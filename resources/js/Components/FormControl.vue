@@ -88,6 +88,14 @@ const props = defineProps({
   transparent: Boolean,
   ctrlKFocus: Boolean,
   disabled: Boolean,
+  optionLabel: {
+    type: String,
+    default: "name",
+  },
+  optionValue: {
+    type: String,
+    default: "id",
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "setRef"]);
@@ -178,43 +186,17 @@ if (props.ctrlKFocus) {
 
 <template>
   <div class="relative">
-    <select
-      v-if="computedType === 'select'"
-      :id="id"
-      v-model="computedValue"
-      :name="name"
-      :class="inputElClass"
-      :disabled="disabled"
-    >
+    <select v-if="computedType === 'select'" :id="id" v-model="computedValue" :name="name" :class="inputElClass"
+      :disabled="disabled">
       <option :value="null" selected :disabled="selectIsDisabled">
         {{ placeholder ? placeholder : "Seleccione una opción" }}
       </option>
-      <option
-        v-for="option in options"
-        :key="option?.id ?? option"
-        :value="option?.[valueSelect] ?? option"
-      >
-        <span v-if="optionNames != null">
-          <span v-for="(o, index) in optionNames" :key="index">
-            {{ option[o] }}{{ index !== optionNames.length - 1 ? props.separator : "" }}
-          </span>
-        </span>
-        <span v-else>
-          {{ option?.name ?? option }}
-        </span>
+      <option v-for="option in options" :key="option?.[optionValue] ?? option" :value="option?.[optionValue] ?? option">
+        {{ option?.[optionLabel] ?? option }}
       </option>
     </select>
-    <textarea
-      v-else-if="computedType === 'textarea'"
-      :id="id"
-      v-model="computedValue"
-      :class="inputElClass"
-      :name="name"
-      :maxlength="maxlength"
-      :placeholder="placeholder"
-      :required="required"
-      :disabled="disabled"
-    />
+    <textarea v-else-if="computedType === 'textarea'" :id="id" v-model="computedValue" :class="inputElClass"
+      :name="name" :maxlength="maxlength" :placeholder="placeholder" :required="required" :disabled="disabled" />
     <!-- <input
       v-else
       :id="id"
@@ -233,31 +215,13 @@ if (props.ctrlKFocus) {
       :class="inputElClass"
       class="invalid:border-red-500 invalid:text-red-600 focus:invalid:border-red-500 focus:invalid:ring-red-500"
     /> -->
-    <input
-      v-else
-      :id="id"
-      ref="inputEl"
-      v-model="computedValue"
-      :name="name"
-      :disabled="disabled"
-      :maxlength="maxlength"
-      :inputmode="inputmode"
-      :autocomplete="autocomplete"
-      :required="required"
-      :placeholder="placeholder"
-      :min="min"
-      :max="max"
-      :type="showPassword[id] ? 'text' : computedType"
-      :class="inputElClass"
-    />
+    <input v-else :id="id" ref="inputEl" v-model="computedValue" :name="name" :disabled="disabled"
+      :maxlength="maxlength" :inputmode="inputmode" :autocomplete="autocomplete" :required="required"
+      :placeholder="placeholder" :min="min" :max="max" :type="showPassword[id] ? 'text' : computedType"
+      :class="inputElClass" />
     <FormControlIcon v-if="icon" :icon="icon" :h="controlIconH" />
-    <BaseIcon
-      @click="showPassword[id] = !showPassword[id]"
-      class="cursor-pointer absolute top-0 right-0 z-10 mr-4 text-gray-500"
-      v-if="type == 'password'"
-      :path="showPassword[id] ? mdiEyeOff : mdiEye"
-      w="10"
-      :h="controlIconH"
-    />
+    <BaseIcon @click="showPassword[id] = !showPassword[id]"
+      class="cursor-pointer absolute top-0 right-0 z-10 mr-4 text-gray-500" v-if="type == 'password'"
+      :path="showPassword[id] ? mdiEyeOff : mdiEye" w="10" :h="controlIconH" />
   </div>
 </template>

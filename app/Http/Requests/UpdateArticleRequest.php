@@ -29,12 +29,14 @@ class UpdateArticleRequest extends FormRequest
             'knowledge_area_id'         => 'required|exists:knowledge_areas,id',
             'article_status_id'         => 'required|exists:article_statuses,id',
             'file'                      => 'nullable|mimes:pdf',
-            
+
             'authors.*.prefix'          => 'required|max:255',
             'authors.*.name'            => 'required|max:255',
             'authors.*.surname'         => 'required|max:255',
             'authors.*.institution_id'  => 'required|exists:institutions,id',
             'authors.*.email'           => 'required|email|max:255',
+            'article_type_id' => 'required|exists:article_types,id',
+
         ];
     }
     public function attributes(): array
@@ -46,6 +48,7 @@ class UpdateArticleRequest extends FormRequest
             'key_works'                 => 'palabras clave',
             'knowledge_area_id'         => 'area de conocimiento',
             'file'                      => 'archivo',
+            'article_type_id' => 'tipo de artículo',
 
             'authors.*.prefix'          => 'prefijo',
             'authors.*.name'            => 'nombre',

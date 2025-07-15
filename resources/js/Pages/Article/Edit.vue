@@ -51,6 +51,7 @@ const form = useForm({
     id: props.article.id,
     title: props.article.title,
     type: props.article.type,
+    article_type_id: props.article.article_type_id,
     abstract: props.article.abstract,
     key_works: props.article.key_works,
     knowledge_area_id: props.article?.knowledge_area?.id,
@@ -105,7 +106,8 @@ provide('getRole', getRole);
                 <BaseButtons class="mt-5">
                     <BaseButton :routeName="`${props.routeName}index`" :icon="mdiClose" color="white"
                         label="Cancelar" />
-                    <BaseButton @click="saveForm" :icon="mdiContentSave" type="submit" color="success" label="Actualizar artículo" />
+                    <BaseButton @click="saveForm" :icon="mdiContentSave" type="submit" color="success"
+                        label="Actualizar artículo" />
                 </BaseButtons>
             </CardBox>
             <div class="col-span-2 h-full lg:relative">
