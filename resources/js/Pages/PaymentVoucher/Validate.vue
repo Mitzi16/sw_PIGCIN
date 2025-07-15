@@ -1,0 +1,168 @@
+<script setup>
+import CardBox from "@/Components/CardBox.vue";
+import LayoutMain from "@/Layouts/LayoutMain.vue";
+import SectionTitleLineWithButton from "@/Components/SectionTitleLineWithButton.vue";
+import {
+    mdiPencil,
+    mdiTrashCan,
+    mdiContentSave,
+    mdiClose,
+    mdiInformation,
+    mdiReceiptTextSend
+} from "@mdi/js";
+import BaseButton from "@/Components/BaseButton.vue";
+import BaseButtons from "@/Components/BaseButtons.vue";
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
+import FormField from "@/Components/FormField.vue";
+import FormControl from "@/Components/FormControl.vue";
+import { computed, watch, ref, onMounted } from "vue";
+import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
+import { Tabs, Tab } from "flowbite-vue";
+import { provide } from "vue";
+import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
+import NotificationBar from "@/Components/NotificationBar.vue";
+import HeadLogo from "@/Components/HeadLogo.vue";
+import LabelControl from "@/Components/LabelControl.vue";
+import InputError from "@/Components/InputError.vue";
+
+const props = defineProps({
+    name: 'Validate',
+    title: { type: String, required: true },
+    routeName: { type: String, required: true },
+    paymentVoucher: { type: Object, required: true },
+    filePath: { type: String, required: true },
+    paymentVoucherStatuses: { type: Object, required: true },
+});
+
+const activeTab = ref('validate')
+const form = useForm({
+    comments: props.paymentVoucher.comments,
+    payment_voucher_status_id: props.paymentVoucher.payment_voucher_status_id,
+});
+
+const saveForm = () => {
+    form.put(route(`${props.routeName}handleValidate`, props.paymentVoucher.id));
+};
+
+</script>
+
+<template>
+    <HeadLogo :title="title" />
+    <LayoutMain>
+        <SectionTitleLineWithButton :icon="mdiReceiptTextSend" :title="title" main>
+            <Link :href="route(`${routeName}index`)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x"
+                viewBox="0 0 16 16">
+                <path
+                    d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+            </svg>
+            </Link>
+        </SectionTitleLineWithButton>
+        <NotificationBar v-if="$page.props.flash.success" color="success" :icon="mdiInformation" :outline="false">
+            {{ $page.props.flash.success }}
+        </NotificationBar>
+
+        <NotificationBar v-if="$page.props.flash.error" color="danger" :icon="mdiInformation" :outline="false">
+            {{ $page.props.flash.error }}
+        </NotificationBar>
+
+        <div class="md:grid md:grid-cols-5 gap-4 md:space-y-0 space-y-5">
+            <CardBox class="col-span-3">
+                <div class="grid grid-cols-1 gap-2 md:grid-cols-2 mb-5">
+                    <FormField label="Referencia:">
+                        <LabelControl :value="paymentVoucher.reference" />
+                    </FormField>
+                    <FormField label="Monto:">
+                        <LabelControl :value="paymentVoucher.amount" />
+                    </FormField>
+                </div>
+                <FormField label="Archivo:">
+                    <div
+                        class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 md:p-10 mb-4 dark:bg-gray-800 dark:border-gray-600">
+                        <div class="w-auto mb-2 text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
+                            <p class="font-semibold mt-2">
+                                Nombre del archivo: {{ paymentVoucher.file.name }}
+                            </p>
+                            <p class="font-semibold">
+                                Tamaño: {{ (paymentVoucher.file.size / 1000).toFixed(2) }} KB
+                            </p>
+                        </div>
+                        <div class="w-full flex justify-center mt-8 mb-4">
+                            <template v-if="filePath">
+                                <iframe v-if="paymentVoucher.file.mime_type === 'application/pdf'"
+                                    class="w-full h-96 border rounded-lg shadow-md" :src="filePath" />
+                                <img v-else :src="filePath"
+                                    class="max-w-full max-h-96 rounded-lg shadow-md object-contain"
+                                    alt="Vista previa de imagen" />
+                            </template>
+                        </div>
+                    </div>
+                </FormField>
+            </CardBox>
+            <div class="col-span-2 h-full lg:relative">
+                <CardBox class="lg:sticky lg:top-14 lg:overflow-y-auto">
+                    <Tabs v-model="activeTab" variant="underline" class="p-5">
+                        <Tab name="validate" title="Validar comprobante" :disabled="false">
+                            <FormField label="Estatus:" required :error="form.errors.payment_voucher_status_id">
+                                <FormControl v-model="form.payment_voucher_status_id"
+                                    :options="paymentVoucherStatuses" />
+                            </FormField>
+                            <FormField label="Comentarios:" :error="form.errors.comments">
+                                <FormControl v-model="form.comments" placeholder="Sin comentarios..." type="textarea"
+                                    height="h-20" />
+                            </FormField>
+
+                            <BaseButtons>
+                                <BaseButton :routeName="`${props.routeName}index`" :icon="mdiClose" color="white"
+                                    label="Cancelar" />
+                                <BaseButton :disabled="props.paymentVoucher.payment_voucher_status_id === 3" @click="saveForm" :icon="mdiContentSave" type="submit" color="success"
+                                    label="Guardar" />
+                            </BaseButtons>
+                        </Tab>
+                        <Tab name="postulant" title="Postulante" :disabled="false">
+                            <FormField label="Nombre:">
+                                <LabelControl :value="paymentVoucher.article.postulant.name" />
+                            </FormField>
+                            <FormField label="Email:">
+                                <LabelControl :value="paymentVoucher.article.postulant.email" />
+                            </FormField>
+                            <FormField label="Institución:">
+                                <LabelControl :value="paymentVoucher.article.postulant?.institution?.name" />
+                            </FormField>
+                            <div class="grid grid-cols-1 gap-2 md:grid-cols-2 mb-5">
+                                <FormField label="Pais:">
+                                    <LabelControl
+                                        :value="paymentVoucher.article.postulant?.institution?.country?.name ?? 'Sin información'" />
+                                </FormField>
+                                <FormField label="Estado:">
+                                    <LabelControl
+                                        :value="paymentVoucher.article.postulant?.institution?.state?.name ?? 'Sin información'" />
+                                </FormField>
+                            </div>
+                        </Tab>
+                        <Tab name="article" title="Articulo" :disabled="false">
+                            <div class="grid grid-cols-1 gap-2 md:grid-cols-2 mb-5">
+                                <FormField label="Titulo:">
+                                    <LabelControl :value="paymentVoucher.article.title" />
+                                </FormField>
+                                <FormField label="Tipo:">
+                                    <LabelControl :value="paymentVoucher.article.type" />
+                                </FormField>
+                                <FormField label="Editor:">
+                                    <LabelControl :value="paymentVoucher.article.editor.name" />
+                                </FormField>
+                                <FormField label="Estatus:">
+                                    <LabelControl :value="paymentVoucher.article.article_status.name" />
+                                </FormField>
+                            </div>
+                            <FormField label="Comprobante:">
+                                <LabelControl :value="paymentVoucher.payment_voucher_status.name" />
+                            </FormField>
+                        </Tab>
+                    </Tabs>
+                </CardBox>
+            </div>
+        </div>
+    </LayoutMain>
+</template>
