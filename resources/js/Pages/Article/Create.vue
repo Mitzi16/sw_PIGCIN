@@ -62,7 +62,6 @@ const form = useForm({
 });
 
 const saveForm = () => {
-    console.log('article_type_id:', form.article_type_id) // 👈 Depuración
 
     form.post(route(`${props.routeName}store`), {
 
@@ -80,7 +79,6 @@ const filterInstitutions = (search) => {
     axios.get(route(`institution.filter`, search))
         .then((response) => {
             results.value = response.data;
-            console.log(results);
         }).catch(function (error) {
             if (error.response) {
                 if (error.response.status == 500) {

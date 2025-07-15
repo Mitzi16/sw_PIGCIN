@@ -13,7 +13,6 @@ class Article extends Model
 
     protected $fillable = [
         'title',
-        'type',
         'abstract',
         'key_works',
         'comment',

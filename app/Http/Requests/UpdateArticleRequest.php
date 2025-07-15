@@ -23,7 +23,6 @@ class UpdateArticleRequest extends FormRequest
     {
         return [
             'title'                     => 'required|string|max:2555|unique:articles,title,' . $this->id,
-            'type'                      => 'required|max:255',
             'abstract'                  => 'required|max:10000',
             'key_works'                 => 'required|max:255',
             'knowledge_area_id'         => 'required|exists:knowledge_areas,id',
@@ -43,7 +42,6 @@ class UpdateArticleRequest extends FormRequest
     {
         return [
             'title'                     => 'titulo',
-            'type'                      => 'tipo de trabajo',
             'abstract'                  => 'resumén',
             'key_works'                 => 'palabras clave',
             'knowledge_area_id'         => 'area de conocimiento',

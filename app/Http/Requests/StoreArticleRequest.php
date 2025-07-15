@@ -24,7 +24,6 @@ class StoreArticleRequest extends FormRequest
     {
         return [
             'title'                     => 'required|unique:articles|max:2555',
-            'type'                      => 'required|max:255',
             'abstract'                  => 'required|max:10000',
             'key_works'                 => 'required|max:255',
             'knowledge_area_id'         => 'required|exists:knowledge_areas,id',
@@ -49,7 +48,6 @@ class StoreArticleRequest extends FormRequest
     {
         return [
             'title'                     => 'titulo',
-            'type'                      => 'tipo de trabajo',
             'abstract'                  => 'resumén',
             'key_works'                 => 'palabras clave',
             'knowledge_area_id'         => 'area de conocimiento',
