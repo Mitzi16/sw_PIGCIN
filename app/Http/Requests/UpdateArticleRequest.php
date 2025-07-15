@@ -23,29 +23,30 @@ class UpdateArticleRequest extends FormRequest
     {
         return [
             'title'                     => 'required|string|max:2555|unique:articles,title,' . $this->id,
-            'type'                      => 'required|max:255',
             'abstract'                  => 'required|max:10000',
             'key_works'                 => 'required|max:255',
             'knowledge_area_id'         => 'required|exists:knowledge_areas,id',
             'article_status_id'         => 'required|exists:article_statuses,id',
             'file'                      => 'nullable|mimes:pdf',
-            
+
             'authors.*.prefix'          => 'required|max:255',
             'authors.*.name'            => 'required|max:255',
             'authors.*.surname'         => 'required|max:255',
             'authors.*.institution_id'  => 'required|exists:institutions,id',
             'authors.*.email'           => 'required|email|max:255',
+            'article_type_id' => 'required|exists:article_types,id',
+
         ];
     }
     public function attributes(): array
     {
         return [
             'title'                     => 'titulo',
-            'type'                      => 'tipo de trabajo',
             'abstract'                  => 'resumén',
             'key_works'                 => 'palabras clave',
             'knowledge_area_id'         => 'area de conocimiento',
             'file'                      => 'archivo',
+            'article_type_id' => 'tipo de artículo',
 
             'authors.*.prefix'          => 'prefijo',
             'authors.*.name'            => 'nombre',

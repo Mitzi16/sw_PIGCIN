@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onMounted} from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 import debounce from "lodash/debounce";
 import { mdiClose } from "@mdi/js";
 import BaseIcon from "./BaseIcon.vue";
@@ -41,6 +41,14 @@ const props = defineProps({
     borderless: Boolean,
     required: Boolean,
     disabled: Boolean,
+    itemLabel: {
+        type: String,
+        default: 'name'
+    },
+    itemValue: {
+        type: String,
+        default: 'id'
+    },
 });
 
 const model = defineModel();
@@ -58,7 +66,7 @@ const inputElClass = computed(() => {
         props.borderless ? "border-0" : "border",
     ];
 
-    if(props.margin){
+    if (props.margin) {
         base.push(props.margin);
     }
     if (props.icon) {
@@ -73,24 +81,24 @@ const previousSelected = ref('');
 
 const handleClick = (item) => {
     showOptions.value = false;
-    search.value = item.name;
-    previousSelected.value = item.name;
-    placeholderInput.value = item.name;
-    model.value = item.id;
+    search.value = item[props.itemLabel];
+    previousSelected.value = item[props.itemLabel];
+    placeholderInput.value = item[props.itemLabel];
+    model.value = item[props.itemValue];
 };
 
 const handleSearch = () => {
     showOptions.value = true;
-    search.value = '';   
+    search.value = '';
 };
 
 const handleBlur = () => {
     setTimeout(() => {
         showOptions.value = false;
-        if(!previousSelected.value){
+        if (!previousSelected.value) {
             placeholderInput.value = props.placeholder;
             search.value = '';
-        }else{
+        } else {
             search.value = previousSelected.value;
         }
     }, 200);
@@ -113,11 +121,11 @@ watch(
 );
 
 onMounted(() => {
-    if(props.itemSelected){
-        model.value = props.itemSelected.id;
-        previousSelected.value = props.itemSelected.name;
-        placeholderInput.value = props.itemSelected.name;
-        search.value = props.itemSelected.name;
+    if (props.itemSelected) {
+        model.value = props.itemSelected[props.itemValue];
+        previousSelected.value = props.itemSelected[props.itemLabel];
+        placeholderInput.value = props.itemSelected[props.itemLabel];
+        search.value = props.itemSelected[props.itemLabel];
     }
 });
 
@@ -128,15 +136,18 @@ onMounted(() => {
         <input :disabled="disabled" :required="required" v-model="search" @focus="handleSearch" @blur="handleBlur"
             :placeholder="placeholderInput" :class="inputElClass" />
 
-        <div v-if="model && !disabled" :class="margin" class="text-gray-800 dark:text-white absolute inset-y-0 right-0 px-3 flex items-center">
+        <div v-if="model && !disabled" :class="margin"
+            class="text-gray-800 dark:text-white absolute inset-y-0 right-0 px-3 flex items-center">
             <BaseIcon @click.prevent="reset" :path="mdiClose" class="cursor-pointer" />
         </div>
 
         <div v-show="search && showOptions" :class="dropdownClass">
             <ul>
-                <li v-if="options?.length" @click="handleClick(item)" v-for="(item, index) in options"
-                    :key="index" class="px-3 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700">
-                    {{ item.name }}
+                <li v-if="options?.length" @click="handleClick(item)" v-for="(item, index) in options" :key="index"
+                    class="px-3 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <slot name="option" :item="item">
+                        {{ item[props.itemLabel] }}
+                    </slot>
                 </li>
                 <li v-else class="px-3 py-2 text-center">
                     No se encontraron resultados

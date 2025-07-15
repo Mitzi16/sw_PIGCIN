@@ -218,7 +218,7 @@ provide("filterBy", filterBy);
                             {{ limitText(item.title, 50) }}
                         </td>
                         <td data-label="Tipo">
-                            {{ item.type }}
+                            {{ item.article_type?.name ?? 'Sin tipo' }}
                         </td>
                         <td data-label="Resumen">
                             {{ limitText(item.abstract, 50) }}
