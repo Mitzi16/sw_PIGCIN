@@ -390,6 +390,7 @@ class ArticleController extends Controller
                     'email' => $author['email'],
                     'institution_id' => $author['institution_id'],
                     'article_id' => $id,
+                    'is_corresponding' => $author['is_corresponding'] ?? false,
                 ]);
             }
         }
@@ -409,6 +410,7 @@ class ArticleController extends Controller
                         'email' => $item['email'],
                         'institution_id' => $item['institution_id'],
                         'article_id' => $id,
+                        'is_corresponding' => $item['is_corresponding'] ?? false,
                     ]);
                 } else { // Es un nuevo autor
                     Log::error('author creado: ' . $item['name']);
@@ -419,6 +421,7 @@ class ArticleController extends Controller
                         'email' => $item['email'],
                         'institution_id' => $item['institution_id'],
                         'article_id' => $id,
+                        'is_corresponding' => $item['is_corresponding'] ?? false,
                     ]);
                 }
             }

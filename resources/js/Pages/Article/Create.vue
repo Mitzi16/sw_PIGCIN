@@ -24,6 +24,7 @@ import InputError from "@/Components/InputError.vue";
 import Select from '@/Components/Select.vue';
 import axios from "axios";
 import HeadLogo from "@/Components/HeadLogo.vue";
+import Swal from 'sweetalert2';
 
 const props = defineProps({
     name: 'Create',
@@ -44,7 +45,8 @@ const props = defineProps({
 const areasData = props.areas.filter(area => area.parent_id === null) ?? []
 const subareasData = ref([])
 const activeTab = ref('call')
-const results = ref(null);
+const results = ref(null); 
+const selectedAuthors = ref([]);
 
 const form = useForm({
     title: null,
@@ -56,8 +58,6 @@ const form = useForm({
     call_id: props.callId,
     file: null,
     authors: [],
-    article_type_id: null,// foreign key real
-
     selectedArea: null
 });
 
@@ -113,21 +113,61 @@ const prefixes = [
     { id: 'Estudiante(a)', name: 'Estudiante(a)' },
 ];
 
-const addAuthor = () => {
+const addAuthor = () => { 
+    if (form.authors.length >= 6) {
+        Swal.fire({
+            title: "ERROR!",
+            text: "No se pueden agregar más de 6 autores",
+            icon: "error",
+            confirmButtonColor: "#3085d6",
+            confirmButtonText: "Ok!",
+        });
+        return;
+    }
+
     form.authors.push({
+        id: Date.now(), // o usa otra forma de generar id temporal si es necesario
         prefix: null,
         name: null,
         surname: null,
         institution_id: null,
         email: null,
+        is_corresponding: false,
     });
 };
 
 const removeAuthor = (index) => {
-    if (form.authors.length > 0) {
-        form.authors.splice(index, 1);
+    if (form.authors.length <= 1) {
+        Swal.fire({
+            title: "Ups!",
+            text: "Debe haber al menos 1 autor",
+            icon: "warning",
+            confirmButtonColor: "#3085d6",
+            confirmButtonText: "Ok",
+        });
+        return;
+    }
+
+    const wasCorresponding = form.authors[index].is_corresponding;
+
+    form.authors.splice(index, 1);
+
+    // Si eliminaste al autor correspondiente, opcionalmente puedes resetear o elegir el primero como nuevo
+    if (wasCorresponding && form.authors.length > 0) {
+        form.authors[0].is_corresponding = true;
     }
 };
+
+const setCorrespondingAuthor = (authorId) => {
+    form.authors.forEach(author => {
+        author.is_corresponding = author.id === authorId;
+    });
+};
+
+const correspondingAuthor = computed(() => {
+    return form.authors.find(author => author.is_corresponding);
+});
+
 
 const getErrorMessage = (index, field) => {
     const errorKey = `authors.${index}.${field}`;
@@ -180,18 +220,16 @@ provide('form', form)
                 </Tab>
 
                 <Tab name="general" title="Datos generales" :disabled="false">
-                    <FormField required label="Titulo:" :error="form.errors.title">
-                        <FormControl height="h-12" v-model="form.title" placeholder="Titulo" />
+                    <FormField required label="Teclea el título del artículo en el idioma inglés:" :error="form.errors.title">
+                        <FormControl height="h-12" v-model="form.title" placeholder="Teclea el título del artículo en el idioma inglés" />
                     </FormField>
 
                     <FormField required label="Selecciona un tipo de artículo" :error="form.errors.article_type_id">
                         <FormControl v-model="form.article_type_id" :options="articleTypes"
                             placeholder="Selecciona un tipo" labelKey="name" valueKey="id" />
                     </FormField>
-
-
-                    <FormField required label="Resumen:" :error="form.errors.abstract">
-                        <FormControl type="textarea" height="h-56" v-model="form.abstract" placeholder="Resumen" />
+                    <FormField required label="Teclea tu resumen del artículo en el idioma inglés:" :error="form.errors.abstract">
+                        <FormControl type="textarea" height="h-56" v-model="form.abstract" placeholder="Teclea tu resumen del artículo en el idioma inglés" />
                     </FormField>
                     <div class="md:flex md:space-x-4 my-5">
                         <div class="md:w-1/2 max-lg:mb-5">
@@ -206,14 +244,26 @@ provide('form', form)
                         </div>
                     </div>
 
-                    <FormField required label="Palabras clave:" :error="form.errors.key_works">
-                        <FormControl v-model="form.key_works" placeholder="Palabras clave" />
+                    <FormField required label="Teclea tus palabras clave en el idioma inglés:" :error="form.errors.key_works">
+                        <FormControl v-model="form.key_works" placeholder="Teclea tus palabras clave en el idioma inglés" />
                     </FormField>
 
                     <div class="my-6">
-                        <div class="justify-between flex mb-6">
+                        <div class="flex justify-between items-start">
+                            <div class="flex flex-col">
                             <label class="font-bold">Lista de autores</label>
-                            <BaseButton :icon="mdiPlus" @click="addAuthor" label="Agregar autor" color="info" />
+                            <label class="font-normal text-sm text-blue-600 mt-1 italic">
+                                Recuerda marcar la casilla de verificación para el autor correspondencia.
+                            </label>
+                            </div>
+                            <BaseButton 
+                            :icon="mdiPlus" 
+                            :disabled="form.authors.length >= 6"
+                            :title="form.authors.length >= 6 ? 'Máximo 6 autores permitidos' : ''"
+                            @click="addAuthor" 
+                            label="Agregar autor" 
+                            color="info"
+                            />
                         </div>
                         <div class="max-h-96 overflow-y-auto">
                             <table v-if="form.authors.length > 0">
@@ -261,11 +311,18 @@ provide('form', form)
                                                 textClass="text-sm" />
                                             <JetInputError :message="getErrorMessage(index, 'email')" />
                                         </td>
-                                        <td data-label="Acciones">
+                                        <td data-label="Acciones" class="flex justify-center items-center space-x-2">
                                             <BaseButtons>
                                                 <BaseButton :icon="mdiTrashCan" small @click="removeAuthor(index)"
                                                     color="danger" />
                                             </BaseButtons>
+                                            <input 
+                                                 type="radio" 
+    name="corresponding-author"
+    :checked="author.is_corresponding"
+    @change="setCorrespondingAuthor(author.id)"
+    class="h-6 w-6 text-indigo-600"
+                                            />
                                         </td>
                                     </tr>
                                 </tbody>
