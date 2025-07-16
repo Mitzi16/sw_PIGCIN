@@ -38,7 +38,8 @@ const props = defineProps({
     },
     areas: { type: Object, default: {}, required: true },
     calls: { type: Object, default: {}, required: true },
-    callId: { default: null }
+    callId: { default: null },
+    articleTypes: { type: Array, required: true }
 });
 
 const areasData = props.areas.filter(area => area.parent_id === null) ?? []
@@ -61,7 +62,9 @@ const form = useForm({
 });
 
 const saveForm = () => {
+
     form.post(route(`${props.routeName}store`), {
+
         onError: (errors) => {
             if (errors.call_id) {
                 activeTab.value = 'call'
@@ -76,7 +79,6 @@ const filterInstitutions = (search) => {
     axios.get(route(`institution.filter`, search))
         .then((response) => {
             results.value = response.data;
-            console.log(results);
         }).catch(function (error) {
             if (error.response) {
                 if (error.response.status == 500) {
@@ -222,33 +224,10 @@ provide('form', form)
                         <FormControl height="h-12" v-model="form.title" placeholder="Teclea el título del artículo en el idioma inglés" />
                     </FormField>
 
-                    <FormField required label="Estado:" :error="form.errors.state_id">
-                        <div class="flex items-center ps-4 border border-gray-400 rounded dark:border-gray-700 h-12">
-                            <input id="bordered-radio-1" type="radio" value="Artículo (6 hojas)" v-model="form.type"
-                                name="bordered-radio"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-800 dark:border-gray-600">
-                            <label for="bordered-radio-1"
-                                class="w-full ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                Artículo normal
-                                <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
-                                    6 hojas
-                                </p>
-                            </label>
-                        </div>
-                        <div class="flex items-center ps-4 border border-gray-400 rounded dark:border-gray-700 h-12">
-                            <input id="bordered-radio-2" type="radio" value="Artículo corto - Poster (2 hojas)"
-                                v-model="form.type" name="bordered-radio"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-800 dark:border-gray-600">
-                            <label for="bordered-radio-2"
-                                class="w-full ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                Artículo corto
-                                <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
-                                    Poster (2 hojas)
-                                </p>
-                            </label>
-                        </div>
+                    <FormField required label="Selecciona un tipo de artículo" :error="form.errors.article_type_id">
+                        <FormControl v-model="form.article_type_id" :options="articleTypes"
+                            placeholder="Selecciona un tipo" labelKey="name" valueKey="id" />
                     </FormField>
-
                     <FormField required label="Teclea tu resumen del artículo en el idioma inglés:" :error="form.errors.abstract">
                         <FormControl type="textarea" height="h-56" v-model="form.abstract" placeholder="Teclea tu resumen del artículo en el idioma inglés" />
                     </FormField>

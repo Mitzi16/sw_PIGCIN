@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\ArticleReviewController;
+use App\Http\Controllers\ArticleTypeController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\CriterionController;
@@ -33,6 +34,7 @@ use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 | contains the "web" middleware group. Now create something great!
 |
 */
+
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
 Route::get('/comite', [WelcomeController::class, 'committee'])->name('welcome.committee');
 Route::get('/lugar', [WelcomeController::class, 'place'])->name('welcome.place');
@@ -65,6 +67,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //
     Route::resource('article', ArticleController::class)->parameters(['article' => 'article']);
+    Route::resource('articleTypes', ArticleTypeController::class)->names('articleType');
+
     Route::resource('articleReview', ArticleReviewController::class)->parameters(['articleReview' => 'articleReview']);
     Route::resource('paymentVoucher', PaymentVoucherController::class)->parameters(['paymentVoucher' => 'paymentVoucher']);
 
@@ -77,7 +81,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     Route::get('/sign-pdf/{article}', [ArticleController::class, 'signPdf'])->name('article.signPdf');
-
 });
 
 require __DIR__ . '/auth.php';

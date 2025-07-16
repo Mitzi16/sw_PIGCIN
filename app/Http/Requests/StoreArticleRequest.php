@@ -24,7 +24,6 @@ class StoreArticleRequest extends FormRequest
     {
         return [
             'title'                     => 'required|unique:articles|max:2555',
-            'type'                      => 'required|max:255',
             'abstract'                  => 'required|max:10000',
             'key_works'                 => 'required|max:255',
             'knowledge_area_id'         => 'required|exists:knowledge_areas,id',
@@ -41,18 +40,20 @@ class StoreArticleRequest extends FormRequest
             'authors.*.surname'         => 'required|max:255',
             'authors.*.institution_id'  => 'required|exists:institutions,id',
             'authors.*.email'           => 'required|email|max:255',
+            'article_type_id' => 'required|exists:article_types,id',
+
         ];
     }
     public function attributes(): array
     {
         return [
             'title'                     => 'titulo',
-            'type'                      => 'tipo de trabajo',
             'abstract'                  => 'resumén',
             'key_works'                 => 'palabras clave',
             'knowledge_area_id'         => 'area de conocimiento',
             'call_id'                   => 'convocatoria',
             'file'                      => 'archivo',
+            'article_type_id' => 'tipo de artículo',
 
             'authors.*.prefix'          => 'prefijo',
             'authors.*.name'            => 'nombre',

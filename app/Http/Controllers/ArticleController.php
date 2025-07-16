@@ -10,6 +10,7 @@ use App\Mail\EvaluationArticle;
 use App\Mail\StoreArticle;
 use App\Models\ArticleReview;
 use App\Models\ArticleStatus;
+use App\Models\ArticleType;
 use App\Models\Author;
 use App\Models\Call;
 use App\Models\Criterion;
@@ -58,7 +59,7 @@ class ArticleController extends Controller
     {
         $direction = $request->direction ?? 'desc';
         $order = $request->order ?? 'created_at';
-        $query = $this->model::query()->with('articleReviews');
+        $query = $this->model::query()->with(['articleReviews', 'articleType']);
         $user = User::findOrFail(Auth::id());
 
         if (!$user->canPermission('article.all')) {
@@ -102,7 +103,10 @@ class ArticleController extends Controller
             fn($article) => [
                 'id' => $article->id,
                 'title' => $article->title,
-                'type' => $article->type,
+                'article_type' => [
+                    'id' => $article->articleType?->id,
+                    'name' => $article->articleType?->name,
+                ],
                 'abstract' => $article->abstract,
                 'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
                 'status' => $article->articleStatus ?? null,
@@ -138,7 +142,8 @@ class ArticleController extends Controller
             'calls' => Call::orderBy('created_at', 'desc')
                 ->where('status', true)
                 ->get()
-                ->map->transform() // Transforma cada uno de los resultados
+                ->map->transform(), // Transforma cada uno de los resultados
+            'articleTypes' => ArticleType::select('id', 'name')->get(),
         ]);
     }
 
@@ -165,6 +170,7 @@ class ArticleController extends Controller
         $article->load(
             'knowledgeArea',
             'articleStatus',
+            'articleType',
             'authors.institution:id,name',
             'file',
             'editor:id,name,email',

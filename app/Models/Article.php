@@ -13,7 +13,6 @@ class Article extends Model
 
     protected $fillable = [
         'title',
-        'type',
         'abstract',
         'key_works',
         'comment',
@@ -23,6 +22,7 @@ class Article extends Model
         'article_status_id',
         'call_id',
         'payment_voucher_id',
+        'article_type_id',
     ];
 
     public function postulant()
@@ -68,5 +68,10 @@ class Article extends Model
     public function paymentVoucher()
     {
         return $this->belongsTo(PaymentVoucher::class);
+    }
+
+    public function articleType()
+    {
+        return $this->belongsTo(ArticleType::class);
     }
 }

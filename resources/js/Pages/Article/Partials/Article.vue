@@ -15,14 +15,17 @@ import BaseButtons from "@/Components/BaseButtons.vue";
 import BaseButton from "@/Components/BaseButton.vue";
 import InputError from "@/Components/InputError.vue";
 import LabelControl from "@/Components/LabelControl.vue";
-import { useForm } from "@inertiajs/vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import Select from '@/Components/Select.vue';
 import axios from "axios";
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 
-const form = inject("form");
+
+const form = inject("form")
+const articleTypes = usePage().props.articleTypes
 const props = inject('props');
+form.article_type_id = form.article_type_id ?? props.article?.article_type_id ?? null
 const areasData = props.areas.filter(area => area.parent_id === null) ?? []
 const subareasData = ref([])
 const results = ref(props.institutions);
@@ -130,30 +133,11 @@ onMounted(() => { filterAreas() });
     <FormField required label="Titulo:" :error="form.errors.title">
         <FormControl height="h-12" v-model="form.title" placeholder="Titulo" />
     </FormField>
-    <FormField required label="Estado:" :error="form.errors.state_id">
-        <div class="flex items-center ps-4 border border-gray-400 rounded dark:border-gray-700 h-12">
-            <input id="bordered-radio-1" type="radio" value="Artículo (6 hojas)" v-model="form.type"
-                name="bordered-radio"
-                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-800 dark:border-gray-600">
-            <label for="bordered-radio-1" class="w-full ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                Artículo normal
-                <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
-                    6 hojas
-                </p>
-            </label>
-        </div>
-        <div class="flex items-center ps-4 border border-gray-400 rounded dark:border-gray-700 h-12">
-            <input id="bordered-radio-2" type="radio" value="Artículo corto - Poster (2 hojas)" v-model="form.type"
-                name="bordered-radio"
-                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-800 dark:border-gray-600">
-            <label for="bordered-radio-2" class="w-full ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                Artículo corto
-                <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
-                    Poster (2 hojas)
-                </p>
-            </label>
-        </div>
+    <FormField required label="Tipo de artículo:" :error="form.errors.article_type_id">
+        <FormControl :options="articleTypes" v-model="form.article_type_id" option-label="name" option-value="id"
+            placeholder="Selecciona un tipo" />
     </FormField>
+
     <FormField required label="Resumen:" :error="form.errors.abstract">
         <FormControl type="textarea" height="h-56" v-model="form.abstract" placeholder="Resumen" />
     </FormField>

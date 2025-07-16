@@ -87,6 +87,12 @@ export default [
                 permission: "institution.index",
             },
             {
+                label: "Tipos de artículos",
+                route: "articleType.index",
+                icon: mdiViewModule,
+                permission: "articleType.index",
+            },
+            {
                 route: "call.index",
                 label: "Convocatorias",
                 icon: mdiBullhorn,
