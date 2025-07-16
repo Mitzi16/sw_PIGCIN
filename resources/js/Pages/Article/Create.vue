@@ -58,6 +58,7 @@ const form = useForm({
     call_id: props.callId,
     file: null,
     authors: [],
+    article_type_id: null,// foreign key real
     selectedArea: null
 });
 
