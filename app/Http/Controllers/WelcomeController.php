@@ -75,4 +75,44 @@ class WelcomeController extends Controller
             'routeName' => $this->routeName,
         ]);
     }
+
+    public function searchArticle(string $code = null)
+    {
+        return Inertia::render("{$this->source}Article/Search", [
+            'title'     => 'Buscador de Artículos',
+            'code'      => $code,
+            'routeName' => $this->routeName,
+        ]);
+    }
+
+    /* public function showArticle(string $code)
+    {
+        $incident = Incident::with([
+            'location.neighborhood.city',
+            'incidentType',
+            'incidentStatus',
+            'evidence.files',
+            'files',
+            'reviewer' 
+
+        ])
+            ->where('unique_code', $code)
+            ->first();
+
+        return Inertia::render("{$this->source}Article/Show", [
+            'title' => 'Ver documento',
+            'incident' => $incident
+        ]);
+    }  */
+    public function showArticle(string $code)
+    {
+        return Inertia::render("{$this->source}Article/Show", [
+        'alert' => [
+            'title' => 'Módulo en construcción',
+            'text' => 'Esta sección se encuentra actualmente en desarrollo.',
+            'icon' => 'info',
+            'redirectTo' => route('welcome.search.article') // ruta a redirigir al cerrar
+        ]
+    ]);
+    }
 }

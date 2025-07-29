@@ -14,7 +14,7 @@ class InstitutionSeeder extends Seeder
      */
     public function run(): void
     {
-        $reader = SimpleExcelReader::create(database_path('seeders/files/country-instituciones.xlsx'))
+        $reader = SimpleExcelReader::create(database_path('seeders/Files/country-instituciones.xlsx'))
             ->fromSheetName("universidades")
             ->trimHeaderRow();
 

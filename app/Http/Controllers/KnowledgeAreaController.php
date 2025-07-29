@@ -55,7 +55,7 @@ class KnowledgeAreaController extends Controller
 
         return Inertia::render("{$this->source}Index", [
             'areas'        =>  $records,
-            'title'          => 'Gestión de Areas de conocimiento',
+            'title'          => 'Gestión de Programas de Estudio',
             'routeName'      => $this->routeName,
             'search'         => $request->search ?? '',
             'direction'     => $direction
@@ -68,7 +68,7 @@ class KnowledgeAreaController extends Controller
     public function create()
     {
         return Inertia::render("{$this->source}Create", [
-            'title'          => 'Agregar área de conocimiento',
+            'title'          => 'Agregar Programa de Estudio',
             'routeName'      => $this->routeName
         ]);
     }

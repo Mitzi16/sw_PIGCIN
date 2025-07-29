@@ -202,7 +202,7 @@ class UserController extends Controller
         if (ApiUser::where('curp', $request)->exists()) {
             $records = ApiUser::where('curp', $request)->first(); //si existe el curp guarda los campos en records
         } else {
-            $request = Http::withToken('ea4d72f1-e7f8-483f-9d88-cef904cf272d')->post("https://apimarket.mx/api/renapo/grupo/valida-curp", ['curp' => $request])['data'];
+            $request = Http::withToken('0ccedcbd-fb5a-4a6a-aaa1-d7bf0031ec0d')->post("https://apimarket.mx/api/renapo/grupo/valida-curp", ['curp' => $request])['data'];
 
             ApiUser::create([
                 "curp" =>  $request['curp'],

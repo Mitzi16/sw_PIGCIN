@@ -39,7 +39,7 @@ class AssignArticle extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'email.AssignArticle',
+            view: 'Email.AssignArticle',
         );
     }
 

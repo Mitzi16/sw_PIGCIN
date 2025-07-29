@@ -39,7 +39,7 @@ class UploadedVoucher extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'email.UploadedVoucher',
+            view: 'Email.UploadedVoucher',
         );
     }
 

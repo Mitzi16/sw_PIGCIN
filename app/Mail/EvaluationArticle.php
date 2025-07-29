@@ -39,7 +39,7 @@ class EvaluationArticle extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'email.EvaluationArticle',
+            view: 'Email.EvaluationArticle',
         );
     }
 

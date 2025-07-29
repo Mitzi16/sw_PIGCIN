@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Rules\ValidatedCall;
+use App\Rules\ExactlyOneCorrespondingAuthor;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreArticleRequest extends FormRequest
@@ -35,12 +36,14 @@ class StoreArticleRequest extends FormRequest
             ],
             'file'                      => 'required|mimes:pdf',
 
+            'authors' => ['required', 'array', new ExactlyOneCorrespondingAuthor()],
             'authors.*.prefix'          => 'required|max:255',
             'authors.*.name'            => 'required|max:255',
             'authors.*.surname'         => 'required|max:255',
             'authors.*.institution_id'  => 'required|exists:institutions,id',
             'authors.*.email'           => 'required|email|max:255',
             'article_type_id' => 'required|exists:article_types,id',
+            'authors.*.is_corresponding' => 'nullable|boolean',
 
         ];
     }
@@ -50,11 +53,12 @@ class StoreArticleRequest extends FormRequest
             'title'                     => 'titulo',
             'abstract'                  => 'resumén',
             'key_works'                 => 'palabras clave',
-            'knowledge_area_id'         => 'area de conocimiento',
+            'knowledge_area_id'         => 'áreas prioritarias',
             'call_id'                   => 'convocatoria',
             'file'                      => 'archivo',
             'article_type_id' => 'tipo de artículo',
 
+            'authors.*.is_corresponding' => 'autor correspondencia',
             'authors.*.prefix'          => 'prefijo',
             'authors.*.name'            => 'nombre',
             'authors.*.surname'         => 'apellido',

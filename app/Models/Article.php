@@ -12,6 +12,7 @@ class Article extends Model
     protected $table = 'articles';
 
     protected $fillable = [
+        'article_folio',
         'title',
         'abstract',
         'key_works',

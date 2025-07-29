@@ -45,8 +45,8 @@ const saveForm = () => {
         </SectionTitleLineWithButton>
 
         <CardBox isForm @submit.prevent="saveForm">
-            <FormField label="Nombre:" :required="true" help="Nombre del área" :error="form.errors.name">
-                <FormControl v-model="form.name" placeholder="Nombre del área" />
+            <FormField label="Nombre del Programa:" :required="true" help="Nombre del programa" :error="form.errors.name">
+                <FormControl v-model="form.name" placeholder="Nombre del programa" />
             </FormField>
 
             <FormField label="Descripción:" :required="true" :error="form.errors.description">

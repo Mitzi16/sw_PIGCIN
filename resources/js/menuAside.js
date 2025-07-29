@@ -64,18 +64,30 @@ export default [
         isDivider: true,
     },
     {
-        label: "Catalogos",
+        label: "Catálogos",
         icon: mdiViewList,
         permission: "menu.catalogo",
         menu: [
             {
-                label: "Areas de conocimiento",
+                route: "call.index",
+                label: "Convocatorias",
+                icon: mdiBullhorn,
+                permission: "call.index",
+            },
+            {
+                label: "Tipos de Artículos",
+                route: "articleType.index",
+                icon: mdiViewModule,
+                permission: "articleType.index",
+            },
+            {
+                label: "Programas de Estudio",
                 route: "knowledgeArea.index",
                 icon: mdiViewModule,
                 permission: "knowledgeArea.index",
             },
             {
-                label: "SubAreas de conocimiento",
+                label: "Áreas Prioritarias",
                 route: "knowledgeSubArea.index",
                 icon: mdiViewModule,
                 // permission: "knowledgeArea.index",
@@ -87,20 +99,8 @@ export default [
                 permission: "institution.index",
             },
             {
-                label: "Tipos de artículos",
-                route: "articleType.index",
-                icon: mdiViewModule,
-                permission: "articleType.index",
-            },
-            {
-                route: "call.index",
-                label: "Convocatorias",
-                icon: mdiBullhorn,
-                permission: "call.index",
-            },
-            {
                 route: "criterion.index",
-                label: "Criterios",
+                label: "Rúbricas de Evaluación",
                 icon: mdiFileDocumentCheck,
                 permission: "criterion.index",
             },

@@ -41,7 +41,7 @@ class StoreArticle extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'email.StoreArticle',
+            view: 'Email.StoreArticle',
         );
     }
 

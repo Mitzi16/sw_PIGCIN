@@ -8,16 +8,32 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\RegisteredReviewUserController;
+use App\Http\Controllers\Auth\RegisteredEditorUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\UserController;
 
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+
+    // Rutas para el registro de postulantes
     Route::get('register', [RegisteredUserController::class, 'create'])
                 ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store']);
+
+    // Rutas para el registro de revisores
+    Route::get('registerReviewCitca2025', [RegisteredReviewUserController::class, 'create'])
+                ->name('register');
+
+    Route::post('registerReviewCitca2025', [RegisteredReviewUserController::class, 'store']);
+
+    // Rutas para el registro de editores
+    Route::get('registerEditorCitca2025', [RegisteredEditorUserController::class, 'create'])
+                ->name('register');
+
+    Route::post('registerEditorCitca2025', [RegisteredEditorUserController::class, 'store']);
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

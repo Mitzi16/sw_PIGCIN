@@ -38,7 +38,7 @@ class StatusVoucher extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'email.StatusVoucher',
+            view: 'Email.StatusVoucher',
         );
     }
 

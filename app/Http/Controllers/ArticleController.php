@@ -29,6 +29,7 @@ use Inertia\Response;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Mail;
+use App\Services\ArticleService;
 
 class ArticleController extends Controller
 {
@@ -37,13 +38,14 @@ class ArticleController extends Controller
     private string $routeName;
     private string $module = 'article';
     private string $storage_path = 'articles';
-
-    public function __construct()
+    private ArticleService $articleService;
+    public function __construct(ArticleService $articleService)
     {
         $this->middleware('auth');
         $this->source = 'Article/';
         $this->model = new Article();
         $this->routeName = 'article.';
+        $this->articleService = $articleService;
 
         $this->middleware("permission:{$this->module}.index")->only(['index', 'show']);
         $this->middleware("permission:{$this->module}.store")->only(['store', 'create']);
@@ -75,7 +77,8 @@ class ArticleController extends Controller
         $query->when($request->input('search'), function ($query, $search) {
             if ($search != '') {
                 $query->where(function ($subQuery) use ($search) {
-                    $subQuery->where('title', 'LIKE', '%' . $search . '%')
+                    $subQuery->where('article_folio', 'LIKE', '%' . $search . '%')
+                        ->orWhere('title', 'LIKE', '%' . $search . '%')
                         ->orWhere('type', 'LIKE', '%' . $search . '%')
                         ->orWhere('abstract', 'LIKE', '%' . $search . '%')
                         ->orWhere('key_works', 'LIKE', '%' . $search . '%')
@@ -102,6 +105,7 @@ class ArticleController extends Controller
         $records = $query->paginate(8)->withQueryString()->through(
             fn($article) => [
                 'id' => $article->id,
+                'folio' => $article->article_folio,
                 'title' => $article->title,
                 'article_type' => [
                     'id' => $article->articleType?->id,
@@ -152,11 +156,16 @@ class ArticleController extends Controller
      */
     public function store(StoreArticleRequest $request)
     {
+        
         $fields = $request->validated();
+        $fields['article_folio'] = $this->articleService->getUniqueCode(); // se inicia el proceso
         $fields['postulant_id'] = Auth::id();
         $article = Article::create($fields);
 
-        $this->storeFile($request, $article);
+        //nombre del archivo
+        $nombre_archivo=$article->article_folio.'-'.$request->selectedArea.'-'.$article->knowledge_area_id.'-'.$article->article_type_id.'.pdf';
+
+        $this->storeFile($request, $article, $nombre_archivo);
         $this->storeAuthors($request, $article->id);
         $this->sendEmail($article->id);
         return redirect()->route("{$this->routeName}index")->with('success', 'Artículo creado con éxito!');
@@ -343,11 +352,22 @@ class ArticleController extends Controller
         return URL::signedRoute('file.serve', $file, now()->addMinutes(60));
     }
 
-    private function storeFile(Request $request, Article $article)
+    private function storeFile(Request $request, Article $article, $nombre_archivo)
     {
+        // Verifica si el archivo ya existe y lo elimina
+        /* $existingFile = File::where([
+            ['fileable_type', Article::class],
+            ['fileable_id', $article->id]
+        ])->first();
+
+        if ($existingFile) {
+            Storage::disk('private')->delete($existingFile->path);
+            $existingFile->delete();
+        } */
+    
         if ($request->hasFile('file')) {
             $fileStorage = $request->file('file');
-            $fileName = (File::max('id') + 1) . '-' . $fileStorage->getClientOriginalName();
+            $fileName = (File::max('id') + 1) . '-' . $nombre_archivo;
             $path = $fileStorage->storeAs($this->storage_path, $fileName, 'private');
             $article->file()->create([
                 'name' => $fileName,
