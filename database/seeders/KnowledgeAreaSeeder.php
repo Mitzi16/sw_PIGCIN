@@ -15,7 +15,7 @@ class KnowledgeAreaSeeder extends Seeder
      */
     public function run(): void
     {
-        $reader = SimpleExcelReader::create(database_path('seeders/files/areas.xlsx'))
+        $reader = SimpleExcelReader::create(database_path('seeders/Files/areas.xlsx'))
             ->fromSheetName("areas") // Primera hoja (index 0)
             ->trimHeaderRow();
 

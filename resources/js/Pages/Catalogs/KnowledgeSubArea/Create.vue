@@ -50,16 +50,16 @@ const saveForm = () => {
         </SectionTitleLineWithButton>
 
         <CardBox isForm @submit.prevent="saveForm">
-            <FormField label="Nombre:" :required="true" help="Nombre del área" :error="form.errors.name">
-                <FormControl v-model="form.name" placeholder="Nombre del área" />
+            <FormField label="Nombre del Área Prioritaria:" :required="true" help="Nombre del área" :error="form.errors.name">
+                <FormControl v-model="form.name" placeholder="Nombre del área prioritaria" />
             </FormField>
 
             <FormField label="Descripción:" :required="true" :error="form.errors.description">
                 <FormControl type="textarea" height="h-24" v-model="form.description" placeholder="Descripción" />
             </FormField>
 
-            <FormField label="Área de conocimiento:" :required="true" :error="form.errors.parent_id">
-                <FormControl type="select" :options="areas" v-model="form.parent_id" placeholder="Selecciona un área" />
+            <FormField label="Programa de Estudio:" :required="true" :error="form.errors.parent_id">
+                <FormControl type="select" :options="areas" v-model="form.parent_id" placeholder="Selecciona un programa" />
             </FormField>
 
             <template #footer>

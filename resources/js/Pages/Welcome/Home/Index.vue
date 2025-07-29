@@ -29,12 +29,10 @@ const props = defineProps({
     <LayoutWelcome>
         <HeroSection>
             <template #title>
-                Congreso Internacional de Tecnología y Ciencia Aplicada
+                5to. Congreso Internacional de Tecnología y Ciencia Aplicada (CITCA)
             </template>
             <template #description>
-                Divulgación de la tecnología y ciencia aplicada en la solución de problemas como soberanía en salud,
-                soberanía alimentaria, soberanía energética, desarrollos socioambientales y desarrollo
-                urbano-industrial.
+                El Tecnológico Nacional de México (TecNM) a través del Centro Nacional de Investigación y Desarrollo Tecnológico (CENIDET), invita a toda la comunidad académica, científica, profesional y estudiantil a enviar sus contribuciones al 5to. Congreso Internacional de Tecnología y Ciencias Aplicadas (CITCA), que se llevará a cabo de manera HÍBRIDA (presencial o virtual) en la ciudad de Cuernavaca Morelos, del 26 al 28 de noviembre de 2025.
             </template>
         </HeroSection>
         

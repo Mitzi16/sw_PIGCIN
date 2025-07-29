@@ -56,6 +56,8 @@ const props = defineProps({
   disabled: Boolean,
   roundedFull: Boolean,
   procesing: Boolean,
+  disabled: Boolean,
+  title: String
 });
 
 const is = computed(() => {

@@ -58,7 +58,13 @@ class PermissionSeeder extends Seeder
         Permission::create(['name' => 'institution.store', 'guard_name' => 'web', 'description' => 'Crear Registros', 'module_key' => 'cat']);
         Permission::create(['name' => 'institution.update', 'guard_name' => 'web', 'description' => 'Actualizar Registros', 'module_key' => 'cat']);
         Permission::create(['name' => 'institution.delete', 'guard_name' => 'web', 'description' => 'Eliminar Registros', 'module_key' => 'cat']);
-        
+
+        Permission::create(['name' => 'articleType.index', 'guard_name' => 'web', 'description' => 'Leer Registros', 'module_key' => 'cat']);
+        Permission::create(['name' => 'articleType.store', 'guard_name' => 'web', 'description' => 'Crear Registros', 'module_key' => 'cat']);
+        Permission::create(['name' => 'articleType.update', 'guard_name' => 'web', 'description' => 'Actualizar Registros', 'module_key' => 'cat']);
+        Permission::create(['name' => 'articleType.delete', 'guard_name' => 'web', 'description' => 'Eliminar Registros', 'module_key' => 'cat']);
+
+
         Permission::create(['name' => 'call.index', 'guard_name' => 'web', 'description' => 'Leer Registros', 'module_key' => 'cat']);
         Permission::create(['name' => 'call.store', 'guard_name' => 'web', 'description' => 'Crear Registros', 'module_key' => 'cat']);
         Permission::create(['name' => 'call.update', 'guard_name' => 'web', 'description' => 'Actualizar Registros', 'module_key' => 'cat']);
@@ -71,7 +77,7 @@ class PermissionSeeder extends Seeder
         Permission::create(['name' => 'article.delete', 'guard_name' => 'web', 'description' => 'Eliminar Registros', 'module_key' => 'div']);
         Permission::create(['name' => 'article.evaluate', 'guard_name' => 'web', 'description' => 'Evaluar Registros', 'module_key' => 'div']);
         Permission::create(['name' => 'article.all', 'guard_name' => 'web', 'description' => 'Acceso a todos los Registros', 'module_key' => 'priv']);
-        
+
         Permission::create(['name' => 'articleReview.index', 'guard_name' => 'web', 'description' => 'Leer Registros', 'module_key' => 'div']);
         Permission::create(['name' => 'articleReview.store', 'guard_name' => 'web', 'description' => 'Crear Registros', 'module_key' => 'div']);
         Permission::create(['name' => 'articleReview.update', 'guard_name' => 'web', 'description' => 'Actualizar Registros', 'module_key' => 'div']);

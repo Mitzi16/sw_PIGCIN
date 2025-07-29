@@ -21,7 +21,7 @@ class LocationSeeder extends Seeder
 
     private function importCountries()
     {
-        $reader = SimpleExcelReader::create(database_path('seeders/files/country-instituciones.xlsx'))
+        $reader = SimpleExcelReader::create(database_path('seeders/Files/country-instituciones.xlsx'))
             ->fromSheetName("country") // Primera hoja (index 0)
             ->trimHeaderRow();
 
@@ -38,7 +38,7 @@ class LocationSeeder extends Seeder
 
     private function importStates()
     {
-        $reader = SimpleExcelReader::create(database_path('seeders/files/country-instituciones.xlsx'))
+        $reader = SimpleExcelReader::create(database_path('seeders/Files/country-instituciones.xlsx'))
             ->fromSheetName("estados")
             ->trimHeaderRow();
 

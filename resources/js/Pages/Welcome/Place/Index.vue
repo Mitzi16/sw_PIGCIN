@@ -20,7 +20,7 @@ const props = defineProps({
                 <div class="max-w-2xl lg:max-w-4xl mx-auto text-center">
                     <h2 class="dark:text-blue-200 text-3xl sm:text-4xl font-semibold text-gray-900">Visita nuestras
                         instalaciones</h2>
-                    <p class="text-gray-600 dark:text-gray-400 mt-3">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
+                    <!-- <p class="text-gray-600 dark:text-gray-400 mt-3">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p> -->
                 </div>
                 <div class="mt-16 lg:mt-20">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">

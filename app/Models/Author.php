@@ -18,6 +18,7 @@ class Author extends Model
         'email',
         'institution_id',
         'article_id',
+        'is_corresponding',
     ];
     // relacion 1 a m
     public function article()

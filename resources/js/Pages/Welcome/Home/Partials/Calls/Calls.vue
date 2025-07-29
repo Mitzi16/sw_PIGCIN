@@ -58,11 +58,10 @@ provide('showModal', { showModal, setShowModal });
         <div class="max-w-screen-xl mx-auto px-4  text-gray-600 md:px-8">
             <div class="text-center max-w-2xl mx-auto">
                 <h3 class="text-gray-800 dark:text-blue-200 text-3xl font-semibold sm:text-4xl">
-                    Nuestras convocatorias
+                    Conoce Nuestra Convocatoria
                 </h3>
                 <p class="mt-3 dark:text-gray-400">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec congue, nisl eget molestie varius,
-                    enim ex faucibus purus.
+                    El CITCA es un foro multidisciplinario para la presentación de trabajos de investigación, innovaciones tecnológicas y/o desarrollos tecnológicos de vanguardia a nivel Internacional como nacional con muestra del Humanismo Mexicano para presentar avances significativos en la generación y/o aplicación del conocimiento.
                 </p>
             </div>
             <div class="w-full my-5 justify-center flex">

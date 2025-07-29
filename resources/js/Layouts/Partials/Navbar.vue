@@ -47,22 +47,21 @@ const toggleNav = () => {
                 <ul
                     class="w-full order-2 flex-col mt-4 space-y-2 lg:ml-20 lg:order-1 lg:flex lg:space-y-0 lg:flex-row lg:items-center lg:space-x-10 lg:mt-0">
                     <li>
-                        <NavLink :active="$page.component === 'Welcome/Home/Index'" href="/">Inicio</NavLink>
+                        <NavLink :active="$page.component === 'Welcome/Home/Index'" href="/">INICIO</NavLink>
                     </li>
                     <li>
-                        <NavLink :active="$page.component === 'Welcome/Committee/Index'" href="/comite">Cómites del
-                            congreso</NavLink>
+                        <NavLink :active="$page.component === 'Welcome/Article/Search'" href="/welcome/article/search">CONSULTAR ESTATUS DE MI ARTÍCULO</NavLink>
                     </li>
                     <!-- <li>
                         <NavLink href="#">Programa técnico</NavLink>
                     </li> -->
                     <li>
-                        <NavLink :active="$page.component === 'Welcome/Place/Index'" href="/lugar">Lugar</NavLink>
+                        <NavLink :active="$page.component === 'Welcome/Place/Index'" href="/lugar">LUGAR</NavLink>
                     </li>
-                    <li>
+                    <!-- <li>
                         <NavLink :active="$page.component === 'Welcome/Program/Index'" href="/programa">Programa
                         </NavLink>
-                    </li>
+                    </li> -->
                 </ul>
 
                 <div class="order-1 flex justify-center items-center mt-4 lg:order-2 lg:mt-0 lg:flex lg:items-center">

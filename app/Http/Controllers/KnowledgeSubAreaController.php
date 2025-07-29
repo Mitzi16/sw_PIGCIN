@@ -53,7 +53,7 @@ class KnowledgeSubAreaController extends Controller
 
         return Inertia::render("{$this->source}Index", [
             'subareas'        =>  $records,
-            'title'          => 'Gestión de Subáreas de conocimiento',
+            'title'          => 'Gestión de Áreas Prioritarias',
             'routeName'      => $this->routeName,
             'search'         => $request->search ?? '',
             'direction'     => $direction
@@ -63,7 +63,7 @@ class KnowledgeSubAreaController extends Controller
     public function create()
     {
         return Inertia::render("{$this->source}Create", [
-            'title'          => 'Agregar SubÁrea de conocimiento',
+            'title'          => 'Agregar Área Prioritaria',
             'routeName'      => $this->routeName,
             'areas' => KnowledgeArea::where('parent_id', null)->get()
         ]);

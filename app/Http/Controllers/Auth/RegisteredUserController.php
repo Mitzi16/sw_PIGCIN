@@ -27,7 +27,7 @@ class RegisteredUserController extends Controller
     public function create(): Response
     {
         return Inertia::render("Auth/Register", [
-            'title'         => 'Registro',
+            'title'         => 'Registro de Postulantes',
             'areas'         => KnowledgeArea::orderBy('name')->get(),
             'institutions'  => Institution::orderBy('name')->select('id', 'name')->where('status', true)->get(),
         ]);

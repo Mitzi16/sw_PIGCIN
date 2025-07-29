@@ -39,7 +39,7 @@ class StoreUser extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'email.StoreUser',
+            view: 'Email.StoreUser',
         );
     }
 
