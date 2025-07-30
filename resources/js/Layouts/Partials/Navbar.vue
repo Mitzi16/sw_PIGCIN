@@ -79,7 +79,7 @@ const toggleNav = () => {
                         <BaseButton v-if="!isAuthenticate" outline small label="Iniciar sesión" color="info"
                             routeName="login" />
                         <BaseButton v-if="!isAuthenticate" small label="Registrarse" color="info"
-                            routeName="register" />
+                            href="/register" />
                         <BaseButton v-if="isAuthenticate" small label="Inicio" color="info" routeName="dashboard" />
                     </div>
                 </div>

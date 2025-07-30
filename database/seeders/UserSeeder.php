@@ -26,9 +26,17 @@ class UserSeeder extends Seeder
                 'created_at'        => now()
             ],
             [
+                'name'              => 'Administrador',
+                'email'             => 'manuel.am@cenidet.tecnm.mx',
+                'password'          => Hash::make('citca2025admin'),
+                'institution_id'    => null,
+                'email_verified_at' => now(),
+                'created_at'        => now()
+            ],
+            [
                 'name'              => 'Norita Financiero',
                 'email'             => 'rf_cenidet@tecnm.mx',
-                'password'          => Hash::make('Password'),
+                'password'          => Hash::make('citca2025xo'),
                 'institution_id'    => null,
                 'email_verified_at' => now(),
                 'created_at'        => now()
@@ -42,6 +50,7 @@ class UserSeeder extends Seeder
         $financial = Role::create(['name' => 'Finanzas', 'description' => 'Finanzas']);
 
         User::find(1)->assignRole($admin);
-        User::find(2)->assignRole($financial);
+        User::find(2)->assignRole($admin);
+        User::find(3)->assignRole($financial);
     }
 }
