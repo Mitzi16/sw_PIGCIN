@@ -41,7 +41,7 @@ class RegisteredUserController extends Controller
     public function store(RegisterRequest $request): RedirectResponse
     {
         $request->validated();
-        $postulant = Role::where('name', 'Postulante')->first();
+        $postulant = Role::where('name', 'Postulante')->firstOrFail();
         $user = User::create($request->validated());
         $user->assignRole($postulant);
 

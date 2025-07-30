@@ -20,7 +20,7 @@ class RegisteredEditorUserController extends Controller
      /**
      * Display the registration view.
      */
-    public function create(): Response
+    public function createEditores(): Response
     {
         return Inertia::render("Auth/RegisterEditor", [
             'title'         => 'Registro de Revisores',
@@ -34,10 +34,10 @@ class RegisteredEditorUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(RegisterRequest $request): RedirectResponse
+    public function storeEditores(RegisterRequest $request): RedirectResponse
     {
         $request->validated();
-        $postulant = Role::where('name', 'Editor')->first();
+        $postulant = Role::where('name', 'Editor')->firstOrFail();
         $user = User::create($request->validated());
         $user->assignRole($postulant);
 

@@ -49,7 +49,7 @@ const form = useForm({
 const isLoading = ref(false);
 
 const submit = () => {
-  form.post(route("register"));
+  form.post(route("registerEditor.storeEditores"));
 };
 
 const getCurp = () => {

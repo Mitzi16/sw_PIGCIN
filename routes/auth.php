@@ -21,19 +21,19 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
                 ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', [RegisteredUserController::class, 'store'])->name('register.postulantes');;
 
     // Rutas para el registro de revisores
-    Route::get('registerReviewCitca2025', [RegisteredReviewUserController::class, 'create'])
-                ->name('register');
+    Route::get('registerReviewCitca2025', [RegisteredReviewUserController::class, 'createRevisores'])
+                ->name('registerReview');
 
-    Route::post('registerReviewCitca2025', [RegisteredReviewUserController::class, 'store']);
+    Route::post('registerReviewCitca2025', [RegisteredReviewUserController::class, 'storeRevisores'])->name('registerReview.storeRevisores');;
 
     // Rutas para el registro de editores
-    Route::get('registerEditorCitca2025', [RegisteredEditorUserController::class, 'create'])
-                ->name('register');
+    Route::get('registerEditorCitca2025', [RegisteredEditorUserController::class, 'createEditores'])
+                ->name('registerEditor');
 
-    Route::post('registerEditorCitca2025', [RegisteredEditorUserController::class, 'store']);
+    Route::post('registerEditorCitca2025', [RegisteredEditorUserController::class, 'storeEditores'])->name('registerEditor.storeEditores');;
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

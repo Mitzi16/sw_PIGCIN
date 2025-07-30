@@ -20,7 +20,7 @@ class RegisteredReviewUserController extends Controller
      /**
      * Display the registration view.
      */
-    public function create(): Response
+    public function createRevisores(): Response
     {
         return Inertia::render("Auth/RegisterReview", [
             'title'         => 'Registro de Revisores',
@@ -34,10 +34,10 @@ class RegisteredReviewUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(RegisterRequest $request): RedirectResponse
+    public function storeRevisores(RegisterRequest $request): RedirectResponse
     {
         $request->validated();
-        $postulant = Role::where('name', 'Revisor')->first();
+        $postulant = Role::where('name', 'Revisor')->firstOrFail();
         $user = User::create($request->validated());
         $user->assignRole($postulant);
 

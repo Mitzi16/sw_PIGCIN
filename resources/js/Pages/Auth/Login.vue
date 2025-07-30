@@ -102,7 +102,7 @@ const submit = () => {
                             <Link href="/register" class="lg:hidden text-xs text-blue-500 underline-offset-4 hover:underline hover:text-blue-700 hover:dark:text-blue-400">Da clic Aquí</Link>
                                 
                             <BaseButton class="w-auto mt-6 hidden lg:flex" type="submit" color="info" label="Registrarse"
-                                routeName="register" />
+                                href="/register" />
                         </div>
                     </div>
                 </div>
