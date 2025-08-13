@@ -72,7 +72,19 @@ class ArticlePolicy
 
     public function evaluate(User $user, Article $article): bool
     {
-        return $user->canPermission('article.evaluate') && $user->id === $article->editor_id && $article->article_status_id !== 4;
+        /* return $user->canPermission('article.evaluate') && $user->id === $article->editor_id && $article->article_status_id !== 4; */
+        $hasPermission   = $user->canPermission('article.evaluate');
+        $isAdmin         = $user->hasRole('Admin');
+        $isAdminRevista         = $user->hasRole('Admin-Revista');
+        $isAssignedEditor = $user->id === $article->editor_id;
+        $isFinal         = $article->article_status_id === 4;
+
+        if ($isFinal) {
+            return false; // bloqueo global si está finalizado
+        }
+
+        // Permite a Admin o al Editor asignado, siempre que tengan el permiso
+        return $hasPermission && ($isAdmin || $isAssignedEditor || $isAdminRevista );
     }
 
     public function canStorePaymentVoucher(User $user, Article $article): bool

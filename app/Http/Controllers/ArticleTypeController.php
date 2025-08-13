@@ -49,7 +49,7 @@ class ArticleTypeController extends Controller
             ->orderBy($order, $direction)
             ->paginate(8)
             ->withQueryString()
-            ->through(fn ($data) => [
+            ->through(fn($data) => [
                 'id' => $data->id,
                 'name' => $data->name,
                 'rubrics_count' => $data->rubrics_count, // Mostrar cantidad de rúbricas
@@ -75,6 +75,7 @@ class ArticleTypeController extends Controller
 
     public function store(StoreArticleTypeRequest $request)
     {
+        
         try {
             $data = $request->validated();
             $rubrics = $request->input('rubrics', []);
@@ -139,6 +140,33 @@ class ArticleTypeController extends Controller
             'articleType' => $articleType,
             'routeName' => $this->routeName,
         ]);
+    }
+
+    public function show(ArticleType $articleType)
+    {
+
+
+        try {
+            \Log::info("Eliminando ArticleType ID: {$articleType->id} - Nombre: {$articleType->name}");
+
+            $articleType->delete();
+
+            return redirect()->route("{$this->routeName}index")
+                ->with('success', 'Tipo de artículo eliminado con éxito!');
+        } catch (Exception $e) {
+            \Log::error("Error eliminando ArticleType: " . $e->getMessage());
+
+            return redirect()->back()
+                ->with('error', 'Error al eliminar el tipo de artículo: ' . $e->getMessage());
+        }
+    }
+    public function export()
+    {
+        return Excel::download(new ArticleTypeExport(), 'article_types.xlsx');
+    }
+    public function listAll()
+    {
+        return ArticleType::select('id', 'name')->orderBy('name')->get();
     }
 
    public function destroy(ArticleType $articleType)

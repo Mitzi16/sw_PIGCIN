@@ -26,6 +26,9 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             PaymentVoucherSeeder::class,
             ArticleTypeSeeder::class,
+            RubricsSeeder::class,
+            RubricsItemsSeeder::class,
+            RubricsAnswersSeeder::class,
         ]);
     }
 }

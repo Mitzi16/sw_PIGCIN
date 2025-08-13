@@ -79,7 +79,7 @@ class ArticleService
         $rubric = $articleType->rubrics()->create($rubricData);
 
         foreach ($items as $itemData) {
-            $answers = collect($itemData['answers'] ?? [])->take(4); // Máx 4 respuestas
+            $answers = collect($itemData['answers'] ?? [])->take(5); // Máx 4 respuestas
             unset($itemData['answers']);
 
             $item = $rubric->items()->create($itemData);

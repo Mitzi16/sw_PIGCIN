@@ -37,7 +37,7 @@ const addItem = (rubricIndex) => {
 
 // Agregar respuesta si no supera el límite de 4
 const addAnswer = (rubricIndex, itemIndex) => {
-  if (form.rubrics[rubricIndex].items[itemIndex].answers.length < 4) {
+  if (form.rubrics[rubricIndex].items[itemIndex].answers.length < 5) {
     form.rubrics[rubricIndex].items[itemIndex].answers.push({
       text: '',
       score: 0
@@ -140,7 +140,7 @@ const saveForm = () => {
                     <span class="text-xs font-medium">Opciones de Respuesta</span>
                     <div>
                       <BaseButton 
-                        v-if="item.answers.length < 4"
+                        v-if="item.answers.length < 5"
                         @click="addAnswer(rubricIndex, itemIndex)" 
                         :icon="mdiPlus" 
                         color="info" 

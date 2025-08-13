@@ -107,7 +107,8 @@ const filterArticleStatuses = () => {
         </BaseButtons>
     </div>
     <!-- FORM PARA EL EDITOR -->
-    <div v-else-if="getRole(['Editor', 'Admin'])">
+    <!-- <div v-else-if="getRole(['Editor', 'Admin'])"> -->
+    <div v-else-if="getRole('Editor') || getRole('Admin') || getRole('Admin-Revista')">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación final
         </h2>

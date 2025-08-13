@@ -72,10 +72,10 @@ const dateToLocal = (date) => {
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-gray-900 truncate dark:text-white">
-                        {{ props.article?.editor?.name }}
+                        Editor en Jefe
                     </p>
                     <p class="text-sm text-gray-500 truncate dark:text-gray-400">
-                        {{ props.article?.editor?.email }}
+                        Correo: {{ props.article?.editor?.email }}
                     </p>
                 </div>
             </div>

@@ -20,24 +20,22 @@ class ArticleType extends Model
     }
 
     public function articles()
-{
-    return $this->hasMany(Article::class);
-}
+    {
+        return $this->hasMany(Article::class);
+    }
 
 
-   protected static function booted()
-{
-    static::deleting(function ($articleType) {
-        // Borrar rúbricas, items y respuestas relacionados
-        foreach ($articleType->rubrics as $rubric) {
-            $rubric->items()->each(function ($item) {
-                $item->answers()->delete();
-                $item->delete();
-            });
-            $rubric->delete();
-        }
-    });
-}
-
-
+    protected static function booted()
+    {
+        static::deleting(function ($articleType) {
+            // Borrar rúbricas, items y respuestas relacionados
+            foreach ($articleType->rubrics as $rubric) {
+                $rubric->items()->each(function ($item) {
+                    $item->answers()->delete();
+                    $item->delete();
+                });
+                $rubric->delete();
+            }
+        });
+    }
 }

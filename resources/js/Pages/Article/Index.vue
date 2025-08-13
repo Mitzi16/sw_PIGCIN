@@ -31,7 +31,7 @@ import { usePage } from "@inertiajs/vue3";
 const page = usePage();
 
 // Roles permitidos para exportar
-const allowedRoles = ["Admin", "Editor", "Revisor"];
+const allowedRoles = ["Admin", "Editor", "Revisor", "Admin-Revista"];
 
 const canExport = computed(() => {
   const roles = page.props.auth?.user?.roles ?? [];

@@ -15,11 +15,19 @@ class ArticleTypeSeeder extends Seeder
     {
         DB::table('article_types')->insert([
             [
-                'name' => 'Artículo (4-6 hojas máximo)',
+                'name' => 'Artículo Congreso (4-6 hojas máximo)',
                 'created_at' => date('Y-m-d H:m:s')
             ],
             [
-                'name' => 'Póster',
+                'name' => 'Artículo Revista',
+                'created_at' => date('Y-m-d H:m:s')
+            ],
+            [
+                'name' => 'Póster Científico',
+                'created_at' => date('Y-m-d H:m:s')
+            ],
+            [
+                'name' => 'Póster Difusión',
                 'created_at' => date('Y-m-d H:m:s')
             ],
         ]);

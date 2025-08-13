@@ -137,11 +137,11 @@ provide('getRole', getRole);
                         <Tab name="status" title="Estatus" :disabled="false">
                             <Status />
                         </Tab>
-                        <Tab v-if="getRole(['Revisor', 'Editor', 'Admin'])" name="assign" title="Asignación">
+                        <Tab v-if="getRole(['Editor', 'Admin', 'Admin-Revista'])" name="assign" title="Asignación">
                             <Assigns />
                         </Tab>
 
-                        <Tab v-if="getRole(['Revisor', 'Editor', 'Admin'])" name="evaluation" title="Evaluación">
+                        <Tab v-if="getRole(['Revisor', 'Editor', 'Admin', 'Admin-Revista'])" name="evaluation" title="Evaluación">
                             <Evaluation />
                         </Tab>
                         <Tab v-if="props.article.article_status_id === 4" name="recognitions" title="Reconocimientos">

@@ -51,7 +51,7 @@ const toggleReviewer = (reviewer) => {
     <div class="mt-5">
         <div class="lg:mb-5">
             <FormField required label="Selecciona un editor:" :error="form.errors.editor_id">
-                <FormControl :disabled="!getRole(['Admin'])" v-model="form.editor_id"
+                <FormControl :disabled="!getRole(['Admin', 'Admin-Revista'])" v-model="form.editor_id"
                     :options="props.editors" />
             </FormField>
         </div>
@@ -62,11 +62,11 @@ const toggleReviewer = (reviewer) => {
                     <ul class="">
                         <li v-for="item in props.reviewers" :key="item.id">
                             <label class="p-2 justify-between flex items-center border-b border-slate-200 px-3"
-                                :class="{ 'cursor-not-allowed': !getRole(['Editor', 'Admin']), 'cursor-pointer': getRole(['Editor', 'Admin']) }">
+                                :class="{ 'cursor-not-allowed': !getRole(['Editor', 'Admin', 'Admin-Revista']), 'cursor-pointer': getRole(['Editor', 'Admin','Admin-Revista']) }">
                                 <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                     {{ item.name }}
                                 </span>
-                                <input :disabled="!getRole(['Editor', 'Admin'])" type="checkbox" class="sr-only peer"
+                                <input :disabled="!getRole(['Editor', 'Admin','Admin-Revista'])" type="checkbox" class="sr-only peer"
                                     :value="{ id: item.id }" :id="'reviewer_' + item.id"
                                     :checked="checkedReviewer(item)" @change="toggleReviewer(item)">
                                 <div
@@ -80,7 +80,7 @@ const toggleReviewer = (reviewer) => {
             </FormField>
         </div>
         <BaseButtons class="mt-5">
-            <BaseButton :disabled="!getRole(['Editor', 'Admin'])" @click="saveAssign()" :icon="mdiContentSave" color="success" label="Asignar" small />
+            <BaseButton :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])" @click="saveAssign()" :icon="mdiContentSave" color="success" label="Asignar" small />
         </BaseButtons>
     </div>
 </template>
