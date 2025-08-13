@@ -8,7 +8,8 @@ import {
     mdiPencil,
     mdiBroom,
     mdiMagnify,
-    mdiPlus
+    mdiPlus,
+    mdiReceiptText
 } from "@mdi/js";
 import NotificationBar from "@/Components/NotificationBar.vue";
 import BaseButton from "@/Components/BaseButton.vue";
@@ -24,6 +25,20 @@ import Dropdown from "@/Components/DropdownTable.vue";
 import debounce from "lodash/debounce";
 import HeadLogo from "@/Components/HeadLogo.vue";
 import { limitText } from "@/Hooks/useFormato";
+
+import { computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
+
+const page = usePage();
+
+// Roles permitidos para exportar
+const allowedRoles = ["Admin", "Editor", "Revisor"];
+
+const canExport = computed(() => {
+  const roles = page.props.auth?.user?.roles ?? [];
+  return roles.some((role) => allowedRoles.includes(role.name));
+});
+
 
 const props = defineProps({
     name: "Index",
@@ -66,6 +81,10 @@ const filterSearch = () => {
 const cleanFilters = () => {
     isLoading.value = true;
     router.get(route(`${props.routeName}index`));
+};
+
+const exportExcel = () => {
+    window.open(route(`${props.routeName}export`), "_blank");
 };
 
 const filterBy = (order, direction) => {
@@ -139,10 +158,13 @@ provide("filterBy", filterBy);
                         :icon="mdiBroom" color="lightDark" title="Limpiar filtro" />
                 </div>
 
-                <BaseButtons>
+                <BaseButtons class="flex space-x-2">
                     <BaseButton :routeName="`${routeName}create`" color="info" :icon="mdiPlus"
-                        label="Agregar convocatoria" class="w-full" />
+                        label="Agregar convocatoria" class="flex-1 h-11 rounded-l-lg " />
+                    <BaseButton :icon="mdiReceiptText" color="success" label="Exportar a Excel" @click="exportExcel"
+                        class="flex-1 h-11 rounded-r-lg" v-if="canExport" />
                 </BaseButtons>
+
             </div>
         </form>
 
@@ -214,6 +236,7 @@ provide("filterBy", filterBy);
                             <BaseButtons>
                                 <BaseButton color="info" :icon="mdiPencil" small :routeName="`${routeName}edit`"
                                     :parameter="item.id" title="Editar convocatoria" />
+
                             </BaseButtons>
                         </td>
                     </tr>

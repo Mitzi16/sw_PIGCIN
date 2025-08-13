@@ -2,7 +2,7 @@
 import LayoutMain from '@/Layouts/LayoutMain.vue'
 import HeadLogo from '@/Components/HeadLogo.vue'
 import SectionTitleLineWithButton from '@/Components/SectionTitleLineWithButton.vue'
-import { mdiBallotOutline, mdiInformation, mdiPencil, mdiBroom, mdiMagnify, mdiPlus } from '@mdi/js'
+import { mdiBallotOutline, mdiInformation, mdiPencil, mdiBroom, mdiMagnify, mdiPlus, mdiReceiptText } from '@mdi/js'
 import BaseButtons from '@/Components/BaseButtons.vue'
 import BaseButton from '@/Components/BaseButton.vue'
 import NotificationBar from '@/Components/NotificationBar.vue'
@@ -14,6 +14,19 @@ import { router, Head } from '@inertiajs/vue3'
 import { ref, reactive, provide } from 'vue'
 import Loading from 'vue-loading-overlay'
 import 'vue-loading-overlay/dist/css/index.css'
+import { computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
+
+const page = usePage();
+
+// Roles permitidos para exportar
+const allowedRoles = ["Admin", "Editor", "Revisor"];
+
+const canExport = computed(() => {
+  const roles = page.props.auth?.user?.roles ?? [];
+  return roles.some((role) => allowedRoles.includes(role.name));
+});
+
 
 const props = defineProps({
     name: 'Index',
@@ -34,6 +47,9 @@ const state = reactive({
         direction: props.direction,
     },
 })
+const exportExcel = () => {
+  window.open(route('articleType.export'));
+};
 
 const filterSearch = () => {
     router.get(route(`${props.routeName}index`, state.filters), { preserveState: true })
@@ -84,8 +100,12 @@ provide('filterBy', filterBy)
                     <BaseButton class="h-11 rounded-l-none" @click="cleanFilters" :icon="mdiBroom" color="lightDark" />
                 </div>
 
-                <BaseButtons>
-                    <BaseButton :routeName="`${routeName}create`" color="info" :icon="mdiPlus" label="Nuevo tipo" />
+                <BaseButtons class="flex space-x-2">
+                    <BaseButton :routeName="`${routeName}create`" color="info" :icon="mdiPlus" label="Nuevo tipo" 
+                    class="flex-1 h-11 rounded-l-lg"
+                    />
+                    <BaseButton :icon="mdiReceiptText" color="success" label="Exportar a Excel" @click="exportExcel"
+                    class="flex-1 h-11 rounded-r-lg" v-if="canExport"/>
                 </BaseButtons>
             </div>
         </form>

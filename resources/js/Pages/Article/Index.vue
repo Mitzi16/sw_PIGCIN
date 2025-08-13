@@ -6,11 +6,9 @@ import {
     mdiBallotOutline,
     mdiInformation,
     mdiPencil,
-    mdiFilePdfBox,
     mdiBroom,
     mdiMagnify,
     mdiPlus,
-    mdiEye,
     mdiCheckDecagram,
     mdiReceiptText
 } from "@mdi/js";
@@ -18,7 +16,7 @@ import NotificationBar from "@/Components/NotificationBar.vue";
 import BaseButton from "@/Components/BaseButton.vue";
 import BaseButtons from "@/Components/BaseButtons.vue";
 import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
-import { router, Head, usePage } from "@inertiajs/vue3";
+import { router } from "@inertiajs/vue3";
 import Pagination from "@/Shared/Pagination.vue";
 import { reactive, ref, provide } from "vue";
 import Loading from "vue-loading-overlay";
@@ -27,26 +25,26 @@ import Dropdown from "@/Components/DropdownTable.vue";
 import HeadLogo from "@/Components/HeadLogo.vue";
 import { limitText } from "@/Hooks/useFormato";
 import { useCan } from "@/Hooks/usePermissions";
+import { computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
+
+const page = usePage();
+
+// Roles permitidos para exportar
+const allowedRoles = ["Admin", "Editor", "Revisor"];
+
+const canExport = computed(() => {
+  const roles = page.props.auth?.user?.roles ?? [];
+  return roles.some((role) => allowedRoles.includes(role.name));
+});
+
 
 const props = defineProps({
     name: "Index",
-    title: {
-        type: String,
-        required: true,
-    },
-    articles: {
-        type: Object,
-        default: () => ({}),
-        required: true,
-    },
-    isReviewer: {
-        type: Boolean,
-        required: true
-    },
-    routeName: {
-        type: String,
-        required: true,
-    },
+    title: { type: String, required: true },
+    articles: { type: Object, default: () => ({}), required: true },
+    isReviewer: { type: Boolean, required: true },
+    routeName: { type: String, required: true },
     search: { type: String, required: true },
     direction: { type: String, required: true },
 });
@@ -63,11 +61,7 @@ const state = reactive({
 });
 
 const filterSearch = () => {
-    router.get(
-        route(`${props.routeName}index`, state.filters, {
-            replace: true,
-        })
-    );
+    router.get(route(`${props.routeName}index`, state.filters, { replace: true }));
 };
 
 const cleanFilters = () => {
@@ -82,66 +76,29 @@ const filterBy = (order, direction) => {
     router.get(route(`${props.routeName}index`, state.filters));
 };
 
+const exportExcel = () => {
+    // Abre en nueva pestaña para descargar el Excel
+    window.open(route(`${props.routeName}export`), "_blank");
+};
+
 const opts = [
-    {
-        label: "Identificador",
-        key: "folio",
-        menu: [
-            { title: "Ordenar desde A - Z", direction: "asc" },
-            { title: "Ordenar desde Z - A", direction: "desc" },
-        ],
-    },
-    {
-        label: "Titulo",
-        key: "title",
-        menu: [
-            { title: "Ordenar desde A - Z", direction: "asc" },
-            { title: "Ordenar desde Z - A", direction: "desc" },
-        ],
-    },
-    {
-        label: "Tipo",
-        key: "type",
-        menu: [
-            { title: "Ordenar desde A - Z", direction: "asc" },
-            { title: "Ordenar desde Z - A", direction: "desc" },
-        ],
-    },
-    {
-        label: "Resumen",
-        key: "abstract",
-        menu: [
-            { title: "Ordenar desde A - Z", direction: "asc" },
-            { title: "Ordenar desde Z - A", direction: "desc" },
-        ],
-    },
-    {
-        label: "Area_Prioritaria",
-        key: "area",
-        menu: [
-            { title: "Ordenar desde A - Z", direction: "asc" },
-            { title: "Ordenar desde Z - A", direction: "desc" },
-        ],
-    },
-    {
-        label: "Estatus",
-        key: "status",
-        menu: [
-            { title: "Ordenar desde A - Z", direction: "asc" },
-            { title: "Ordenar desde Z - A", direction: "desc" },
-        ],
-    },
+    { label: "Identificador", key: "folio", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
+    { label: "Titulo", key: "title", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
+    { label: "Tipo", key: "type", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
+    { label: "Resumen", key: "abstract", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
+    { label: "Area_Prioritaria", key: "area", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
+    { label: "Estatus", key: "status", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
 ];
 
 const canEdit = (id) => {
-    if (useCan('article.update')) {
-        const article = props.articles.data.find(article => article?.id === id);
+    if (useCan("article.update")) {
+        const article = props.articles.data.find((article) => article?.id === id);
         if (article.isPostulant && article.status.can_edit) {
             return true;
         }
     }
     return false;
-}
+};
 
 provide("filterBy", filterBy);
 
@@ -150,8 +107,7 @@ provide("filterBy", filterBy);
 <template>
     <HeadLogo :title="title" />
     <LayoutMain>
-        <SectionTitleLineWithButton :icon="mdiBallotOutline" :title="title" main>
-        </SectionTitleLineWithButton>
+        <SectionTitleLineWithButton :icon="mdiBallotOutline" :title="title" main />
 
         <NotificationBar v-if="$page.props.flash.success" color="success" :icon="mdiInformation" :outline="false">
             {{ $page.props.flash.success }}
@@ -162,21 +118,27 @@ provide("filterBy", filterBy);
         </NotificationBar>
 
         <form @submit.prevent="filterSearch" class="w-full mb-5">
-            <div class="flex flex-col md:flex-row justify-between">
+            <div class="flex flex-col md:flex-row justify-between items-center">
                 <div class="flex w-full md:w-1/2 mr-1 my-4">
                     <input type="search" id="search-dropdown"
-                        class="block pr-10 md:h-11 w-full z-20 text-sm text-gray-900 bg-gray-50 rounded-l-lg md:border-l-gray-300 border-l-gray-300 border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-l-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:border-blue-500"
+                        class="block pr-10 md:h-11 w-full z-20 text-sm text-gray-900 bg-gray-50 rounded-l-lg md:border-l-gray-300 border-l-gray-300 border border-gray-300
+                    focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-l-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:border-blue-500"
                         placeholder="Ingresa un parametro de busqueda" v-model="search" />
                     <BaseButton class="relative z-30 right-0 h-11 rounded-none" @click="filterSearch" :icon="mdiMagnify"
                         color="info" title="Buscar" />
-                    <BaseButton class=" relative right-0 h-11 rounded-l-none rounded-r-lg" @click="cleanFilters"
+                    <BaseButton class="relative right-0 h-11 rounded-l-none rounded-r-lg" @click="cleanFilters"
                         :icon="mdiBroom" color="lightDark" title="Limpiar filtro" />
                 </div>
 
-                <BaseButtons>
+                <BaseButtons class="flex space-x-2 w-full max-w-sm">
+                    <!-- max-w-sm opcional para que no se estiren demasiado -->
                     <BaseButton v-if="useCan('article.store')" :routeName="`${routeName}create`" color="info"
-                        :icon="mdiPlus" label="Agregar artículo" class="w-full" />
+                        :icon="mdiPlus" label="Agregar artículo" class="flex-1 h-11 rounded-l-lg " />
+
+                    <BaseButton :icon="mdiReceiptText" color="success" label="Exportar Excel" @click="exportExcel"
+                        class="flex-1 h-11 rounded-r-lg" v-if="canExport"/>
                 </BaseButtons>
+
             </div>
         </form>
 
@@ -200,9 +162,7 @@ provide("filterBy", filterBy);
                         <th>
                             <Dropdown title="Area_Prioritaria" :options="opts" />
                         </th>
-                        <th class="text-sm" v-if="isReviewer">
-                            Estatus de evaluación
-                        </th>
+                        <th class="text-sm" v-if="isReviewer">Estatus de evaluación</th>
                         <th v-else>
                             <Dropdown title="Estatus" :options="opts" />
                         </th>
@@ -224,21 +184,11 @@ provide("filterBy", filterBy);
                                     d="M8.5 2.687c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z" />
                             </svg>
                         </td>
-                        <td data-label="Identificador">
-                            {{ item.folio }}
-                        </td>
-                        <td data-label="Titulo">
-                            {{ limitText(item.title, 50) }}
-                        </td>
-                        <td data-label="Tipo">
-                            {{ item.article_type?.name ?? 'Sin tipo' }}
-                        </td>
-                        <td data-label="Resumen">
-                            {{ limitText(item.abstract, 50) }}
-                        </td>
-                        <td data-label="Area">
-                            {{ item.area }}
-                        </td>
+                        <td data-label="Identificador">{{ item.folio }}</td>
+                        <td data-label="Titulo">{{ limitText(item.title, 50) }}</td>
+                        <td data-label="Tipo">{{ item.article_type?.name ?? "Sin tipo" }}</td>
+                        <td data-label="Resumen">{{ limitText(item.abstract, 50) }}</td>
+                        <td data-label="Area">{{ item.area }}</td>
                         <td v-if="isReviewer" data-label="Estatus de evaluación">
                             <div class="dark:bg-green-800 dark:text-green-200 bg-green-100 rounded-full text-green-500 px-2 dark:opacity-95 opacity-85 w-max text-center"
                                 v-if="item.statusReviewer">
@@ -251,13 +201,9 @@ provide("filterBy", filterBy);
                             </div>
                         </td>
                         <td v-else data-label="Estatus">
-                            <div :class="item.status.class">
-                                {{ item.status.name }}
-                            </div>
+                            <div :class="item.status.class">{{ item.status.name }}</div>
                         </td>
-                        <td data-label="Comprobante">
-                            {{ item.paymentVoucherStatus?.name }}
-                        </td>
+                        <td data-label="Comprobante">{{ item.paymentVoucherStatus?.name }}</td>
                         <td data-label="Acciones">
                             <BaseButtons>
                                 <BaseButton v-if="canEdit(item.id)" color="info" :icon="mdiPencil" small

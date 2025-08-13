@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Call;
+use App\Models\Article;
+use App\Models\Author;
+use App\Models\ArticleStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -78,12 +81,27 @@ class WelcomeController extends Controller
 
     public function searchArticle(string $code = null)
     {
+        if ($code) {
+        $article = Article::with('files')->where('article_folio', $code)->first(); 
+
+        if ($article) {
+            return redirect()->route('welcome.show.article', ['code' => $code]);
+        }
+
         return Inertia::render("{$this->source}Article/Search", [
             'title'     => 'Buscador de Artículos',
             'code'      => $code,
+            'notFound'  => true,
             'routeName' => $this->routeName,
         ]);
+     }
+
+     return Inertia::render("{$this->source}Article/Search", [
+        'title'     => 'Buscador de Artículos',
+        'routeName' => $this->routeName,
+        ]);
     }
+
 
     /* public function showArticle(string $code)
     {
@@ -106,13 +124,29 @@ class WelcomeController extends Controller
     }  */
     public function showArticle(string $code)
     {
+        $article = Article::with(['file', 'status']) // Asegúrate de tener relación con status
+        ->where('article_folio', $code)
+        ->first();
+
+     if (!$article) {
+        return redirect()->route('welcome.search.article', ['code' => $code])
+            ->with([
+                'alert' => [
+                    'title' => 'No encontrado',
+                    'text' => 'No se encontró ningún artículo con ese folio.',
+                    'icon' => 'warning',
+                    'redirectTo' => route('welcome.search.article')
+                ]
+            ]);
+        }
+
+        $statuses = ArticleStatus::select('id', 'name', 'description')->get();
+
         return Inertia::render("{$this->source}Article/Show", [
-        'alert' => [
-            'title' => 'Módulo en construcción',
-            'text' => 'Esta sección se encuentra actualmente en desarrollo.',
-            'icon' => 'info',
-            'redirectTo' => route('welcome.search.article') // ruta a redirigir al cerrar
-        ]
-    ]);
+        'title'            => 'Detalle del Artículo',
+        'article'          => $article,
+        'articleStatuses'  => $statuses,
+        'routeName'        => $this->routeName,
+        ]);
     }
 }

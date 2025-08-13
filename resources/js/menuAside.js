@@ -118,4 +118,48 @@ export default [
         icon: mdiReceiptText,
         permission: "paymentVoucher.index",
     },
+    {
+        label: "Graficas",
+        icon: mdiViewList,
+        permission: "menu.graficas",
+        menu: [
+            {
+                route: "article.graphs.institution",
+                label: "Artículos por institución",
+                icon: mdiBullhorn,
+            },
+            {
+                label: "Artículos por tipo de artículo",
+                route: "article.graphs.articleType",
+                icon: mdiViewModule,
+            },
+            {
+                label: "Artículos por estatus",
+                route: "article.graphs.status",
+                icon: mdiViewModule,
+                
+            },
+            {
+                label: "Artículos por fecha de postulación",
+                route: "article.graphs.date",
+                icon: mdiViewModule,
+                // permission: "knowledgeArea.index",
+            },
+            {
+                label: "Artículos por usuario",
+                route: "article.graphs.user",
+                icon: mdiDomain,
+            },
+            {
+                label: "Artículos por programa de estudio",
+                route: "article.graphs.program",
+                icon: mdiDomain,
+            },
+            {
+                label: "Artículos por área prioritaria",
+                route: "article.graphs.area",
+                icon: mdiDomain,
+            },
+        ],
+    }
 ];

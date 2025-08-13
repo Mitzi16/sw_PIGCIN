@@ -7,6 +7,8 @@ use App\Http\Requests\StoreKnowledgeAreaRequest;
 use App\Http\Requests\UpdateKnowledgeAreaRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\KnowledgeAreaExport;
 
 class KnowledgeAreaController extends Controller
 {
@@ -118,5 +120,13 @@ class KnowledgeAreaController extends Controller
     {
         $knowledgeArea->delete();
         return redirect()->route("{$this->routeName}index")->with('success', 'Área de conocimiento eliminada con éxito');
+    }
+
+    /**
+     * Export knowledge areas to Excel.
+     */
+    public function export()
+    {
+        return Excel::download(new KnowledgeAreaExport(), 'Programas de Estudio.xlsx');
     }
 }

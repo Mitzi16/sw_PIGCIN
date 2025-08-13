@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Article;
-use Illuminate\Http\Request;
+use App\Models\ArticleType;
 use Illuminate\Support\Facades\DB;
 
 class ArticleService
@@ -15,8 +15,6 @@ class ArticleService
         $this->articles = $articles;
     }
 
-
-
     public function getUniqueCode(): string
     {
         $congreso = 'CITCA';
@@ -25,21 +23,70 @@ class ArticleService
         $date = now()->format('d-m-Y');
         $edicion_citca = $mes <= 6 ? '01' : '02';
 
-        // Obtener el próximo ID basado en el máximo ID actual
         $nextId = str_pad((Article::max('id') ?? 0) + 1, 4, '0', STR_PAD_LEFT);
-
-        // Generar el código base
         $baseCode = "{$congreso}{$ano}-{$edicion_citca}-{$nextId}-{$date}";
 
-        // Verificar unicidad
         $suffix = 0;
         $originalBase = $baseCode;
-
         while (Article::where('article_folio', $baseCode)->exists()) {
             $suffix++;
             $baseCode = "{$originalBase}-{$suffix}";
         }
 
         return $baseCode;
+    }
+
+    public function createWithRubrics(array $data, ?array $rubrics = null): ArticleType
+    {
+        return DB::transaction(function () use ($data, $rubrics) {
+            $articleType = ArticleType::create($data);
+
+            if ($rubrics) {
+                $this->createRubrics($articleType, $rubrics);
+            }
+
+            return $articleType->load(['rubrics.items.answers']);
+        });
+    }
+
+    public function updateWithRubrics(ArticleType $articleType, array $data, ?array $rubrics = null): ArticleType
+    {
+        return DB::transaction(function () use ($articleType, $data, $rubrics) {
+            $articleType->update($data);
+
+            if ($rubrics !== null) {
+                // Soft delete existing rubrics
+                $articleType->rubrics()->delete();
+
+                // Create new rubrics
+                $this->createRubrics($articleType, $rubrics);
+            }
+
+            return $articleType->load(['rubrics.items.answers']);
+        });
+    }
+
+    private function createRubrics(ArticleType $articleType, array $rubrics): void
+    {
+        // Solo tomamos la primera rúbrica
+        $rubricData = collect($rubrics)->first();
+
+        if (!$rubricData) return;
+
+        $items = collect($rubricData['items'] ?? [])->take(10); // Máx 10 preguntas
+        unset($rubricData['items']);
+
+        $rubric = $articleType->rubrics()->create($rubricData);
+
+        foreach ($items as $itemData) {
+            $answers = collect($itemData['answers'] ?? [])->take(4); // Máx 4 respuestas
+            unset($itemData['answers']);
+
+            $item = $rubric->items()->create($itemData);
+
+            foreach ($answers as $answerData) {
+                $item->answers()->create($answerData);
+            }
+        }
     }
 }

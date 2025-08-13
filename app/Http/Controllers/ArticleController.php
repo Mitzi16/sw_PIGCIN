@@ -30,7 +30,8 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Mail;
 use App\Services\ArticleService;
-
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ArticlesExport;
 class ArticleController extends Controller
 {
     private Article $model;
@@ -156,14 +157,14 @@ class ArticleController extends Controller
      */
     public function store(StoreArticleRequest $request)
     {
-        
+
         $fields = $request->validated();
         $fields['article_folio'] = $this->articleService->getUniqueCode(); // se inicia el proceso
         $fields['postulant_id'] = Auth::id();
         $article = Article::create($fields);
 
         //nombre del archivo
-        $nombre_archivo=$article->article_folio.'-'.$request->selectedArea.'-'.$article->knowledge_area_id.'-'.$article->article_type_id.'.pdf';
+        $nombre_archivo = $article->article_folio . '-' . $request->selectedArea . '-' . $article->knowledge_area_id . '-' . $article->article_type_id . '.pdf';
 
         $this->storeFile($request, $article, $nombre_archivo);
         $this->storeAuthors($request, $article->id);
@@ -364,7 +365,7 @@ class ArticleController extends Controller
             Storage::disk('private')->delete($existingFile->path);
             $existingFile->delete();
         } */
-    
+
         if ($request->hasFile('file')) {
             $fileStorage = $request->file('file');
             $fileName = (File::max('id') + 1) . '-' . $nombre_archivo;
@@ -446,5 +447,10 @@ class ArticleController extends Controller
                 }
             }
         }
+    }
+
+    public function export()
+    {
+        return Excel::download(new ArticlesExport, 'articulos.xlsx');
     }
 }

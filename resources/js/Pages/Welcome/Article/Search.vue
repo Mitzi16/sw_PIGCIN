@@ -16,9 +16,18 @@ import Swal from "sweetalert2";
 // Props
 const props = defineProps({
     title: { type: String, required: true },
-    code: { type: String, required: false, default: null }
+    code: { type: String, required: false, default: null },
+    notFound: { type: Boolean, required: false, default: false },
 });
 
+if (props.code && props.code !== '' && props.notFound) {
+  Swal.fire({
+    icon: 'error',
+    title: 'Artículo no encontrado',
+    text: `No se encontró ningún artículo con el folio: ${props.code}`,
+    confirmButtonText: 'OK'
+  });
+}
 // Form
 const form = useForm({ code: props.code });
 

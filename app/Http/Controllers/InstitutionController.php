@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\InstitutionExport;
 use App\Models\Institution;
 use App\Http\Requests\StoreInstitutionRequest;
 use App\Http\Requests\UpdateInstitutionRequest;
@@ -10,6 +11,7 @@ use App\Models\State;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class InstitutionController extends Controller
 {
@@ -59,7 +61,7 @@ class InstitutionController extends Controller
             $records = $records->orderBy($order, $direction);
         }
         $records = $records->paginate(8)->withQueryString()->through(
-            fn ($institution) => [
+            fn($institution) => [
                 'id' => $institution->id,
                 'name' => $institution->name,
                 'country' => $institution->country ? $institution->country->name : null,
@@ -137,5 +139,12 @@ class InstitutionController extends Controller
     {
         $institution->delete();
         return redirect()->route("{$this->routeName}index")->with('success', 'Institución eliminada con éxito');
+    }
+
+
+
+    public function export()
+    {
+        return Excel::download(new InstitutionExport(), 'institutions.xlsx');
     }
 }

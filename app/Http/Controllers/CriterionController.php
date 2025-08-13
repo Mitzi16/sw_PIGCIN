@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\CriterionExport;
 use App\Models\Criterion;
 use App\Http\Requests\StoreCriterionRequest;
 use App\Http\Requests\UpdateCriterionRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
+
 
 class CriterionController extends Controller
 {
@@ -26,6 +30,7 @@ class CriterionController extends Controller
         $this->middleware("permission:{$this->module}.store")->only(['store', 'create']);
         $this->middleware("permission:{$this->module}.update")->only(['update', 'edit']);
         $this->middleware("permission:{$this->module}.delete")->only(['destroy']);
+        
     }
     /**
      * Display a listing of the resource.
@@ -45,7 +50,7 @@ class CriterionController extends Controller
         });
 
         $records = $records->orderBy($order, $direction)->paginate(8)->withQueryString()->through(
-            fn ($data) => [
+            fn($data) => [
                 'id' => $data->id,
                 'name' => $data->name,
                 'description' => $data->description,
@@ -117,5 +122,13 @@ class CriterionController extends Controller
     {
         $criterion->delete();
         return redirect()->route("{$this->routeName}index")->with('success', 'Criterio eliminado con éxito');
+    }
+
+    public function export()
+    {
+            Log::info('Exportando criterios a Excel');
+
+
+        return Excel::download(new CriterionExport, 'criteria.xlsx');
     }
 }

@@ -17,6 +17,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\ArticleGraphController;
 use App\Models\Module;
 use App\Models\User;
 use Illuminate\Foundation\Application;
@@ -42,13 +43,20 @@ Route::get('/programa', [WelcomeController::class, 'program'])->name('welcome.pr
 Route::get('/welcome/article/show/{code?}', [WelcomeController::class, 'showArticle'])->name('welcome.show.article');
 Route::get('/welcome/article/search/{code?}', action: [WelcomeController::class, 'searchArticle'])->name('welcome.search.article');
 
-
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
 
     // Route::get('/dashboard', function () {
     //     return Inertia::render('Dashboard', ['users' => User::all(), 'modulos' => Module::all()]);
     // })->name('dashboard');
+
+    Route::get('/graficas/article/institution', [ArticleGraphController::class, 'institution'])->name('article.graphs.institution');
+    Route::get('/graficas/article/articleType', [ArticleGraphController::class, 'articleType'])->name('article.graphs.articleType');
+    Route::get('/graficas/article/status', [ArticleGraphController::class, 'status'])->name('article.graphs.status');
+    Route::get('/graficas/article/date', [ArticleGraphController::class, 'date'])->name('article.graphs.date');
+    Route::get('/graficas/article/user', [ArticleGraphController::class, 'articlesByRole'])->name('article.graphs.user');
+    Route::get('/graficas/article/program', [ArticleGraphController::class, 'articlesByProgram'])->name('article.graphs.program');
+    Route::get('/graficas/article/area', [ArticleGraphController::class, 'articlesByArea'])->name('article.graphs.area');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -70,7 +78,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //
     Route::resource('article', ArticleController::class)->parameters(['article' => 'article']);
-    Route::resource('articleTypes', ArticleTypeController::class)->names('articleType');
+    Route::resource('articleTypes', ArticleTypeController::class)->names('articleType')->except(['show']);
+
+    //Exports to Excel 
+
+    Route::prefix('admin')->group(function () {
+        Route::get('criterion/export', [CriterionController::class, 'export'])->name('criterion.export');
+        Route::get('articles/export', [ArticleController::class, 'export'])->name('article.export');
+        Route::get('calls/export', [CallController::class, 'export'])->name('call.export');
+        Route::get('articleTypes/export', [ArticleTypeController::class, 'export'])->name('articleType.export');
+        Route::get('institution/export', [InstitutionController::class, 'export'])->name('institution.export');
+        Route::get('knowledgeArea/export', [KnowledgeAreaController::class, 'export'])->name('knowledgeArea.export');
+        Route::get('knowledgeSubArea/export', [KnowledgeSubAreaController::class, 'export'])->name('knowledgeSubArea.export');
+
+    });
+
 
     Route::resource('articleReview', ArticleReviewController::class)->parameters(['articleReview' => 'articleReview']);
     Route::resource('paymentVoucher', PaymentVoucherController::class)->parameters(['paymentVoucher' => 'paymentVoucher']);

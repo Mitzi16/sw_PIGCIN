@@ -8,6 +8,8 @@ use App\Http\Requests\UpdateCallRequest;
 use App\Models\File;
 use App\Models\Institution;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\CallsExport;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -49,7 +51,7 @@ class CallController extends Controller
         });
 
         $records = $records->orderBy($order, $direction)->paginate(8)->withQueryString()->through(
-            fn ($data) => [
+            fn($data) => [
                 'id' => $data->id,
                 'title' => $data->title,
                 'description' => $data->description,
@@ -171,5 +173,9 @@ class CallController extends Controller
                 $this->createFile($request, $call, $type);
             }
         }
+    }
+    public function export()
+    {
+        return Excel::download(new CallsExport, 'calls.xlsx');
     }
 }

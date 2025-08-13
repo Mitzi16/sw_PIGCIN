@@ -4,6 +4,7 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ArticleTypeController;
 use App\Http\Controllers\Api\InstitutionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -30,3 +31,4 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('file/serve/{file}', [FileController::class, 'serveFile'])->name('file.serve')->middleware('signed');
 Route::get('get-curp/{curp}', [UserController::class, 'getCurp'])->name('user.getCurp');
 Route::get('/institutions/{search}', [InstitutionController::class, 'filter'])->name('institution.filter');
+Route::get('/article-types/list', [ArticleTypeController::class, 'listAll']) ->middleware('auth');

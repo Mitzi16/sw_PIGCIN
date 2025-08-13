@@ -1,45 +1,37 @@
 <script setup>
-import { ref, watch, computed, onMounted } from "vue";
-import {
-  Chart,
-  LineElement,
-  PointElement,
-  LineController,
-  LinearScale,
-  CategoryScale,
-  Tooltip,
-} from "chart.js";
+import { ref, watch, onMounted, defineProps } from "vue";
+import { Chart, registerables } from "chart.js";
+
+Chart.register(...registerables);
 
 const props = defineProps({
   data: {
     type: Object,
     required: true,
   },
+  type: {
+    type: String,
+    default: "line", // acepta 'line', 'bar', 'pie', etc.
+  },
 });
 
 const root = ref(null);
-
 let chart;
 
-Chart.register(
-  LineElement,
-  PointElement,
-  LineController,
-  LinearScale,
-  CategoryScale,
-  Tooltip
-);
+function createChart() {
+  if (chart) {
+    chart.destroy();
+  }
 
-onMounted(() => {
   chart = new Chart(root.value, {
-    type: "line",
+    type: props.type,
     data: props.data,
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: {
+      scales: props.type === 'pie' ? {} : {
         y: {
-          display: false,
+          display: true,
         },
         x: {
           display: true,
@@ -47,21 +39,17 @@ onMounted(() => {
       },
       plugins: {
         legend: {
-          display: false,
+          display: true,
         },
       },
     },
   });
-});
+}
 
-const chartData = computed(() => props.data);
+onMounted(createChart);
 
-watch(chartData, (data) => {
-  if (chart) {
-    chart.data = data;
-    chart.update();
-  }
-});
+watch(() => props.data, createChart, { deep: true });
+watch(() => props.type, createChart);
 </script>
 
 <template>

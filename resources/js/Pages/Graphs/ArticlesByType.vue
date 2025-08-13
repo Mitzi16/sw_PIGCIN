@@ -1,0 +1,222 @@
+<script setup>
+import HeadLogo from "@/Components/HeadLogo.vue";
+import LayoutAuthenticated from "@/Layouts/LayoutAuthenticated.vue";
+import SectionTitleLineWithButton from "@/Components/SectionTitleLineWithButton.vue";
+import SectionMain from "@/Components/SectionMain.vue";
+import Dropdown from "@/Components/Dropdown.vue"; // Asegúrate que exista
+import { mdiChartTimelineVariant } from "@mdi/js";
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { Chart, registerables } from 'chart.js';
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+
+const props = defineProps({
+  articleTypes: { type: Array, required: true }
+});
+
+// Función para generar color pastel consistente basado en el ID
+function getColorFromId(id, alpha = 0.5) {
+  const hue = (id * 60) % 360; // Cambia el 60 para variar el espaciado de colores
+  return `hsla(${hue}, 70%, 70%, ${alpha})`;
+}
+
+// Generar colores fijos por ID
+const backgroundColors = props.articleTypes.map(type => getColorFromId(type.id, 0.5));
+const borderColors = props.articleTypes.map(type => getColorFromId(type.id, 1));
+
+// Registra todos los componentes de Chart.js
+Chart.register(...registerables);
+
+const chartData = ref({
+  labels: props.articleTypes.map(type => type.name),
+  datasets: [{
+    label: 'Cantidad de Artículos',
+    data: props.articleTypes.map(type => type.total),
+    backgroundColor: props.articleTypes.map(type => getColorFromId(type.id, 0.5)),
+    borderColor: props.articleTypes.map(type => getColorFromId(type.id, 1)),
+    borderWidth: 1
+  }]
+});
+
+const chartOptions = ref({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { position: 'top' },
+    title: { display: true, text: 'Distribución de Artículos ' }
+  },
+  scales: {
+    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+  }
+});
+
+let myChart = null;
+
+onMounted(() => {
+  const ctx = document.getElementById('articlesChart');
+  if (ctx) {
+    myChart = new Chart(ctx, {
+      type: 'bar',
+      data: chartData.value,
+      options: chartOptions.value
+    });
+  }
+});
+
+onBeforeUnmount(() => { 
+  if (myChart) {
+    myChart.destroy();
+    myChart = null;
+  }
+});
+
+// Función para descargar gráfica y tabla
+async function downloadChartsAs(format = "pdf") {
+  try {
+    const element = document.getElementById("charts-pdf-content");
+    if (!element) return;
+
+    const noCaptureElements = document.querySelectorAll(".no-capture");
+    noCaptureElements.forEach((el) => (el.style.visibility = "hidden"));
+
+    const canvas = await html2canvas(element, { 
+      backgroundColor: null, 
+      scale: 2,
+      logging: false,
+      useCORS: true
+    });
+
+    noCaptureElements.forEach((el) => (el.style.visibility = "visible"));
+
+    const imgData = canvas.toDataURL(`image/${format === 'pdf' ? 'png' : format}`);
+
+    if (format === "pdf") {
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("graficas.pdf");
+    } else {
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = `graficas.${format}`;
+      link.click();
+    }
+  } catch (error) {
+    console.error("Error al generar el documento:", error);
+  }
+}
+</script>
+
+<template>
+  <HeadLogo title="Artículos Por Tipo de Artículo" />
+  <LayoutAuthenticated>
+    <SectionMain>
+      <SectionTitleLineWithButton
+        :icon="mdiChartTimelineVariant"
+        title="Artículos Por Tipo de Artículo"
+        main
+      />
+      <div id="charts-pdf-content" class="p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-lg shadow relative">
+        
+        <!-- Dropdown de opciones (sin cambios) -->
+        <div class="absolute top-4 right-4 z-10 no-capture">
+          <Dropdown>
+            <template #trigger>
+              <button
+                class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-white px-3 py-2 rounded"
+              >
+                Opciones
+              </button>
+            </template>
+
+            <template #content>
+              <ul class="rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md dark:shadow-lg">
+                <li>
+                    <button
+                      @click="downloadChartsAs('png')"
+                      class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <span class="flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Descargar PNG
+                      </span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      @click="downloadChartsAs('jpg')"
+                      class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <span class="flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Descargar JPG
+                      </span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      @click="downloadChartsAs('pdf')"
+                      class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <span class="flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Descargar PDF
+                      </span>
+                    </button>
+                  </li>
+              </ul>
+            </template>
+          </Dropdown>
+        </div>
+
+        <!-- Gráfica (sin cambios) -->
+        <div class="chart-container" style="position: relative; height:400px; width:100%">
+          <canvas id="articlesChart"></canvas>
+        </div>
+        
+        <!-- Tabla con mejoras responsive y dark mode -->
+        <div class="mt-8 overflow-x-auto shadow-md rounded-lg">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Datos detallados</h2>
+          <table class="min-w-full border border-gray-200 dark:border-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th scope="col" class="px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Tipo de Artículo
+                </th>
+                <th scope="col" class="px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Cantidad
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(label, index) in chartData.labels" :key="index" :class="{'bg-gray-50 dark:bg-gray-700': index % 2 === 0, 'bg-white dark:bg-gray-800': index % 2 !== 0}">
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700">
+                  {{ label }}
+                </td>
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                  {{ chartData.datasets[0].data[index] }}
+                </td>
+              </tr>
+              <tr class="bg-gray-100 dark:bg-gray-600 font-semibold">
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700">
+                  Total
+                </td>
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700">
+                  {{ chartData.datasets[0].data.reduce((a, b) => a + b, 0) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </SectionMain>
+  </LayoutAuthenticated>
+</template>

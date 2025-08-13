@@ -23,6 +23,26 @@ class StoreArticleTypeRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255|unique:article_types,name',
+            'rubrics' => 'nullable|array',
+            'rubrics.*.title' => 'required|string|max:255',
+            'rubrics.*.items' => 'nullable|array',
+            'rubrics.*.items.*.question' => 'required|string',
+            'rubrics.*.items.*.answers' => 'nullable|array',
+            'rubrics.*.items.*.answers.*.text' => 'required|string',
+            'rubrics.*.items.*.answers.*.score' => 'required|numeric|min:0',
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            'name.required' => 'El nombre del tipo de artículo es obligatorio.',
+            'name.unique' => 'Ya existe un tipo de artículo con este nombre.',
+            'rubrics.*.title.required' => 'El título de la rúbrica es obligatorio.',
+            'rubrics.*.items.*.question.required' => 'La pregunta es obligatoria.',
+            'rubrics.*.items.*.answers.*.text.required' => 'El texto de la respuesta es obligatorio.',
+            'rubrics.*.items.*.answers.*.score.required' => 'El puntaje es obligatorio.',
+            'rubrics.*.items.*.answers.*.score.numeric' => 'El puntaje debe ser un número.',
         ];
     }
 

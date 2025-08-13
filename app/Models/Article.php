@@ -75,4 +75,9 @@ class Article extends Model
     {
         return $this->belongsTo(ArticleType::class);
     }
+
+    public function status()
+    {
+    return $this->belongsTo(ArticleStatus::class, 'article_status_id');
+    }
 }

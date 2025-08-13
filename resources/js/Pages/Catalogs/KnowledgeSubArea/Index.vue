@@ -8,7 +8,8 @@ import {
     mdiPencil,
     mdiBroom,
     mdiMagnify,
-    mdiPlus
+    mdiPlus,
+    mdiReceiptText
 } from "@mdi/js";
 import NotificationBar from "@/Components/NotificationBar.vue";
 import BaseButton from "@/Components/BaseButton.vue";
@@ -24,6 +25,19 @@ import Dropdown from "@/Components/DropdownTable.vue";
 import debounce from "lodash/debounce";
 import HeadLogo from "@/Components/HeadLogo.vue";
 import { limitText } from "@/Hooks/useFormato";
+import { computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
+
+const page = usePage();
+
+// Roles permitidos para exportar
+const allowedRoles = ["Admin", "Editor", "Revisor"];
+
+const canExport = computed(() => {
+  const roles = page.props.auth?.user?.roles ?? [];
+  return roles.some((role) => allowedRoles.includes(role.name));
+});
+
 
 const props = defineProps({
     name: "Index",
@@ -73,6 +87,10 @@ const filterBy = (order, direction) => {
     state.filters.direction = direction;
     isLoading.value = true;
     router.get(route(`${props.routeName}index`, state.filters));
+};
+
+const exportExcel = () => {
+    window.open(route(`${props.routeName}export`), "_blank");
 };
 
 const opts = [
@@ -130,9 +148,11 @@ provide("filterBy", filterBy);
                         :icon="mdiBroom" color="lightDark" title="Limpiar filtro" />
                 </div>
 
-                <BaseButtons>
+                <BaseButtons class="flex space-x-2">
                     <BaseButton :routeName="`${routeName}create`" color="info" :icon="mdiPlus" label="Agregar Área"
-                        class="w-full" />
+                        class="flex-1 h-11 rounded-l-lg" />
+                    <BaseButton @click="exportExcel" color="success" :icon="mdiReceiptText" label="Exportar a Excel"
+                        class="flex-1 h-11 rounded-r-lg" v-if="canExport" />
                 </BaseButtons>
             </div>
         </form>

@@ -7,6 +7,8 @@ use App\Models\KnowledgeArea;
 use App\Http\Requests\StoreKnowledgeAreaRequest;
 use App\Http\Requests\UpdateKnowledgeAreaRequest;
 use Inertia\Inertia;
+use App\Exports\KnowledgeSubAreaExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class KnowledgeSubAreaController extends Controller
 {
@@ -14,7 +16,7 @@ class KnowledgeSubAreaController extends Controller
     private string $source;
     private string $routeName;
     private string $module = 'knowledgeSubArea';
-    
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -43,7 +45,7 @@ class KnowledgeSubAreaController extends Controller
         });
 
         $records = $records->orderBy($order, $direction)->paginate(8)->withQueryString()->through(
-            fn ($data) => [
+            fn($data) => [
                 'id' => $data->id,
                 'name' => $data->name,
                 'description' => $data->description,
@@ -96,5 +98,10 @@ class KnowledgeSubAreaController extends Controller
     {
         $knowledgeSubArea->delete();
         return redirect()->route("{$this->routeName}index")->with('success', 'Área de conocimiento eliminada con éxito');
+    }
+
+    public function export()
+    {
+        return Excel::download(new KnowledgeSubAreaExport(), 'subareas_de_conocimiento.xlsx');
     }
 }
