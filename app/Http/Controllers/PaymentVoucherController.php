@@ -61,6 +61,7 @@ class PaymentVoucherController extends Controller
             if ($search != '') {
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('title', 'LIKE', '%' . $search . '%')
+                        ->orWhere('article_folio', 'LIKE', '%' . $search . '%')
                         ->orWhere('type', 'LIKE', '%' . $search . '%')
                         ->orWhere('abstract', 'LIKE', '%' . $search . '%')
                         ->orWhere('key_works', 'LIKE', '%' . $search . '%')
@@ -80,6 +81,7 @@ class PaymentVoucherController extends Controller
         $articles = $query->paginate(8)->withQueryString()->through(
             fn($article) => [
                 'id' => $article->id,
+                'article_folio' => $article->article_folio,
                 'title' => $article->title,
                 'editor' => $article->editor->name,
                 'status' => $article->articleStatus,
@@ -104,7 +106,7 @@ class PaymentVoucherController extends Controller
         $this->authorize('canStorePaymentVoucher', $article);
         return Inertia::render("{$this->source}Create", [
             'title'      => 'Cargar comprobante de pago',
-            'article'    => $article->load('articleStatus', 'editor:id,name', 'postulant.institution.country', 'postulant.institution.state'),
+            'article'    => $article->load('articleType','articleStatus', 'editor:id,name', 'postulant.institution.country', 'postulant.institution.state'),
             'routeName'  => $this->routeName,
         ]);
     }
@@ -137,6 +139,7 @@ class PaymentVoucherController extends Controller
      */
     public function show(PaymentVoucher $paymentVoucher)
     {
+        
         return Inertia::render("{$this->source}Show", [
             'title'             => 'Visualizar comprobante de pago',
             'paymentVoucher'    => $paymentVoucher->load(
@@ -144,8 +147,9 @@ class PaymentVoucherController extends Controller
                 'article.postulant.institution.state',
                 'article.editor',
                 'article.articleStatus',
+                'article.articleType',
                 'paymentVoucherStatus',
-                'file'
+                'file',
             ),
             'filePath'                  => $this->getFile($paymentVoucher->file),
             'paymentVoucherStatuses'    => PaymentVoucherStatus::all(),

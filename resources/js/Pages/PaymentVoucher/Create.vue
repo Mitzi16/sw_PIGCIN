@@ -147,17 +147,21 @@ const getFileUrl = computed(() => {
                             </div>
                         </Tab>
                         <Tab name="article" title="Articulo" :disabled="false">
+                            
                             <div class="grid grid-cols-1 gap-2 md:grid-cols-2 mb-5">
+                                <FormField label="Identificador:">
+                                    <LabelControl :value="article.article_folio" />
+                                </FormField>
                                 <FormField label="Titulo:">
                                     <LabelControl :value="article.title" />
                                 </FormField>
                                 <FormField label="Tipo:">
-                                    <LabelControl :value="article.type" />
+                                    <LabelControl :value="article.article_type.name" />
                                 </FormField>
                                 <FormField label="Editor:">
                                     <LabelControl :value="article.editor.name" />
                                 </FormField>
-                                <FormField label="Estatus:">
+                                <FormField label="Estatus del artículo:">
                                     <LabelControl :value="article.article_status.name" />
                                 </FormField>
                             </div>

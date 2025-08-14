@@ -133,12 +133,16 @@ const reload = () => {
                             </div>
                         </Tab>
                         <Tab name="article" title="Articulo" :disabled="false">
+                        
                             <div class="grid grid-cols-1 gap-2 md:grid-cols-2 mb-5">
+                                <FormField label="Identificador:">
+                                    <LabelControl :value="paymentVoucher.article.article_folio" />
+                                </FormField>
                                 <FormField label="Titulo:">
                                     <LabelControl :value="paymentVoucher.article.title" />
                                 </FormField>
                                 <FormField label="Tipo:">
-                                    <LabelControl :value="paymentVoucher.article.type" />
+                                    <LabelControl :value="paymentVoucher.article.article_type.name" />
                                 </FormField>
                                 <FormField label="Editor:">
                                     <LabelControl :value="paymentVoucher.article.editor.name" />
