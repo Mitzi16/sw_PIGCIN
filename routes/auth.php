@@ -10,6 +10,9 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\RegisteredReviewUserController;
 use App\Http\Controllers\Auth\RegisteredEditorUserController;
+use App\Http\Controllers\Auth\RegisteredConferencistaUserController;
+use App\Http\Controllers\Auth\RegisteredTalleristaUserController;
+use App\Http\Controllers\Auth\RegisteredAsistenteUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\UserController;
 
@@ -21,19 +24,39 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
                 ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store'])->name('register.postulantes');;
+    Route::post('register', [RegisteredUserController::class, 'store'])->name('register.postulantes');
 
     // Rutas para el registro de revisores
     Route::get('registerReviewCitca2025', [RegisteredReviewUserController::class, 'createRevisores'])
                 ->name('registerReview');
 
-    Route::post('registerReviewCitca2025', [RegisteredReviewUserController::class, 'storeRevisores'])->name('registerReview.storeRevisores');;
+    Route::post('registerReviewCitca2025', [RegisteredReviewUserController::class, 'storeRevisores'])->name('registerReview.storeRevisores');
 
     // Rutas para el registro de editores
     Route::get('registerEditorCitca2025', [RegisteredEditorUserController::class, 'createEditores'])
                 ->name('registerEditor');
 
-    Route::post('registerEditorCitca2025', [RegisteredEditorUserController::class, 'storeEditores'])->name('registerEditor.storeEditores');;
+    Route::post('registerEditorCitca2025', [RegisteredEditorUserController::class, 'storeEditores'])->name('registerEditor.storeEditores');
+
+    // Rutas para el registro de conferencistas
+    Route::get('registerConferencistas', [RegisteredConferencistaUserController::class, 'createConferencistas'])
+                ->name('registerConferencistas');
+
+    Route::post('registerConferencistas', [RegisteredConferencistaUserController::class, 'storeConferencista'])->name('registerConferencista.storeConferencista');
+
+
+    // Rutas para el registro de Talleristas
+    Route::get('registerTalleristas', [RegisteredTalleristaUserController::class, 'createTalleristas'])
+                ->name('registerTalleristas');
+
+    Route::post('registerTalleristas', [RegisteredTalleristaUserController::class, 'storeTallerista'])->name('registerTallerista.storeTallerista');
+
+     // Rutas para el registro de Asistentes
+    Route::get('registerAsistentes', [RegisteredAsistenteUserController::class, 'createAsistentes'])
+                ->name('registerAsistentes');
+
+    Route::post('registerAsistentes', [RegisteredAsistenteUserController::class, 'storeAsistente'])->name('registerAsistente.storeAsistente');
+
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
