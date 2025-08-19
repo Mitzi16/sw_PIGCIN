@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ArticleTypeController;
+use App\Http\Controllers\RubricController;
 use App\Http\Controllers\Api\InstitutionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -32,3 +33,7 @@ Route::get('file/serve/{file}', [FileController::class, 'serveFile'])->name('fil
 Route::get('get-curp/{curp}', [UserController::class, 'getCurp'])->name('user.getCurp');
 Route::get('/institutions/{search}', [InstitutionController::class, 'filter'])->name('institution.filter');
 Route::get('/article-types/list', [ArticleTypeController::class, 'listAll']) ->middleware('auth');
+Route::get('/rubrics/by-article-type/{articleTypeId}', [RubricController::class, 'getByArticleType']);
+Route::get('/article-evaluation/{articleId}', [RubricController::class, 'getArticleEvaluation'])
+    ->name('article.evaluation');
+Route::post('/evaluations', [RubricController::class, 'storeEvaluation']);

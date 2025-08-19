@@ -80,4 +80,10 @@ class Article extends Model
     {
     return $this->belongsTo(ArticleStatus::class, 'article_status_id');
     }
+    public function evaluations()
+    {
+    return $this->hasMany(\App\Models\ArticleEvaluation::class, 'article_id')
+        ->with(['rubricItem', 'rubricAnswer']);
+    }
+
 }

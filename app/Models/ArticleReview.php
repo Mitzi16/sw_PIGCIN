@@ -13,6 +13,7 @@ class ArticleReview extends Model
 
     protected $fillable = [
         'comment',
+        'comment_for_editor',
         'reviewer_id',
         'article_status_id',
         'article_id'

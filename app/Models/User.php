@@ -122,4 +122,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Article::class, 'postulant_id');
     }
+    // Un revisor (usuario) puede tener muchas evaluaciones
+    public function evaluations()
+    {
+        return $this->hasMany(ArticleEvaluation::class, 'user_id');
+    }
 }

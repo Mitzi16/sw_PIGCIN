@@ -16,4 +16,8 @@ class RubricItem extends Model
     {
         return $this->hasMany(RubricAnswer::class);
     }
+    public function evaluations()
+    {
+        return $this->hasMany(ArticleEvaluation::class);
+    }
 }

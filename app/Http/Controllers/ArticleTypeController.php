@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Exports\ArticleTypeExport;
@@ -32,43 +31,45 @@ class ArticleTypeController extends Controller
         $this->middleware("permission:{$this->module}.update")->only(['update', 'edit']);
         $this->middleware("permission:{$this->module}.delete")->only(['destroy']);
         $this->service = $service;
+        $this->service = $service;
     }
 
     public function index(Request $request)
-    {
-        $direction = $request->direction ?? 'desc';
-        $order = $request->order ?? 'created_at';
-        $records = $this->model->query();
+{
+    $direction = $request->direction ?? 'desc';
+    $order = $request->order ?? 'created_at';
+    $records = $this->model->query();
 
-        $records->when($request->search, function ($query, $search) {
-            if ($search != '') {
-                $query->where('name', 'LIKE', '%' . $search . '%');
-            }
-        });
+    $records->when($request->search, function ($query, $search) {
+        if ($search != '') {
+            $query->where('name', 'LIKE', '%' . $search . '%');
+        }
+    });
 
-        $records = $records->withCount('rubrics') // Agregar conteo de rúbricas
-            ->orderBy($order, $direction)
-            ->paginate(8)
-            ->withQueryString()
-            ->through(fn($data) => [
-                'id' => $data->id,
-                'name' => $data->name,
-                'rubrics_count' => $data->rubrics_count, // Mostrar cantidad de rúbricas
-                'created_at' => $data->created_at->format('d/m/Y'),
-            ]);
-
-        return Inertia::render("{$this->source}Index", [
-            'articleTypes' => $records,
-            'title' => 'Tipos de artículos',
-            'routeName' => $this->routeName,
-            'search' => $request->search ?? '',
-            'direction' => $direction
+    $records = $records->withCount('rubrics') // Agregar conteo de rúbricas
+        ->orderBy($order, $direction)
+        ->paginate(8)
+        ->withQueryString()
+        ->through(fn($data) => [
+            'id' => $data->id,
+            'name' => $data->name,
+            'rubrics_count' => $data->rubrics_count, // Mostrar cantidad de rúbricas
+            'created_at' => $data->created_at->format('d/m/Y'),
         ]);
-    }
 
+    return Inertia::render("{$this->source}Index", [
+        'articleTypes' => $records,
+        'title' => 'Tipos de artículos',
+        'routeName' => $this->routeName,
+        'search' => $request->search ?? '',
+        'direction' => $direction,
+    ]);
+}
     public function create()
     {
         return Inertia::render("{$this->source}Create", [
+            'title' => 'Agregar tipo de artículo',
+            'routeName' => $this->routeName,
             'title' => 'Agregar tipo de artículo',
             'routeName' => $this->routeName,
         ]);
@@ -76,6 +77,19 @@ class ArticleTypeController extends Controller
 
     public function store(StoreArticleTypeRequest $request)
     {
+        try {
+            $data = $request->validated();
+            $rubrics = $request->input('rubrics', []);
+
+            $articleType = $this->service->createWithRubrics($data, $rubrics);
+
+            return redirect()->route("{$this->routeName}index")
+                ->with('success', 'Tipo de artículo creado con éxito!');
+        } catch (Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error al crear el tipo de artículo: ' . $e->getMessage());
+        }
         try {
             $data = $request->validated();
             $rubrics = $request->input('rubrics', []);
@@ -104,7 +118,21 @@ class ArticleTypeController extends Controller
             }
         ]);
 
+        // Cargar todas las relaciones necesarias para el formulario
+        $articleType->load([
+            'rubrics' => function ($query) {
+                $query->with([
+                    'items' => function ($query) {
+                        $query->with('answers');
+                    }
+                ]);
+            }
+        ]);
+
         return Inertia::render("{$this->source}Edit", [
+            'title' => 'Editar tipo de artículo',
+            'articleType' => $articleType,
+            'routeName' => $this->routeName,
             'title' => 'Editar tipo de artículo',
             'articleType' => $articleType,
             'routeName' => $this->routeName,
@@ -142,30 +170,24 @@ class ArticleTypeController extends Controller
         ]);
     }
 
-    public function destroy(ArticleType $articleType)
-    {
+   public function destroy(ArticleType $articleType)
+{
+    try {
+                \Log::info("Eliminando ArticleType ID: {$articleType->id} - Nombre: {$articleType->name}");
 
+        $articleType->delete();
 
-        try {
-            \Log::info("Eliminando ArticleType ID: {$articleType->id} - Nombre: {$articleType->name}");
+        return redirect()->route("{$this->routeName}index")
+            ->with('success', 'Tipo de artículo eliminado con éxito!');
+    } catch (Exception $e) {
+                \Log::error("Error eliminando ArticleType: " . $e->getMessage());
 
-            $articleType->delete();
-
-            return redirect()->route("{$this->routeName}index")
-                ->with('success', 'Tipo de artículo eliminado con éxito!');
-        } catch (Exception $e) {
-            \Log::error("Error eliminando ArticleType: " . $e->getMessage());
-
-            return redirect()->back()
-                ->with('error', 'Error al eliminar el tipo de artículo: ' . $e->getMessage());
-        }
-    }
-    public function export()
-    {
-        return Excel::download(new ArticleTypeExport(), 'article_types.xlsx');
-    }
-    public function listAll()
-    {
-        return ArticleType::select('id', 'name')->orderBy('name')->get();
+        return redirect()->back()
+            ->with('error', 'Error al eliminar el tipo de artículo: ' . $e->getMessage());
     }
 }
+public function listAll()
+{
+    return ArticleType::select('id', 'name')->orderBy('name')->get();
+}
+} 

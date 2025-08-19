@@ -23,6 +23,7 @@ class UpdateArticleReviewRequest extends FormRequest
     {
         return [
             'comment'           => 'required|max:2555',
+            'comment_for_editor' => 'required|max:2555',
             'reviewer_id'       => 'required|exists:users,id',
             'article_status_id' => 'required|exists:article_statuses,id',
             'article_id'        => 'required|exists:articles,id',
@@ -34,6 +35,7 @@ class UpdateArticleReviewRequest extends FormRequest
     {
         return [
             'comment'           => 'comentarios',
+            'comment_for_editor' => 'comentarios para el editor',
             'reviewer_id'       => 'revisor',
             'article_status_id' => 'resultado',
             'article_id'        => 'artículo',
