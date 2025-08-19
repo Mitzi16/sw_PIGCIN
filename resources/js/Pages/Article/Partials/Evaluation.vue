@@ -14,16 +14,34 @@ import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
 import DropdownItem from "@/Components/DropdownItem.vue";
 import BaseButtons from "@/Components/BaseButtons.vue";
 import BaseButton from "@/Components/BaseButton.vue";
+import EvaluacionModal from '@/Components/EvaluacionModal.vue';
+import ResultModal from '@/Components/ResultModal.vue';
+import axios from 'axios';
 
 const props = inject('props');
 const user = usePage().props.auth.user;
 const getRole = inject('getRole');
+
+// Estados para el modal de evaluación
+const showModal = ref(false);
+
+// Estados para el modal de resultados
+const showResultsModal = ref(false);
+const selectedReviewerId = ref(null);
+const currentArticleId = ref(props.article.id);
+
+// Abrir modal de resultados para un revisor específico
+const openReviewerResults = (reviewerId) => {
+  selectedReviewerId.value = reviewerId;
+  showResultsModal.value = true;
+};
 
 const filterArticleReview = props.article.article_reviews.find(articleReview => articleReview.reviewer_id === user.id)
 
 const formReviewer = useForm({
     id: filterArticleReview?.id ?? null,
     comment: filterArticleReview?.comment ?? null,
+    comment_for_editor: filterArticleReview?.comment_for_editor ?? null,
     reviewer_id: filterArticleReview?.reviewer_id ?? null,
     article_status_id: filterArticleReview?.article_status_id ?? null,
     article_id: props.article.id,
@@ -34,6 +52,8 @@ const formEditor = useForm({
     id: props.article.id,
     article_status_id: props.article.article_status.is_evaluation ? props.article.article_status_id : null,
     comment: props.article.comment,
+    comment_for_editor: props.article.comment_for_editor,
+    article_id: props.article.id,
 })
 
 const saveEditor = () => {
@@ -60,7 +80,6 @@ const toggleCriterion = (criterion) => {
 const filterArticleStatuses = () => {
     return props.articleStatuses.filter(status => status.is_evaluation == true)
 }
-
 </script>
 
 <template>
@@ -72,42 +91,40 @@ const filterArticleStatuses = () => {
         <p class="text-slate-500 text-sm mb-2">
             Los comentarios y criterios se veran reflejados al editor.
         </p>
-        <div class="lg:mb-5">
+        <div class="lg:mb-5 border-slate-500">
             <FormField required label="Evalua los criterios:" :error="formReviewer.errors.criteria">
-                <div class="border rounded border-gray-400 overflow-y-auto max-h-96">
-                    <ul class="px-5">
-                        <li v-for="item in props.criteria" :key="item.id">
-                            <label
-                                class="p-2 justify-between flex items-center cursor-pointer border-b border-slate-200">
-                                <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
-                                    {{ item.name }}
-                                </span>
-                                <input type="checkbox" class="sr-only peer" :value="{ id: item.id }"
-                                    :id="'criterion_' + item.id" :checked="checkedCriterion(item)"
-                                    @change="toggleCriterion(item)">
-                                <div
-                                    class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
-                                </div>
-                            </label>
-                        </li>
-                    </ul>
+                <div class="mt-4">
+                    <button @click="showModal = true" class="bg-green-500 text-white px-4 py-2 rounded">
+                        Evaluar artículo
+                    </button>
                 </div>
+
+                <EvaluacionModal
+                    :showModal="showModal"
+                    :articleTypeId="props.article.article_type_id"
+                    :articleId="props.article.id"
+                    @close="showModal = false"
+                />
             </FormField>
         </div>
         <BaseDivider />
         <FormField required label="Selecciona un resultado:" :error="formReviewer.errors.article_status_id">
             <FormControl v-model="formReviewer.article_status_id" :options="filterArticleStatuses()" />
         </FormField>
-        <FormField required label="Comentarios:" :error="formReviewer.errors.comment">
+        <FormField required label="Comentarios Del Revisor:" :error="formReviewer.errors.comment">
             <FormControl type="textarea" height="h-24" v-model="formReviewer.comment"
+                placeholder="Escribe tus comentarios..." />
+        </FormField>
+        <FormField required label="Comentarios Para El Editor:" :error="formReviewer.errors.comment_for_editor">
+            <FormControl type="textarea" height="h-24" v-model="formReviewer.comment_for_editor"
                 placeholder="Escribe tus comentarios..." />
         </FormField>
         <BaseButtons class="mt-5">
             <BaseButton :disabled="props.statusReviewer" @click="saveReviewer" :icon="mdiContentSave" color="success" label="Guardar" small />
         </BaseButtons>
     </div>
+    
     <!-- FORM PARA EL EDITOR -->
-    <!-- <div v-else-if="getRole(['Editor', 'Admin'])"> -->
     <div v-else-if="getRole('Editor') || getRole('Admin') || getRole('Admin-Revista')">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación final
@@ -134,8 +151,12 @@ const filterArticleStatuses = () => {
         </h2>
         <div v-if="props.article.article_reviews.length > 0" class="lg:mb-5">
             <ul role="list" class="max-w-sm">
-                <li v-for="item in props.article.article_reviews" :key="item.id" class="">
-                    <DropdownItem :value="false" class="">
+                <li v-for="item in props.article.article_reviews" :key="item.id">
+                    <DropdownItem 
+                        :value="false" 
+                        class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click="openReviewerResults(item.reviewer_id)"
+                    >
                         <template #header>
                             <div class="flex items-center justify-between w-full space-x-2">
                                 <div class="flex items-center space-x-3">
@@ -163,7 +184,6 @@ const filterArticleStatuses = () => {
                             <ul class="">
                                 <li v-for="evaluation in props.criteria" :key="evaluation.id">
                                     <label
-                                    
                                         class="p-2 px-5 justify-between flex items-center border-b border-slate-200 dark:border-slate-600">
                                         <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                             {{ evaluation.name }}
@@ -189,7 +209,6 @@ const filterArticleStatuses = () => {
                                                 <path d="M6 6l12 12" />
                                             </svg>
                                         </span>
-
                                     </label>
                                 </li>
                             </ul>
@@ -197,12 +216,24 @@ const filterArticleStatuses = () => {
                         <CardBoxComponentEmpty v-else />
 
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios</p>
+                        <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Del Revisor</p>
                         <FormControl disabled type="textarea" height="h-24" v-model="item.comment"
-                            placeholder="Sin comentarios..." />
+                            placeholder="Sin comentarios por parte del revisor..."/>
+                        <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Para El Editor</p>
+                        <FormControl disabled type="textarea" height="h-24" v-model="item.comment_for_editor"
+                            placeholder="Sin comentarios para el editor..." />
                     </DropdownItem>
                 </li>
             </ul>
         </div>
         <CardBoxComponentEmpty v-else />
     </div>
+
+    <!-- Modal de Resultados (fuera del bucle) -->
+    <ResultModal 
+        :showModal="showResultsModal" 
+        :article_id="currentArticleId"
+        :reviewerId="selectedReviewerId"
+        @close="showResultsModal = false"
+    />
 </template>
