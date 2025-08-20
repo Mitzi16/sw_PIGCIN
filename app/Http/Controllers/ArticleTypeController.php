@@ -190,4 +190,9 @@ public function listAll()
 {
     return ArticleType::select('id', 'name')->orderBy('name')->get();
 }
+
+ public function export()
+    {
+        return Excel::download(new ArticleTypeExport, 'Tipos de Artículo.xlsx');
+    }
 } 

@@ -126,9 +126,6 @@ class CriterionController extends Controller
 
     public function export()
     {
-            Log::info('Exportando criterios a Excel');
-
-
         return Excel::download(new CriterionExport, 'criteria.xlsx');
     }
 }

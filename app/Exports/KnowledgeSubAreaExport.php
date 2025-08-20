@@ -4,34 +4,43 @@ namespace App\Exports;
 
 use App\Models\KnowledgeArea;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 
-class KnowledgeSubAreaExport implements FromCollection
+class KnowledgeSubAreaExport implements FromCollection, WithHeadings, WithMapping
 {
     /**
-     * @return \Illuminate\Support\Collection
+     * Obtiene solo las subáreas (las que tienen área padre)
      */
     public function collection()
     {
         return KnowledgeArea::whereNotNull('parent_id')
             ->with('parent')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'ID' => $item->id,
-                    'Nombre' => $item->name,
-                    'Descripción' => $item->description,
-                    'Área Padre' => $item->parent?->name ?? '—',
-                ];
-            });
+            ->get();
     }
 
+    /**
+     * Encabezados de columnas
+     */
     public function headings(): array
     {
         return [
-            'ID',
+            
             'Nombre',
             'Descripción',
-            'Área Padre'
+            'Área Padre',
+        ];
+    }
+
+    /**
+     * Mapea cada fila exportada
+     */
+    public function map($subarea): array
+    {
+        return [
+            $subarea->name,
+            $subarea->description,
+            optional($subarea->parent)->name ?? '—',
         ];
     }
 }
