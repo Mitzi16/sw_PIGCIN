@@ -78,29 +78,78 @@ class WelcomeController extends Controller
             'routeName' => $this->routeName,
         ]);
     }
-
-    public function searchArticle(string $code = null)
+    public function searchArticle(Request $request, string $code = null)
     {
+        // Si viene un "code" directo desde la URL
         if ($code) {
-        $article = Article::with('files')->where('article_folio', $code)->first(); 
+            $article = Article::where('article_folio', $code)->first();
 
-        if ($article) {
-            return redirect()->route('welcome.show.article', ['code' => $code]);
+            if ($article) {
+                return redirect()->route('welcome.show.article', ['code' => $article->article_folio]);
+            }
+
+            return Inertia::render("{$this->source}Article/Search", [
+                'title'     => 'Buscador de Artículos',
+                'code'      => $code,
+                'notFound'  => true,
+                'routeName' => $this->routeName,
+            ]);
         }
 
+        // Búsqueda desde formulario
+        $searchType  = $request->input('searchType');
+        $searchValue = $request->input($searchType);
+
+        if ($searchValue) {
+            $query = Article::query();
+
+            switch ($searchType) {
+                case 'title':
+                    $query->where('title', 'like', "%{$searchValue}%");
+                    break;
+
+                case 'author':
+                    $query->whereHas(
+                        'authors',
+                        fn($q) =>
+                        $q->where('name', 'like', "%{$searchValue}%")
+                    );
+                    break;
+
+                case 'code':
+                    $query->where(function ($q) use ($searchValue) {
+                        $q->where('article_folio', $searchValue)            // coincidencia exacta
+                            ->orWhere('article_folio', 'like', $searchValue . '%'); // prefijo hasta consecutivo
+                    });
+                    break;
+                case 'identifier':
+                    $query->where('article_folio', 'like', "{$searchValue}%"); // 🔹 aquí reemplaza identifier por article_folio
+                    break;
+            }
+
+            $article = $query->first();
+
+            if ($article) {
+                // 🔹 Redirige siempre usando el folio completo
+                return redirect()->route('welcome.show.article', ['code' => $article->article_folio]);
+            }
+
+            return Inertia::render("{$this->source}Article/Search", [
+                'title'     => 'Buscador de Artículos',
+                'notFound'  => true,
+                'routeName' => $this->routeName,
+                'code'      => $searchType === 'code' ? $searchValue : null,
+            ]);
+        }
+
+        // Vista inicial sin búsqueda
         return Inertia::render("{$this->source}Article/Search", [
             'title'     => 'Buscador de Artículos',
-            'code'      => $code,
-            'notFound'  => true,
             'routeName' => $this->routeName,
         ]);
-     }
-
-     return Inertia::render("{$this->source}Article/Search", [
-        'title'     => 'Buscador de Artículos',
-        'routeName' => $this->routeName,
-        ]);
     }
+
+
 
 
     /* public function showArticle(string $code)
@@ -125,28 +174,47 @@ class WelcomeController extends Controller
     public function showArticle(string $code)
     {
         $article = Article::with(['file', 'status']) // Asegúrate de tener relación con status
-        ->where('article_folio', $code)
-        ->first();
+            ->where('article_folio', $code)
+            ->first();
 
-     if (!$article) {
-        return redirect()->route('welcome.search.article', ['code' => $code])
-            ->with([
-                'alert' => [
-                    'title' => 'No encontrado',
-                    'text' => 'No se encontró ningún artículo con ese folio.',
-                    'icon' => 'warning',
-                    'redirectTo' => route('welcome.search.article')
-                ]
-            ]);
+        if (!$article) {
+            return redirect()->route('welcome.search.article', ['code' => $code])
+                ->with([
+                    'alert' => [
+                        'title' => 'No encontrado',
+                        'text' => 'No se encontró ningún artículo con ese folio.',
+                        'icon' => 'warning',
+                        'redirectTo' => route('welcome.search.article')
+                    ]
+                ]);
         }
 
         $statuses = ArticleStatus::select('id', 'name', 'description')->get();
 
         return Inertia::render("{$this->source}Article/Show", [
-        'title'            => 'Detalle del Artículo',
-        'article'          => $article,
-        'articleStatuses'  => $statuses,
-        'routeName'        => $this->routeName,
+            'title'            => 'Detalle del Artículo',
+            'article'          => $article,
+            'articleStatuses'  => $statuses,
+            'routeName'        => $this->routeName,
         ]);
     }
+
+    public function searchArticleLive(Request $request)
+{
+    $q = $request->input('q');
+
+    if (!$q) {
+        return response()->json([]);
+    }
+
+    $articles = Article::query()
+        ->where('article_folio', 'like', "{$q}%")
+        ->orWhere('title', 'like', "%{$q}%")
+        ->orWhereHas('authors', fn($a) => $a->where('name', 'like', "%{$q}%"))
+        ->limit(10)
+        ->get(['article_folio', 'title']);
+
+    return response()->json($articles);
+}
+
 }
