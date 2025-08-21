@@ -55,16 +55,35 @@ class ArticleService
             $articleType->update($data);
 
             if ($rubrics !== null) {
-                // Soft delete existing rubrics
-                $articleType->rubrics()->delete();
+                $rubricData = collect($rubrics)->first();
 
-                // Create new rubrics
-                $this->createRubrics($articleType, $rubrics);
+                if ($rubricData) {
+                    $rubric = $articleType->rubrics()->first();
+                    if ($rubric) {
+                        $rubric->update([
+                            'title' => $rubricData['title'],
+                        ]);
+                        $rubric->items()->delete();
+                        foreach ($rubricData['items'] as $itemData) {
+                            $answers = collect($itemData['answers'] ?? [])->take(5);
+                            unset($itemData['answers']);
+
+                            $item = $rubric->items()->create($itemData);
+
+                            foreach ($answers as $answerData) {
+                                $item->answers()->create($answerData);
+                            }
+                        }
+                    } else {
+                        $this->createRubrics($articleType, $rubrics);
+                    }
+                }
             }
 
             return $articleType->load(['rubrics.items.answers']);
         });
     }
+
 
     private function createRubrics(ArticleType $articleType, array $rubrics): void
     {
