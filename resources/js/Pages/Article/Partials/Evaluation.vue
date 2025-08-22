@@ -106,6 +106,11 @@ const filterArticleStatuses = () => {
                     @close="showModal = false"
                 />
             </FormField>
+            <FormField label="Puntuación total:">
+                <p class="text-gray-700 dark:text-gray-300">
+                   aqui iria la puntuación total calculada que es el campo article_score
+                </p>
+            </FormField>
         </div>
         <BaseDivider />
         <FormField required label="Selecciona un resultado:" :error="formReviewer.errors.article_status_id">
@@ -178,43 +183,8 @@ const filterArticleStatuses = () => {
                                 </span>
                             </div>
                         </template>
-
-                        <p class="text-center text-xs text-slate-700 dark:text-slate-300">Criterios</p>
-                        <div v-if="item.criteria.length > 0" class="overflow-y-auto max-h-96">
-                            <ul class="">
-                                <li v-for="evaluation in props.criteria" :key="evaluation.id">
-                                    <label
-                                        class="p-2 px-5 justify-between flex items-center border-b border-slate-200 dark:border-slate-600">
-                                        <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
-                                            {{ evaluation.name }}
-                                        </span>
-                                        <span v-if="item?.criteria?.find(criterion => criterion.id === evaluation.id)"
-                                            class="flex items-center justify-center w-6 h-6 bg-green-200 rounded-full -start-4 ring-1 ring-white dark:ring-gray-900 dark:bg-green-900">
-                                            <svg class="w-3 h-3 text-green-500 dark:text-green-400" aria-hidden="true"
-                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 12">
-                                                <path stroke="currentColor" stroke-linecap="round"
-                                                    stroke-linejoin="round" stroke-width="2"
-                                                    d="M1 5.917 5.724 10.5 15 1.5" />
-                                            </svg>
-                                        </span>
-                                        <span v-else
-                                            class="flex items-center justify-center w-6 h-6 bg-red-100 rounded-full -start-4 ring-1 ring-white dark:ring-red-900 dark:bg-red-900">
-                                            <svg xmlns="http://www.w3.org/2000/svg"
-                                                class="icon icon-tabler icon-tabler-x w-4 h-4 text-red-500 dark:text-red-400"
-                                                width="52" height="52" viewBox="0 0 24 24" stroke-width="1.5"
-                                                stroke="currentColor" fill="none" stroke-linecap="round"
-                                                stroke-linejoin="round">
-                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                                <path d="M18 6l-12 12" />
-                                                <path d="M6 6l12 12" />
-                                            </svg>
-                                        </span>
-                                    </label>
-                                </li>
-                            </ul>
-                        </div>
-                        <CardBoxComponentEmpty v-else />
-
+                        <p class="text-center text-xs text-slate-700 dark:text-slate-300">Informacion de evaluacion </p>
+                        <span>aqui iria el texto que dice Puntuacion Total y su valor que estan en el modals</span>
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios</p>
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Del Revisor</p>
                         <FormControl disabled type="textarea" height="h-24" v-model="item.comment"
