@@ -65,14 +65,35 @@ class RubricController extends Controller
     // El user_id del revisor asignado
     $reviewerId = $articleReview->reviewer_id;
 
+    //  Contar cuántos ítems de rúbrica tiene el artículo
+    $rubric = \App\Models\Rubric::where('article_type_id', $articleReview->article->article_type_id)
+                ->withCount('items')
+                ->first();
+
+    if (!$rubric) {
+        return response()->json(['message' => 'No se encontró rúbrica asociada a este artículo'], 404);
+    }
+
+    // Validar que se hayan contestado todos los ítems
+    if (count($data['answers']) < $rubric->items_count) {
+        return response()->json([
+            'message' => 'La evaluación está incompleta, debes responder todas las preguntas'
+        ], 422);
+    }
+
+    // Guardar/actualizar cada respuesta
     foreach ($data['answers'] as $answer) {
-        \App\Models\ArticleEvaluation::create([
-            'article_id' => $data['article_id'],
-            'rubric_item_id' => $answer['rubric_item_id'],
-            'rubric_answer_id' => $answer['rubric_answer_id'],
-            'score' => $answer['score'],
-            'user_id' => $reviewerId // Usamos el reviewer_id de article_reviews
-        ]);
+        \App\Models\ArticleEvaluation::updateOrCreate(
+            [
+                'article_id' => $data['article_id'],
+                'rubric_item_id' => $answer['rubric_item_id'],
+                'user_id' => $reviewerId,
+            ],
+            [
+                'rubric_answer_id' => $answer['rubric_answer_id'],
+                'score' => $answer['score'],
+            ]
+        );
     }
 
     // Calcular la suma total para el artículo
@@ -84,14 +105,14 @@ class RubricController extends Controller
         ->update(['article_score' => $totalScore]);
 
     return response()->json([
-        'message' => 'Evaluación guardada con éxito', 
+        'message' => 'Evaluación guardada con éxito',
         'total_score' => $totalScore,
         'reviewer_id' => $reviewerId
     ]);
     }
 
     public function getArticleEvaluation($articleId, Request $request)
-{
+    {
     $reviewerId = $request->query('reviewer_id');
     
     $query = \App\Models\ArticleEvaluation::where('article_id', $articleId)
@@ -107,7 +128,8 @@ class RubricController extends Controller
 
     $evaluations = $query->get();
 
-    $articleScore = $evaluations->first()->article_score ?? 0;
+    // calcular el total directamente con sum()
+    $articleScore = $query->sum('score');
 
     return response()->json([
         'evaluations' => $evaluations->map(function($eval) {
@@ -120,5 +142,5 @@ class RubricController extends Controller
         }),
         'article_score' => $articleScore
     ]);
-}
+    }
 }
