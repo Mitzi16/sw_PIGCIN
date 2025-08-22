@@ -5,12 +5,12 @@ import {
     mdiContentSave,
     mdiClose
 } from "@mdi/js";
-import { computed, watch, ref, onMounted, inject } from "vue";
+import { ref, reactive, onMounted, inject } from "vue";
 import FormField from "@/Components/FormField.vue";
 import FormControl from "@/Components/FormControl.vue";
 import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
 import BaseDivider from "@/Components/BaseDivider.vue";
-import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import DropdownItem from "@/Components/DropdownItem.vue";
 import BaseButtons from "@/Components/BaseButtons.vue";
 import BaseButton from "@/Components/BaseButton.vue";
@@ -22,65 +22,112 @@ const props = inject('props');
 const user = usePage().props.auth.user;
 const getRole = inject('getRole');
 
-// Estados para el modal de evaluación
 const showModal = ref(false);
-
-// Estados para el modal de resultados
 const showResultsModal = ref(false);
 const selectedReviewerId = ref(null);
 const currentArticleId = ref(props.article.id);
 
-// Abrir modal de resultados para un revisor específico
-const openReviewerResults = (reviewerId) => {
-  selectedReviewerId.value = reviewerId;
-  showResultsModal.value = true;
-};
+// Estado reactivo para el artículo
+const article = reactive({ ...props.article });
 
-const filterArticleReview = props.article.article_reviews.find(articleReview => articleReview.reviewer_id === user.id)
-
+// Formulario del revisor
+const filterArticleReview = article.article_reviews.find(ar => ar.reviewer_id === user.id);
 const formReviewer = useForm({
     id: filterArticleReview?.id ?? null,
     comment: filterArticleReview?.comment ?? null,
     comment_for_editor: filterArticleReview?.comment_for_editor ?? null,
     reviewer_id: filterArticleReview?.reviewer_id ?? null,
     article_status_id: filterArticleReview?.article_status_id ?? null,
-    article_id: props.article.id,
-    criteria: filterArticleReview?.criteria?.map(criterion => criterion.id)
-})
+    article_id: article.id,
+    criteria: filterArticleReview?.criteria?.map(c => c.id) ?? []
+});
 
+// Formulario del editor
 const formEditor = useForm({
-    id: props.article.id,
-    article_status_id: props.article.article_status.is_evaluation ? props.article.article_status_id : null,
-    comment: props.article.comment,
-    comment_for_editor: props.article.comment_for_editor,
-    article_id: props.article.id,
-})
+    id: article.id,
+    article_status_id: article.article_status.is_evaluation ? article.article_status_id : null,
+    comment: article.comment,
+    comment_for_editor: article.comment_for_editor,
+    article_id: article.id,
+});
 
-const saveEditor = () => {
-    formEditor.patch(route(`${props.routeName}evaluate`, props.article.id));
-}
+// Puntaje total
+const totalScore = ref(null);
 
-const saveReviewer = () => {
-    formReviewer.put(route(`articleReview.update`, filterArticleReview?.id));
-}
-
-const checkedCriterion = (criterion) => {
-    return formReviewer.criteria.includes(criterion.id);
+// Abrir modal de resultados
+const openReviewerResults = (reviewerId) => {
+    selectedReviewerId.value = reviewerId;
+    showResultsModal.value = true;
 };
 
-const toggleCriterion = (criterion) => {
-    const index = formReviewer.criteria.indexOf(criterion.id);
-    if (index === -1) {
-        formReviewer.criteria.push(criterion.id);
-    } else {
-        formReviewer.criteria.splice(index, 1);
+// Guardar evaluación del revisor
+const saveReviewer = async () => {
+    try {
+        await formReviewer.put(route(`articleReview.update`, filterArticleReview?.id));
+
+        const { data } = await axios.get(`/article-evaluation/${article.id}`, {
+            params: { reviewer_id: user.id }
+        });
+
+        totalScore.value = data.article_score;
+
+        // Asegurar que cada review tenga article_score
+        article.article_reviews = data.article_reviews.map(r => ({
+            ...r,
+            article_score: r.article_score ?? data.article_score
+        }));
+
+    } catch (error) {
+        console.error(error);
     }
 };
 
-const filterArticleStatuses = () => {
-    return props.articleStatuses.filter(status => status.is_evaluation == true)
-}
+// Guardar evaluación del editor
+const saveEditor = async () => {
+    try {
+        await formEditor.patch(route(`${props.routeName}evaluate`, article.id));
+
+        article.article_status_id = formEditor.article_status_id;
+        article.comment = formEditor.comment;
+        article.comment_for_editor = formEditor.comment_for_editor;
+    } catch (error) {
+        console.error(error);
+    }
+};
+
+// Funciones de criterios
+const checkedCriterion = (criterion) => formReviewer.criteria.includes(criterion.id);
+const toggleCriterion = (criterion) => {
+    const index = formReviewer.criteria.indexOf(criterion.id);
+    if (index === -1) formReviewer.criteria.push(criterion.id);
+    else formReviewer.criteria.splice(index, 1);
+};
+
+// Filtrar estados de evaluación
+const filterArticleStatuses = () => props.articleStatuses.filter(status => status.is_evaluation);
+
+// Cargar puntaje total al montar
+onMounted(async () => {
+    try {
+        const { data } = await axios.get(`/api/article-evaluation/${article.id}`, {
+            params: { reviewer_id: user.id }
+        });
+
+        totalScore.value = data.article_score;
+
+        // Cada review debe tener article_score
+        article.article_reviews = data.article_reviews.map(r => ({
+            ...r,
+            article_score: r.article_score ?? data.article_score
+        }));
+
+    } catch (error) {
+        console.error("Error al obtener el puntaje total", error);
+    }
+});
 </script>
+
+
 
 <template>
     <!-- FORM PARA EL REVISOR -->
@@ -99,18 +146,15 @@ const filterArticleStatuses = () => {
                     </button>
                 </div>
 
-                <EvaluacionModal
-                    :showModal="showModal"
-                    :articleTypeId="props.article.article_type_id"
-                    :articleId="props.article.id"
-                    @close="showModal = false"
-                />
+                <EvaluacionModal :showModal="showModal" :articleTypeId="props.article.article_type_id"
+                    :articleId="props.article.id" @close="showModal = false" />
             </FormField>
             <FormField label="Puntuación total:">
                 <p class="text-gray-700 dark:text-gray-300">
-                   aqui iria la puntuación total calculada que es el campo article_score
+                    {{ totalScore !== null ? totalScore : 'Sin evaluar aún' }}
                 </p>
             </FormField>
+
         </div>
         <BaseDivider />
         <FormField required label="Selecciona un resultado:" :error="formReviewer.errors.article_status_id">
@@ -125,10 +169,11 @@ const filterArticleStatuses = () => {
                 placeholder="Escribe tus comentarios..." />
         </FormField>
         <BaseButtons class="mt-5">
-            <BaseButton :disabled="props.statusReviewer" @click="saveReviewer" :icon="mdiContentSave" color="success" label="Guardar" small />
+            <BaseButton :disabled="props.statusReviewer" @click="saveReviewer" :icon="mdiContentSave" color="success"
+                label="Guardar" small />
         </BaseButtons>
     </div>
-    
+
     <!-- FORM PARA EL EDITOR -->
     <div v-else-if="getRole('Editor') || getRole('Admin') || getRole('Admin-Revista')">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
@@ -146,7 +191,8 @@ const filterArticleStatuses = () => {
                 placeholder="Escribe tus comentarios..." />
         </FormField>
         <BaseButtons class="mt-5">
-            <BaseButton :disabled="props.article.article_status_id === 4" @click="saveEditor" :icon="mdiContentSave" color="success" label="Guardar" small />
+            <BaseButton :disabled="props.article.article_status_id === 4" @click="saveEditor" :icon="mdiContentSave"
+                color="success" label="Guardar" small />
         </BaseButtons>
 
         <BaseDivider />
@@ -156,12 +202,9 @@ const filterArticleStatuses = () => {
         </h2>
         <div v-if="props.article.article_reviews.length > 0" class="lg:mb-5">
             <ul role="list" class="max-w-sm">
-                <li v-for="item in props.article.article_reviews" :key="item.id">
-                    <DropdownItem 
-                        :value="false" 
-                        class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                        @click="openReviewerResults(item.reviewer_id)"
-                    >
+<li v-for="item in article.article_reviews" :key="item.id">
+                    <DropdownItem :value="false" class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click="openReviewerResults(item.reviewer_id)">
                         <template #header>
                             <div class="flex items-center justify-between w-full space-x-2">
                                 <div class="flex items-center space-x-3">
@@ -183,15 +226,25 @@ const filterArticleStatuses = () => {
                                 </span>
                             </div>
                         </template>
-                        <p class="text-center text-xs text-slate-700 dark:text-slate-300">Informacion de evaluacion </p>
-                        <span>aqui iria el texto que dice Puntuacion Total y su valor que estan en el modals</span>
+                        <p class="text-center text-xs text-slate-700 dark:text-slate-300">Información de evaluación</p>
+                       <p class="text-center text-sm font-semibold text-gray-800 dark:text-white">
+{{ item.article_score ?? totalScore ?? 'Sin evaluar' }}
+</p>
+
+
+
+
+
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios</p>
-                        <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Del Revisor</p>
+                        <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Del Revisor
+                        </p>
                         <FormControl disabled type="textarea" height="h-24" v-model="item.comment"
-                            placeholder="Sin comentarios por parte del revisor..."/>
-                        <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Para El Editor</p>
+                            placeholder="Sin comentarios por parte del revisor..." />
+                        <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Para El
+                            Editor</p>
                         <FormControl disabled type="textarea" height="h-24" v-model="item.comment_for_editor"
                             placeholder="Sin comentarios para el editor..." />
+
                     </DropdownItem>
                 </li>
             </ul>
@@ -200,10 +253,6 @@ const filterArticleStatuses = () => {
     </div>
 
     <!-- Modal de Resultados (fuera del bucle) -->
-    <ResultModal 
-        :showModal="showResultsModal" 
-        :article_id="currentArticleId"
-        :reviewerId="selectedReviewerId"
-        @close="showResultsModal = false"
-    />
+    <ResultModal :showModal="showResultsModal" :article_id="currentArticleId" :reviewerId="selectedReviewerId"
+        @close="showResultsModal = false" />
 </template>
