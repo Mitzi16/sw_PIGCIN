@@ -65,20 +65,20 @@ const saveReviewer = async () => {
     try {
         await formReviewer.put(route(`articleReview.update`, filterArticleReview?.id));
 
-        const { data } = await axios.get(`/article-evaluation/${article.id}`, {
+        // Refrescamos desde backend
+        const { data } = await axios.get(`/api/article-evaluation/${article.id}`, {
             params: { reviewer_id: user.id }
         });
 
-        totalScore.value = data.article_score;
+        totalScore.value = data.article_score ?? null;
 
-        // Asegurar que cada review tenga article_score
-        article.article_reviews = data.article_reviews.map(r => ({
+        props.article.article_reviews = data.article_reviews.map(r => ({
             ...r,
             article_score: r.article_score ?? data.article_score
         }));
 
     } catch (error) {
-        console.error(error);
+        
     }
 };
 
@@ -91,7 +91,7 @@ const saveEditor = async () => {
         article.comment = formEditor.comment;
         article.comment_for_editor = formEditor.comment_for_editor;
     } catch (error) {
-        console.error(error);
+        
     }
 };
 
@@ -108,22 +108,21 @@ const filterArticleStatuses = () => props.articleStatuses.filter(status => statu
 
 // Cargar puntaje total al montar
 onMounted(async () => {
-    try {
-        const { data } = await axios.get(`/api/article-evaluation/${article.id}`, {
-            params: { reviewer_id: user.id }
-        });
+  try {
+    const params = getRole(user) === 'revisor'
+      ? { reviewer_id: user.id }
+      : {}; // editor no necesita reviewer_id
 
-        totalScore.value = data.article_score;
+    const { data } = await axios.get(`/api/article-evaluation/${article.id}`, { params });
 
-        // Cada review debe tener article_score
-        article.article_reviews = data.article_reviews.map(r => ({
-            ...r,
-            article_score: r.article_score ?? data.article_score
-        }));
-
-    } catch (error) {
-        console.error("Error al obtener el puntaje total", error);
-    }
+    totalScore.value = data.article_score ?? null;
+    article.article_reviews = data.article_reviews.map(r => ({
+      ...r,
+      article_score: r.article_score ?? data.article_score
+    }));
+  } catch (error) {
+    
+  }
 });
 </script>
 
@@ -202,7 +201,7 @@ onMounted(async () => {
         </h2>
         <div v-if="props.article.article_reviews.length > 0" class="lg:mb-5">
             <ul role="list" class="max-w-sm">
-<li v-for="item in article.article_reviews" :key="item.id">
+            <li v-for="item in article.article_reviews" :key="item.id">
                     <DropdownItem :value="false" class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                         @click="openReviewerResults(item.reviewer_id)">
                         <template #header>
@@ -228,13 +227,8 @@ onMounted(async () => {
                         </template>
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300">Información de evaluación</p>
                        <p class="text-center text-sm font-semibold text-gray-800 dark:text-white">
-{{ item.article_score ?? totalScore ?? 'Sin evaluar' }}
-</p>
-
-
-
-
-
+                        {{ totalScore !== null ? totalScore : 'Sin evaluar aún' }} pts
+                        </p>
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios</p>
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Del Revisor
                         </p>
