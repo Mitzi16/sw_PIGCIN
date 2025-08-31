@@ -10,8 +10,8 @@
                     <a href="#" class="text-base text-white hover:text-gray-200">Privacy Policy</a>
                 </div>
             </nav>
-            <div class="mt-8 md:mb-8 flex justify-center space-x-6 md:order-3  ">
-                <a href="#" class="text-white hover:text-gray-200">
+            <div class="mt-8 md:mb-8 flex justify-center space-x-6 md:order-3">
+                <a href="#" class="text-white hover:text-gray-200" target="_blank">
                     <span class="sr-only">Facebook</span>
                     <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path fill-rule="evenodd"
@@ -20,7 +20,7 @@
                     </svg>
                 </a>
 
-                <a href="#" class="text-white hover:text-gray-200">
+                <a href="#" class="text-white hover:text-gray-200" target="_blank">
                     <span class="sr-only">Twitter</span>
                     <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path
@@ -28,7 +28,7 @@
                     </svg>
                 </a>
 
-                <a href="#" class="text-white hover:text-gray-200">
+                <a href="#" class="text-white hover:text-gray-200" target="_blank" >
                     <span class="sr-only">GitHub</span>
                     <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path fill-rule="evenodd"
