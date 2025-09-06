@@ -176,46 +176,74 @@ class ArticleController extends Controller
      * Display the specified resource.
      */
     public function show(Article $article)
-    {
-        $article->load(
-            'knowledgeArea',
-            'articleStatus',
-            'articleType',
-            'authors.institution:id,name',
-            'file',
-            'editor:id,name,email',
-            'editor.file',
-            'articleReviews.reviewer:id,name,email',
-            'articleReviews.reviewer.file',
-            'articleReviews.articleStatus',
-            'articleReviews.criteria:id',
-            'call',
-            'paymentVoucher'
-        );
+{
+    $article->load(
+        'knowledgeArea',
+        'articleStatus',
+        'articleType',
+        'authors.institution:id,name',
+        'file',
+        'editor:id,name,email',
+        'editor.file',
+        'articleReviews.reviewer:id,name,email',
+        'articleReviews.reviewer.file',
+        'articleReviews.articleStatus',
+        'articleReviews.criteria:id',
+        'call',
+        'paymentVoucher'
+    );
 
-        $institutions = $article->authors->map(function ($author) {
+    $institutions = $article->authors->map(function ($author) {
+        return [
+            'id'   => $author->institution?->id,
+            'name' => $author->institution?->name,
+        ];
+    })->unique('id')->values();
+
+    // Editores (rol ID = 2)
+    $editors = User::with('knowledgeArea.parent')
+        ->role(2)
+        ->get()
+        ->map(function ($u) {
             return [
-                'id' => $author->institution?->id,
-                'name' => $author->institution?->name,
+                'id'      => $u->id,
+                'name'    => $u->name,
+                'area'    => $u->mainArea()?->name,
+                'subarea' => $u->subArea()?->name,
             ];
-        })->unique('id')->values();
-        return Inertia::render("{$this->source}Show", [
-            'title'             => 'Visualizar Artículo',
-            'article'           => $article,
-            'filePath'          => $this->getFile($article->file),
-            'articleStatuses'   => ArticleStatus::orderBy('id')->get(),
-            'editors'           => User::role(2)->get(),
-            'reviewers'         => User::role(3)->get(),
-            'criteria'          => Criterion::orderBy('id')->get(),
-            'user'              => User::with('roles')->find(Auth::id()),
-            'areas'             => KnowledgeArea::orderBy('name')->get(),
-            'institutions'      => $institutions,
-            'statusReviewer' => $article->articleReviews->filter(function ($review) {
-                return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
-            })->isNotEmpty(), // Verifica si el usuario es revisor
-            'routeName'         => $this->routeName,
-        ]);
-    }
+        });
+
+    // Revisores (rol ID = 3)
+    $reviewers = User::with('knowledgeArea.parent')
+        ->role(3)
+        ->get()
+        ->map(function ($u) {
+            return [
+                'id'      => $u->id,
+                'name'    => $u->name,
+                'area'    => $u->mainArea()?->name,
+                'subarea' => $u->subArea()?->name,
+            ];
+        });
+
+    return Inertia::render("{$this->source}Show", [
+        'title'           => 'Visualizar Artículo',
+        'article'         => $article,
+        'filePath'        => $this->getFile($article->file),
+        'articleStatuses' => ArticleStatus::orderBy('id')->get(),
+        'editors'         => $editors,
+        'reviewers'       => $reviewers,
+        'criteria'        => Criterion::orderBy('id')->get(),
+        'user'            => User::with('roles')->find(Auth::id()),
+        'areas'           => KnowledgeArea::orderBy('name')->get(),
+        'institutions'    => $institutions,
+        'statusReviewer'  => $article->articleReviews->filter(function ($review) {
+            return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
+        })->isNotEmpty(),
+        'routeName'       => $this->routeName,
+    ]);
+}
+
 
     /**
      * Show the form for editing the specified resource.
