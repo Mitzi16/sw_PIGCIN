@@ -61,19 +61,37 @@ const toggleReviewer = (reviewer) => {
                 <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 overflow-y-auto max-h-96">
                     <ul class="">
                         <li v-for="item in props.reviewers" :key="item.id">
-                            <label class="p-2 justify-between flex items-center border-b border-slate-200 px-3"
-                                :class="{ 'cursor-not-allowed': !getRole(['Editor', 'Admin', 'Admin-Revista']), 'cursor-pointer': getRole(['Editor', 'Admin','Admin-Revista']) }">
-                                <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
-                                    {{ item.name }}
-                                </span>
-                                <input :disabled="!getRole(['Editor', 'Admin','Admin-Revista'])" type="checkbox" class="sr-only peer"
-                                    :value="{ id: item.id }" :id="'reviewer_' + item.id"
-                                    :checked="checkedReviewer(item)" @change="toggleReviewer(item)">
-                                <div
-                                    class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
-                                </div>
-                            </label>
-                        </li>
+  <label
+    class="p-2 justify-between flex items-center border-b border-slate-200 px-3"
+    :class="{
+      'cursor-not-allowed': !getRole(['Editor', 'Admin', 'Admin-Revista']),
+      'cursor-pointer': getRole(['Editor', 'Admin','Admin-Revista'])
+    }"
+  >
+    <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
+      {{ item.name }}  {{ item.area }} --<span v-if="item.subarea">  {{ item.subarea }}</span>
+    </span>
+
+    <input
+      :disabled="!getRole(['Editor', 'Admin','Admin-Revista'])"
+      type="checkbox"
+      class="sr-only peer"
+      :value="{ id: item.id }"
+      :id="'reviewer_' + item.id"
+      :checked="checkedReviewer(item)"
+      @change="toggleReviewer(item)"
+    >
+
+    <div
+      class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
+      dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700
+      peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full
+      peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px]
+      after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5
+      after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+    </div>
+  </label>
+</li>
                     </ul>
                 </div>
                 <CardBoxComponentEmpty v-else />

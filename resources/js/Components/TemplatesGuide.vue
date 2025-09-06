@@ -8,8 +8,8 @@ const articleTemplates = [
     proyectos finales de curso. Este rubro es bastante sugerido para estudiantes de licenciatura, 
     con apoyo de los docentes. Los trabajos deben tener entre 4 y 6 páginas, máximo 6 autores.`,
     downloads: [
-      { label: "Word", link: "/templates/memoria.docx", filename: "Artículo Congreso (4-6 hojas).docx", type: "file" },
-      { label: "LaTeX", link: "/templates/memoria-latex.zip", filename: "Artículo Congreso (4-6 hojas).zip", type: "file" }
+      { label: "Word", link: "/download/ArtículoCongreso(4-6 hojas).docx", filename: "ArtículoCongreso(4-6 hojas).docx", type: "file" },
+      { label: "LaTeX", link: "/download/plantilla_latex_4to_CITCA.zip", filename: "plantilla_latex_4to_CITCA.zip", type: "file" }
     ]
   },
   {
@@ -19,8 +19,8 @@ const articleTemplates = [
     Producto de proyectos de investigación, tesis de posgrado, etc. Sugerido para investigadores, 
     docentes-investigadores y estudiantes de posgrado. Más de 6 páginas, con límites de autores.`,
     downloads: [
-      { label: "Word", link: "/templates/revista.docx", filename: "Artículo Revista.docx", type: "file" },
-      { label: "LaTeX", link: "/templates/revista-latex.zip", filename: "Artículo Revista.zip", type: "file" }
+      { label: "Word", link: "/download/office_2-0.zip", filename: "office_2-0.zip", type: "file" },
+      { label: "LaTeX", link: "/download/latex-1.4.zip", filename: "latex-1.4.zip", type: "file" }
     ]
   }
 ];
@@ -31,16 +31,16 @@ const posterTemplates = [
     description: `Presentar a una audiencia especializada de manera clara, concisa y visualmente atractiva 
     los resultados, metodologías o avances de una investigación científica.`,
     downloads: [
-      { label: "PPT", link: "/templates/poster-cientifico.pptx", filename: "Póster Científico.pptx", type: "file" },
+      { label: "PPT", link: "/download/poster_cientifico_4to_CITCA.pptx", filename: "poster_cientifico_4to_CITCA.pptx", type: "file" },
       { label: "Canva", link: "https://www.canva.com/design/DAGfAJcZYcc/BS61YSpbSKpfPUdlMPByMg/view?utm_content=DAGfAJcZYcc&utm_campaign=designshare&utm_medium=link&utm_source=publishsharelink&mode=preview", type: "link" }
     ]
   },
   {
-    title: "Póster de Difusión",
+    title: "Póster de Divulgación",
     description: `Comunicar información científica o técnica de manera accesible y comprensible para 
     un público no especializado. Busca educar, informar y despertar interés en un tema específico.`,
     downloads: [
-      { label: "PPT", link: "/templates/poster-divulgacion.pptx", filename: "Póster Divulgación.pptx", type: "file" },
+      { label: "PPT", link: "/download/poster_divulgacion_4to_CITCA.pptx", filename: "poster_divulgacion_4to_CITCA.pptx", type: "file" },
       { label: "Canva", link: "https://www.canva.com/design/DAGe_2PZq_Y/HHOFJMDlgM7DYr_Jrq3eww/view?utm_content=DAGe_2PZq_Y&utm_campaign=designshare&utm_medium=link&utm_source=publishsharelink&mode=preview", type: "link" }
     ]
   }
@@ -49,6 +49,7 @@ const posterTemplates = [
 
 <template>
   <div class="space-y-10">
+    <h1 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-6">Plantillas para Contribuciones</h1>
     <!-- Artículos -->
     <section>
       <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Artículos</h2>

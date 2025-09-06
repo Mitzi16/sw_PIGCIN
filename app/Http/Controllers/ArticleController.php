@@ -221,32 +221,56 @@ class ArticleController extends Controller
      * Show the form for editing the specified resource.
      */
     public function edit(Article $article)
-    {
-        $user = User::with('roles')->find(Auth::id());
-        $institutions = $article->authors->map(function ($author) {
+{
+    $user = User::with('roles')->find(Auth::id());
+
+    $institutions = $article->authors->map(function ($author) {
+        return [
+            'id' => $author->institution?->id,
+            'name' => $author->institution?->name,
+        ];
+    })->unique('id')->values();
+
+    
+    $editors = User::role('Editor')->get()->map(fn($u) => [
+        'id'   => $u->id,
+        'name' => $u->name,
+    ]);
+
+    
+    $reviewers = User::with('knowledgeArea.parent')
+        ->role('Reviewer') // si usas nombre de rol en Spatie
+        ->get()
+        ->map(function ($u) {
             return [
-                'id' => $author->institution?->id,
-                'name' => $author->institution?->name,
+                'id'      => $u->id,
+                'name'    => $u->name,
+                'area'    => $u->mainArea()?->name,
+                'subarea' => $u->subArea()?->name,
             ];
-        })->unique('id')->values();
-        return Inertia::render("{$this->source}Edit", [
-            'title'             => 'Editar Artículo',
-            'article'           => $article->load(
-                'knowledgeArea',
-                'articleStatus',
-                'authors',
-                'file',
-                'articleReviews',
-                'call'
-            ),
-            'filePath'          => $this->getFile($article->file),
-            'articleStatuses'   => ArticleStatus::orderBy('id')->get(),
-            'user'              => $user,
-            'areas'             => KnowledgeArea::orderBy('name')->get(),
-            'institutions'      => $institutions,
-            'routeName'         => $this->routeName,
-        ]);
-    }
+        });
+
+    return Inertia::render("{$this->source}Edit", [
+        'title'           => 'Editar Artículo',
+        'article'         => $article->load(
+            'knowledgeArea',
+            'articleStatus',
+            'authors',
+            'file',
+            'articleReviews',
+            'call'
+        ),
+        'filePath'        => $this->getFile($article->file),
+        'articleStatuses' => ArticleStatus::orderBy('id')->get(),
+        'user'            => $user,
+        'areas'           => KnowledgeArea::orderBy('name')->get(),
+        'institutions'    => $institutions,
+        'editors'         => $editors,    
+        'reviewers'       => $reviewers,  
+        'routeName'       => $this->routeName,
+    ]);
+}
+
     /**
      * Update the specified resource in storage.
      */
