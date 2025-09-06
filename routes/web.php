@@ -17,6 +17,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\TemplateDownloadController;
 use App\Http\Controllers\ArticleGraphController;
 use App\Models\Module;
 use App\Models\User;
@@ -43,7 +44,9 @@ Route::get('/programa', [WelcomeController::class, 'program'])->name('welcome.pr
 Route::get('/welcome/article/show/{code?}', [WelcomeController::class, 'showArticle'])->name('welcome.show.article');
 Route::get('/welcome/article/search/{code?}', action: [WelcomeController::class, 'searchArticle'])->name('welcome.search.article');
 Route::get('/welcome/article/search-live', [WelcomeController::class, 'searchArticleLive'])->name('welcome.search.article.live');
-
+Route::get('/download/{filename}', [TemplateDownloadController::class, 'download'])
+    ->where('filename', '.*')
+    ->name('download');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');

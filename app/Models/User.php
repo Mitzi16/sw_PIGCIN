@@ -100,9 +100,16 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function knowledgeArea()
     {
-        return $this->belongsTo(KnowledgeArea::class);
+        return $this->belongsTo(KnowledgeArea::class, 'knowledge_area_id');
     }
-
+    public function mainArea()
+    {
+        return $this->knowledgeArea?->parent ?? $this->knowledgeArea; // esto te da el área principal si el user está en subárea
+    }
+   public function subArea()
+{
+    return $this->knowledgeArea?->parent ? $this->knowledgeArea : null;
+}
     public function institution()
     {
         return $this->belongsTo(Institution::class);
