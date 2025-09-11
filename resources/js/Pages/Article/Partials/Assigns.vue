@@ -16,6 +16,8 @@ import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
 const props = inject('props');
 const getRole = inject('getRole');
 
+const TotalAssigned = computed(() => form.reviewers.length);
+
 const form = useForm({
     article_id: props.article.id,
     editor_id: props.article.editor_id,
@@ -58,7 +60,13 @@ const toggleReviewer = (reviewer) => {
 
         <div class="lg:mb-5">
             <FormField required label="Selecciona uno o más revisores:" :error="form.errors.reviewers">
-                <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 overflow-y-auto max-h-96">
+                 <!-- Contador -->
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                        Revisores asignados: <strong>{{ TotalAssigned }}</strong>
+                    </span>
+                </div>
+                <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 overflow-y-auto ">
                     <ul class="">
                         <li v-for="item in props.reviewers" :key="item.id">
                             <label class="p-2 justify-between flex items-center border-b border-slate-200 px-3" :class="{
