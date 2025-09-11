@@ -216,6 +216,7 @@ class ArticleController extends Controller
     // Revisores (rol ID = 3)
     $reviewers = User::with('knowledgeArea.parent')
         ->role(3)
+        ->withCount('articleReviews')
         ->get()
         ->map(function ($u) {
             return [
@@ -223,6 +224,8 @@ class ArticleController extends Controller
                 'name'    => $u->name,
                 'area'    => $u->mainArea()?->name,
                 'subarea' => $u->subArea()?->name,
+                'assigned_count'      => $u->article_reviews_count,
+
             ];
         });
 

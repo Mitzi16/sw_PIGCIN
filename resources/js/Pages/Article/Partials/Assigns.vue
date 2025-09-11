@@ -62,7 +62,7 @@ const toggleReviewer = (reviewer) => {
             <FormField required label="Selecciona uno o más revisores:" :error="form.errors.reviewers">
                  <!-- Contador -->
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                    <span class=" text-gray-600 dark:text-gray-400">
                         Revisores asignados: <strong>{{ TotalAssigned }}</strong>
                     </span>
                 </div>
@@ -77,6 +77,7 @@ const toggleReviewer = (reviewer) => {
                                     {{ item.name }}
                                     <span v-if="item.area"> - {{ item.area }}</span>
                                     <span v-if="item.subarea"> - {{ item.subarea }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400"> Asignados: {{ item.assigned_count }}</span>
                                 </span>
 
 
