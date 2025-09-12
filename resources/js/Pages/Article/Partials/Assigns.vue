@@ -77,7 +77,7 @@ const toggleReviewer = (reviewer) => {
                                     {{ item.name }}
                                     <span v-if="item.area"> - {{ item.area }}</span>
                                     <span v-if="item.subarea"> - {{ item.subarea }}</span>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400"> Asignados: {{ item.assigned_count }}</span>
+                                    <span class=" text-gray-500 dark:text-gray-400"> Número de Artículos Asignados: {{ item.assigned_count }}</span>
                                 </span>
 
 
