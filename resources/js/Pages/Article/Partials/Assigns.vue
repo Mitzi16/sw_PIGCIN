@@ -60,7 +60,7 @@ const toggleReviewer = (reviewer) => {
 
         <div class="lg:mb-5">
             <FormField required label="Selecciona uno o más revisores:" :error="form.errors.reviewers">
-                 <!-- Contador -->
+                <!-- Contador -->
                 <div class="flex items-center justify-between mb-2">
                     <span class=" text-gray-600 dark:text-gray-400">
                         Revisores asignados: <strong>{{ TotalAssigned }}</strong>
@@ -75,10 +75,13 @@ const toggleReviewer = (reviewer) => {
                             }">
                                 <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                     {{ item.name }}
-                                    <span v-if="item.area"> - {{ item.area }}</span>
-                                    <span v-if="item.subarea"> - {{ item.subarea }}</span>
-                                    <span class=" text-gray-500 dark:text-gray-400"> Número de Artículos Asignados: {{ item.assigned_count }}</span>
+                                    <span v-if="item.area" class="ml-2">- {{ item.area }}</span>
+                                    <span v-if="item.subarea" class="ml-2">- {{ item.subarea }}</span>
+                                    <p class="text-gray-500 dark:text-gray-400 mt-1">
+                                        Número de Artículos Asignados: {{ item.assigned_count }}
+                                    </p>
                                 </span>
+
 
 
                                 <input :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])" type="checkbox"
