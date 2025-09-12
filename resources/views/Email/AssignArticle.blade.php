@@ -58,7 +58,14 @@
 
                                             Puedes revisar el contenido a través del siguiente botón:
                                         </p>
-
+                                        
+                                         <p style="font-size: 14px; line-height: 1.5em; margin-top: 15px; text-align: left; color: #e53e3e; font-weight: bold;">
+                                            Nota: si se te asignó un artículo que no es de tu área, por favor contacta al correo:
+                                            <a href="mailto:citca_editores@cenidet.tecnm.mx" style="color: #2b6cb0; text-decoration: underline;">
+                                                citca_editores@cenidet.tecnm.mx
+                                            </a>
+                                        </p>
+                                        
 
                                         <table class="action" align="center" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; position: relative; -premailer-cellpadding: 0; -premailer-cellspacing: 0; -premailer-width: 100%; margin: 30px auto; padding: 0; text-align: center; width: 100%;">
                                             <tr>
