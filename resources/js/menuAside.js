@@ -119,7 +119,7 @@ export default [
         permission: "paymentVoucher.index",
     },
     {
-        label: "Graficas",
+        label: "Gráficas",
         icon: mdiViewList,
         permission: "menu.graficas",
         menu: [
