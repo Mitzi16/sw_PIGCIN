@@ -8,20 +8,17 @@ const props = inject('props');
 
 const dateToLocal = (date) => {
     if (!date) return "";
-    const dateUtc = new Date(date);
-    const options = {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-    };
-    const formattedDate = dateUtc.toLocaleDateString("es-MX", options);
-    const [year, month, day, hour, minute] = formattedDate.split(/[/,\s-]/);
+    const [fecha, hora] = date.split(" ");
+    if (!fecha || !hora) return "fecha inválida";
+    const [day, month, year] = fecha.split("-");
+    const [hour, minute] = hora.split(":");
+    const d = new Date(year, month - 1, day, hour, minute);
+    if (isNaN(d.getTime())) {
+        return "fecha inválida";
+    }
     return `${day}-${month}-${year} ${hour}:${minute}`;
-    // return `${day}-${month}-${year}`;
 };
+
 </script>
 
 <template>
@@ -52,6 +49,8 @@ const dateToLocal = (date) => {
 
                 </div>
                 <span v-if="props.article.article_status_id === item.id" class="text-xs">
+                    {{ console.log("👉 updated_at:", props.article.updated_at) }}
+
                     Ultima fecha: {{ dateToLocal(props.article.updated_at) }}
                 </span>
                 <p class="text-sm">{{ item.description }}</p>
@@ -68,7 +67,8 @@ const dateToLocal = (date) => {
         <li class="py-3 sm:py-4">
             <div class="flex items-center space-x-3 rtl:space-x-reverse mb-2">
                 <div class="flex-shrink-0">
-                    <img class="w-8 h-8 rounded-full" :src="props.article?.editor?.file?.path ?? '/img/user.jpg'" alt="Neil image">
+                    <img class="w-8 h-8 rounded-full" :src="props.article?.editor?.file?.path ?? '/img/user.jpg'"
+                        alt="Neil image">
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-gray-900 truncate dark:text-white">
