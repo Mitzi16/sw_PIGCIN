@@ -2,49 +2,51 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ArticlesExport;
 use App\Http\Requests\EvaluationEditorRequest;
-use App\Models\Article;
 use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
 use App\Mail\EvaluationArticle;
 use App\Mail\StoreArticle;
-use App\Models\ArticleReview;
+use App\Models\Article;
 use App\Models\ArticleStatus;
 use App\Models\ArticleType;
 use App\Models\Author;
 use App\Models\Call;
 use App\Models\Criterion;
 use App\Models\File;
-use App\Models\Institution;
 use App\Models\KnowledgeArea;
 use App\Models\User;
-use Database\Seeders\KnowledgeAreaSeeder;
-use Inertia\Inertia;
+use App\Services\ArticleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Inertia\Inertia;
 use Inertia\Response;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\Mail;
-use App\Services\ArticleService;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\ArticlesExport;
+
 class ArticleController extends Controller
 {
     private Article $model;
+
     private string $source;
+
     private string $routeName;
+
     private string $module = 'article';
+
     private string $storage_path = 'articles';
+
     private ArticleService $articleService;
+
     public function __construct(ArticleService $articleService)
     {
         $this->middleware('auth');
         $this->source = 'Article/';
-        $this->model = new Article();
+        $this->model = new Article;
         $this->routeName = 'article.';
         $this->articleService = $articleService;
 
@@ -55,90 +57,92 @@ class ArticleController extends Controller
 
         $this->authorizeResource(Article::class, $this->module);
     }
+
     /**
      * Display a listing of the resource.
      */
-   public function index(Request $request): Response
-{
-    $direction = $request->direction ?? 'desc';
-    $order = $request->order ?? 'created_at';
-    $query = $this->model::query()->with(['articleReviews', 'articleType']);
-    $user = User::findOrFail(Auth::id());
+    public function index(Request $request): Response
+    {
+        $direction = $request->direction ?? 'desc';
+        $order = $request->order ?? 'created_at';
+        $query = $this->model::query()->with(['articleReviews', 'articleType']);
+        $user = User::findOrFail(Auth::id());
 
-    if (!$user->canPermission('article.all')) {
-        $query->where(function ($query) {
-            $query->where('editor_id', Auth::id())
-                ->orWhere('postulant_id', Auth::id())
-                ->orWhereHas('articleReviews', function ($query) {
-                    $query->where('reviewer_id', Auth::id());
-                });
-        });
-    }
-
-    $query->when($request->input('search'), function ($query, $search) {
-        if ($search != '') {
-            $query->where(function ($subQuery) use ($search) {
-                $subQuery->where('article_folio', 'LIKE', '%' . $search . '%')
-                    ->orWhere('title', 'LIKE', '%' . $search . '%')
-                    ->orWhere('abstract', 'LIKE', '%' . $search . '%')
-                    ->orWhere('key_works', 'LIKE', '%' . $search . '%')
-                    ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
-                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                    })
-                    ->orWhereHas('articleStatus', function ($subQuery) use ($search) {
-                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                    })
-                    ->orWhereHas('articleType', function ($subQuery) use ($search) {
-                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
+        if (! $user->canPermission('article.all')) {
+            $query->where(function ($query) {
+                $query->where('editor_id', Auth::id())
+                    ->orWhere('postulant_id', Auth::id())
+                    ->orWhereHas('articleReviews', function ($query) {
+                        $query->where('reviewer_id', Auth::id());
                     });
             });
         }
-    });
 
-    if ($order === 'area') {
-        $query = $query->join('knowledge_areas', 'knowledge_areas.id', '=', 'articles.knowledge_area_id')
-            ->orderBy('knowledge_areas.name', $direction);
-    } else if ($order === 'status') {
-        $query = $query->join('article_statuses', 'article_statuses.id', '=', 'articles.article_status_id')
-            ->orderBy('article_statuses.name', $direction);
-    } else if ($order === 'type') {
-        $query = $query->join('article_types', 'article_types.id', '=', 'articles.article_type_id')
-            ->orderBy('article_types.name', $direction);
-    } else {
-        $query = $query->orderBy($order, $direction);
+        $query->when($request->input('search'), function ($query, $search) {
+            if ($search != '') {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('article_folio', 'LIKE', '%'.$search.'%')
+                        ->orWhere('title', 'LIKE', '%'.$search.'%')
+                        ->orWhere('abstract', 'LIKE', '%'.$search.'%')
+                        ->orWhere('key_works', 'LIKE', '%'.$search.'%')
+                        ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
+                            $subQuery->where('name', 'LIKE', '%'.$search.'%');
+                        })
+                        ->orWhereHas('articleStatus', function ($subQuery) use ($search) {
+                            $subQuery->where('name', 'LIKE', '%'.$search.'%');
+                        })
+                        ->orWhereHas('articleType', function ($subQuery) use ($search) {
+                            $subQuery->where('name', 'LIKE', '%'.$search.'%');
+                        });
+                });
+            }
+        });
+
+        if ($order === 'area') {
+            $query = $query->join('knowledge_areas', 'knowledge_areas.id', '=', 'articles.knowledge_area_id')
+                ->orderBy('knowledge_areas.name', $direction);
+        } elseif ($order === 'status') {
+            $query = $query->join('article_statuses', 'article_statuses.id', '=', 'articles.article_status_id')
+                ->orderBy('article_statuses.name', $direction);
+        } elseif ($order === 'type') {
+            $query = $query->join('article_types', 'article_types.id', '=', 'articles.article_type_id')
+                ->orderBy('article_types.name', $direction);
+        } elseif ($order === 'folio') {
+            $query = $query->orderBy('article_folio', $direction);
+        } else {
+            $query = $query->orderBy($order, $direction);
+        }
+
+        $records = $query->paginate(8)->withQueryString()->through(
+            fn ($article) => [
+                'id' => $article->id,
+                'folio' => $article->article_folio,
+                'title' => $article->title,
+                'article_type' => [
+                    'id' => $article->articleType?->id,
+                    'name' => $article->articleType?->name,
+                ],
+                'abstract' => $article->abstract,
+                'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
+                'status' => $article->articleStatus ?? null,
+                'paymentVoucherStatus' => $article?->paymentVoucher?->paymentVoucherStatus ?? null,
+                'isPostulant' => $article->postulant_id === Auth::id() ? true : false,
+                'statusReviewer' => $article->articleReviews->filter(function ($review) {
+                    return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
+                })->isNotEmpty(),
+            ]
+        );
+
+        return Inertia::render("{$this->source}Index", [
+            'articles' => $records,
+            'title' => 'Gestión de Artículos',
+            'isReviewer' => User::find(Auth::id())->getRole(null, 'Revisor'),
+            'routeName' => $this->routeName,
+            'loadingResults' => false,
+            'search' => $request->search ?? '',
+            'direction' => $direction,
+        ]);
     }
-
-    $records = $query->paginate(8)->withQueryString()->through(
-        fn($article) => [
-            'id' => $article->id,
-            'folio' => $article->article_folio,
-            'title' => $article->title,
-            'article_type' => [
-                'id' => $article->articleType?->id,
-                'name' => $article->articleType?->name,
-            ],
-            'abstract' => $article->abstract,
-            'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
-            'status' => $article->articleStatus ?? null,
-            'paymentVoucherStatus' => $article?->paymentVoucher?->paymentVoucherStatus ?? null,
-            'isPostulant' => $article->postulant_id === Auth::id() ? true : false,
-            'statusReviewer' => $article->articleReviews->filter(function ($review) {
-                return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
-            })->isNotEmpty()
-        ]
-    );
-
-    return Inertia::render("{$this->source}Index", [
-        'articles'       =>  $records,
-        'title'          => 'Gestión de Artículos',
-        'isReviewer'      => User::find(Auth::id())->getRole(null, 'Revisor'),
-        'routeName'      => $this->routeName,
-        'loadingResults' => false,
-        'search'         => $request->search ?? '',
-        'direction'      => $direction,
-    ]);
-}
-
 
     /**
      * Show the form for creating a new resource.
@@ -146,10 +150,10 @@ class ArticleController extends Controller
     public function create(Request $request)
     {
         return Inertia::render("{$this->source}Create", [
-            'title'         => 'Agregar Artículo',
-            'routeName'     => $this->routeName,
-            'callId'        => $request->input('id'),
-            'areas'         => KnowledgeArea::orderBy('name')->get(),
+            'title' => 'Agregar Artículo',
+            'routeName' => $this->routeName,
+            'callId' => $request->input('id'),
+            'areas' => KnowledgeArea::orderBy('name')->get(),
             'calls' => Call::orderBy('created_at', 'desc')
                 ->where('status', true)
                 ->get()
@@ -169,12 +173,13 @@ class ArticleController extends Controller
         $fields['postulant_id'] = Auth::id();
         $article = Article::create($fields);
 
-        //nombre del archivo
-        $nombre_archivo = $article->article_folio . '-' . $request->selectedArea . '-' . $article->knowledge_area_id . '-' . $article->article_type_id . '.pdf';
+        // nombre del archivo
+        $nombre_archivo = $article->article_folio.'-'.$request->selectedArea.'-'.$article->knowledge_area_id.'-'.$article->article_type_id.'.pdf';
 
         $this->storeFile($request, $article, $nombre_archivo);
         $this->storeAuthors($request, $article->id);
         $this->sendEmail($article->id);
+
         return redirect()->route("{$this->routeName}index")->with('success', 'Artículo creado con éxito!');
     }
 
@@ -182,131 +187,128 @@ class ArticleController extends Controller
      * Display the specified resource.
      */
     public function show(Article $article)
-{
-    $article->load(
-        'knowledgeArea',
-        'articleStatus',
-        'articleType',
-        'authors.institution:id,name',
-        'file',
-        'editor:id,name,email',
-        'editor.file',
-        'articleReviews.reviewer:id,name,email',
-        'articleReviews.reviewer.file',
-        'articleReviews.articleStatus',
-        'articleReviews.criteria:id',
-        'call',
-        'paymentVoucher'
-    );
+    {
+        $article->load(
+            'knowledgeArea',
+            'articleStatus',
+            'articleType',
+            'authors.institution:id,name',
+            'file',
+            'editor:id,name,email',
+            'editor.file',
+            'articleReviews.reviewer:id,name,email',
+            'articleReviews.reviewer.file',
+            'articleReviews.articleStatus',
+            'articleReviews.criteria:id',
+            'call',
+            'paymentVoucher'
+        );
 
-    $institutions = $article->authors->map(function ($author) {
-        return [
-            'id'   => $author->institution?->id,
-            'name' => $author->institution?->name,
-        ];
-    })->unique('id')->values();
-
-    // Editores (rol ID = 2)
-    $editors = User::with('knowledgeArea.parent')
-        ->role(2)
-        ->get()
-        ->map(function ($u) {
+        $institutions = $article->authors->map(function ($author) {
             return [
-                'id'      => $u->id,
-                'name'    => $u->name,
-                'area'    => $u->mainArea()?->name,
-                'subarea' => $u->subArea()?->name,
+                'id' => $author->institution?->id,
+                'name' => $author->institution?->name,
             ];
-        });
+        })->unique('id')->values();
 
-    // Revisores (rol ID = 3)
-    $reviewers = User::with('knowledgeArea.parent')
-        ->role(3)
-        ->withCount('articleReviews')
-        ->get()
-        ->map(function ($u) {
-            return [
-                'id'      => $u->id,
-                'name'    => $u->name,
-                'area'    => $u->mainArea()?->name,
-                'subarea' => $u->subArea()?->name,
-                'assigned_count'      => $u->article_reviews_count,
+        // Editores (rol ID = 2)
+        $editors = User::with('knowledgeArea.parent')
+            ->role(2)
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'area' => $u->mainArea()?->name,
+                    'subarea' => $u->subArea()?->name,
+                ];
+            });
 
-            ];
-        });
+        // Revisores (rol ID = 3)
+        $reviewers = User::with('knowledgeArea.parent')
+            ->role(3)
+            ->withCount('articleReviews')
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'area' => $u->mainArea()?->name,
+                    'subarea' => $u->subArea()?->name,
+                    'assigned_count' => $u->article_reviews_count,
 
-    return Inertia::render("{$this->source}Show", [
-        'title'           => 'Visualizar Artículo',
-        'article'         => $article,
-        'filePath'        => $this->getFile($article->file),
-        'articleStatuses' => ArticleStatus::orderBy('id')->get(),
-        'editors'         => $editors,
-        'reviewers'       => $reviewers,
-        'criteria'        => Criterion::orderBy('id')->get(),
-        'user'            => User::with('roles')->find(Auth::id()),
-        'areas'           => KnowledgeArea::orderBy('name')->get(),
-        'institutions'    => $institutions,
-        'statusReviewer'  => $article->articleReviews->filter(function ($review) {
-            return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
-        })->isNotEmpty(),
-        'routeName'       => $this->routeName,
-    ]);
-}
+                ];
+            });
 
+        return Inertia::render("{$this->source}Show", [
+            'title' => 'Visualizar Artículo',
+            'article' => $article,
+            'filePath' => $this->getFile($article->file),
+            'articleStatuses' => ArticleStatus::orderBy('id')->get(),
+            'editors' => $editors,
+            'reviewers' => $reviewers,
+            'criteria' => Criterion::orderBy('id')->get(),
+            'user' => User::with('roles')->find(Auth::id()),
+            'areas' => KnowledgeArea::orderBy('name')->get(),
+            'institutions' => $institutions,
+            'statusReviewer' => $article->articleReviews->filter(function ($review) {
+                return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
+            })->isNotEmpty(),
+            'routeName' => $this->routeName,
+        ]);
+    }
 
     /**
      * Show the form for editing the specified resource.
      */
     public function edit(Article $article)
-{
-    $user = User::with('roles')->find(Auth::id());
+    {
+        $user = User::with('roles')->find(Auth::id());
 
-    $institutions = $article->authors->map(function ($author) {
-        return [
-            'id' => $author->institution?->id,
-            'name' => $author->institution?->name,
-        ];
-    })->unique('id')->values();
-
-    
-    $editors = User::role('Editor')->get()->map(fn($u) => [
-        'id'   => $u->id,
-        'name' => $u->name,
-    ]);
-
-    
-    $reviewers = User::with('knowledgeArea.parent')
-        ->role('Reviewer') // si usas nombre de rol en Spatie
-        ->get()
-        ->map(function ($u) {
+        $institutions = $article->authors->map(function ($author) {
             return [
-                'id'      => $u->id,
-                'name'    => $u->name,
-                'area'    => $u->mainArea()?->name,
-                'subarea' => $u->subArea()?->name,
+                'id' => $author->institution?->id,
+                'name' => $author->institution?->name,
             ];
-        });
+        })->unique('id')->values();
 
-    return Inertia::render("{$this->source}Edit", [
-        'title'           => 'Editar Artículo',
-        'article'         => $article->load(
-            'knowledgeArea',
-            'articleStatus',
-            'authors',
-            'file',
-            'articleReviews',
-            'call'
-        ),
-        'filePath'        => $this->getFile($article->file),
-        'articleStatuses' => ArticleStatus::orderBy('id')->get(),
-        'user'            => $user,
-        'areas'           => KnowledgeArea::orderBy('name')->get(),
-        'institutions'    => $institutions,
-        'editors'         => $editors,    
-        'reviewers'       => $reviewers,  
-        'routeName'       => $this->routeName,
-    ]);
-}
+        $editors = User::role('Editor')->get()->map(fn ($u) => [
+            'id' => $u->id,
+            'name' => $u->name,
+        ]);
+
+        $reviewers = User::with('knowledgeArea.parent')
+            ->role('Reviewer') // si usas nombre de rol en Spatie
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'area' => $u->mainArea()?->name,
+                    'subarea' => $u->subArea()?->name,
+                ];
+            });
+
+        return Inertia::render("{$this->source}Edit", [
+            'title' => 'Editar Artículo',
+            'article' => $article->load(
+                'knowledgeArea',
+                'articleStatus',
+                'authors',
+                'file',
+                'articleReviews',
+                'call'
+            ),
+            'filePath' => $this->getFile($article->file),
+            'articleStatuses' => ArticleStatus::orderBy('id')->get(),
+            'user' => $user,
+            'areas' => KnowledgeArea::orderBy('name')->get(),
+            'institutions' => $institutions,
+            'editors' => $editors,
+            'reviewers' => $reviewers,
+            'routeName' => $this->routeName,
+        ]);
+    }
 
     /**
      * Update the specified resource in storage.
@@ -321,9 +323,11 @@ class ArticleController extends Controller
             $this->updateAuthors($request, $article->id);
 
             $this->sendEmail($article->id);
+
             return redirect()->route("{$this->routeName}index")->with('success', 'Artículo modificado con éxito!');
         } catch (\Exception $e) {
-            Log::error('Error al almacenar la articulo: ' . $e->getMessage());
+            Log::error('Error al almacenar la articulo: '.$e->getMessage());
+
             return redirect()->route("{$this->routeName}index")->with('error', 'Ocurrio un error al modificar el artículo!');
         }
     }
@@ -334,6 +338,7 @@ class ArticleController extends Controller
     public function destroy(Article $article)
     {
         $article->delete();
+
         return redirect()->route("{$this->routeName}index")->with('success', 'Artículo eliminado con éxito');
     }
 
@@ -369,7 +374,7 @@ class ArticleController extends Controller
             $this->authorize('successPayment', $article);
             $varCER = 'VIICyT/VIICyT.cer';
             $varKEY = 'VIICyT/VIICyT.key';
-            $keyPasswd = "viicyt2024";
+            $keyPasswd = 'viicyt2024';
 
             // obtener los archivos
             $dataCER = Storage::disk('public')->get($varCER);
@@ -379,7 +384,7 @@ class ArticleController extends Controller
             $resKEY = openssl_pkey_get_private($dataKEY, $keyPasswd);
 
             // Preparar el string para la firma
-            $string = '||' . $article->id . '||' . $article->title . '||';
+            $string = '||'.$article->id.'||'.$article->title.'||';
             $stringMD5 = md5($string);
 
             // Encriptar el string MD5
@@ -388,9 +393,9 @@ class ArticleController extends Controller
             // Codificar en Base64
             $str_b64 = base64_encode($encrypted_string);
 
-            return response()->json(["signedText" => $str_b64]);
+            return response()->json(['signedText' => $str_b64]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error interno del servidor: ' . $e->getMessage()], 200);
+            return response()->json(['error' => 'Error interno del servidor: '.$e->getMessage()], 200);
         }
     }
 
@@ -401,7 +406,7 @@ class ArticleController extends Controller
 
         $userData = [
             'name' => $user->name,
-            'articleId' => $id
+            'articleId' => $id,
         ];
 
         foreach ($allAdmins as $admin) {
@@ -429,7 +434,7 @@ class ArticleController extends Controller
 
         if ($request->hasFile('file')) {
             $fileStorage = $request->file('file');
-            $fileName = (File::max('id') + 1) . '-' . $nombre_archivo;
+            $fileName = (File::max('id') + 1).'-'.$nombre_archivo;
             $path = $fileStorage->storeAs($this->storage_path, $fileName, 'private');
             $article->file()->create([
                 'name' => $fileName,
@@ -445,12 +450,12 @@ class ArticleController extends Controller
         if ($request->hasFile('file')) {
             $file = File::where([
                 ['fileable_type', Article::class],
-                ['fileable_id', $article->id]
+                ['fileable_id', $article->id],
             ])->first();
             Storage::disk('private')->delete($file->path);
 
             $fileStorage = $request->file('file');
-            $fileName = (File::max('id') + 1) . '-' . $fileStorage->getClientOriginalName();
+            $fileName = (File::max('id') + 1).'-'.$fileStorage->getClientOriginalName();
             $path = $fileStorage->storeAs($this->storage_path, $fileName, 'private');
             $article->file()->update([
                 'name' => $fileName,
@@ -484,7 +489,7 @@ class ArticleController extends Controller
             foreach ($request->authors as $item) {
                 if (isset($item['id'])) { // significa que tiene id, es existente
                     $author = Author::findOrFail($item['id']);
-                    Log::error('author editado: ' . $item['id']);
+                    Log::error('author editado: '.$item['id']);
                     $author->update([
                         'prefix' => $item['prefix'],
                         'name' => $item['name'],
@@ -495,7 +500,7 @@ class ArticleController extends Controller
                         'is_corresponding' => $item['is_corresponding'] ?? false,
                     ]);
                 } else { // Es un nuevo autor
-                    Log::error('author creado: ' . $item['name']);
+                    Log::error('author creado: '.$item['name']);
                     Author::create([
                         'prefix' => $item['prefix'],
                         'name' => $item['name'],
