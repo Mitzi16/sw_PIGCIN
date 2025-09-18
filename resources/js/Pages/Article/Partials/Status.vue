@@ -49,7 +49,6 @@ const dateToLocal = (date) => {
 
                 </div>
                 <span v-if="props.article.article_status_id === item.id" class="text-xs">
-                    {{ console.log("👉 updated_at:", props.article.updated_at) }}
 
                     Ultima fecha: {{ dateToLocal(props.article.updated_at) }}
                 </span>
