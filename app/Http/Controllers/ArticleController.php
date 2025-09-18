@@ -58,81 +58,87 @@ class ArticleController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): Response
-    {
-        $direction = $request->direction ?? 'desc';
-        $order = $request->order ?? 'created_at';
-        $query = $this->model::query()->with(['articleReviews', 'articleType']);
-        $user = User::findOrFail(Auth::id());
+   public function index(Request $request): Response
+{
+    $direction = $request->direction ?? 'desc';
+    $order = $request->order ?? 'created_at';
+    $query = $this->model::query()->with(['articleReviews', 'articleType']);
+    $user = User::findOrFail(Auth::id());
 
-        if (!$user->canPermission('article.all')) {
-            $query->where(function ($query) {
-                $query->where('editor_id', Auth::id())
-                    ->orWhere('postulant_id', Auth::id())
-                    ->orWhereHas('articleReviews', function ($query) {
-                        $query->where('reviewer_id', Auth::id());
+    if (!$user->canPermission('article.all')) {
+        $query->where(function ($query) {
+            $query->where('editor_id', Auth::id())
+                ->orWhere('postulant_id', Auth::id())
+                ->orWhereHas('articleReviews', function ($query) {
+                    $query->where('reviewer_id', Auth::id());
+                });
+        });
+    }
+
+    $query->when($request->input('search'), function ($query, $search) {
+        if ($search != '') {
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('article_folio', 'LIKE', '%' . $search . '%')
+                    ->orWhere('title', 'LIKE', '%' . $search . '%')
+                    ->orWhere('abstract', 'LIKE', '%' . $search . '%')
+                    ->orWhere('key_works', 'LIKE', '%' . $search . '%')
+                    ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
+                    })
+                    ->orWhereHas('articleStatus', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
+                    })
+                    ->orWhereHas('articleType', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
                     });
             });
         }
+    });
 
-        $query->when($request->input('search'), function ($query, $search) {
-            if ($search != '') {
-                $query->where(function ($subQuery) use ($search) {
-                    $subQuery->where('article_folio', 'LIKE', '%' . $search . '%')
-                        ->orWhere('title', 'LIKE', '%' . $search . '%')
-                        ->orWhere('type', 'LIKE', '%' . $search . '%')
-                        ->orWhere('abstract', 'LIKE', '%' . $search . '%')
-                        ->orWhere('key_works', 'LIKE', '%' . $search . '%')
-                        ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
-                            $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                        })
-                        ->orWhereHas('articleStatus', function ($subQuery) use ($search) {
-                            $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                        });
-                });
-            }
-        });
-
-        if ($order === 'area') {
-            $query = $query->join('knowledge_areas', 'knowledge_areas.id', '=', 'articles.knowledge_area_id')
-                ->orderBy('knowledge_areas.name', $direction);
-        } else if ($order === 'status') {
-            $query = $query->join('article_statuses', 'article_statuses.id', '=', 'articles.article_status_id')
-                ->orderBy('article_statuses.name', $direction);
-        } else {
-            $query = $query->orderBy($order, $direction);
-        }
-
-        $records = $query->paginate(8)->withQueryString()->through(
-            fn($article) => [
-                'id' => $article->id,
-                'folio' => $article->article_folio,
-                'title' => $article->title,
-                'article_type' => [
-                    'id' => $article->articleType?->id,
-                    'name' => $article->articleType?->name,
-                ],
-                'abstract' => $article->abstract,
-                'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
-                'status' => $article->articleStatus ?? null,
-                'paymentVoucherStatus' => $article?->paymentVoucher?->paymentVoucherStatus ?? null,
-                'isPostulant' => $article->postulant_id === Auth::id() ? true : false,
-                'statusReviewer' => $article->articleReviews->filter(function ($review) {
-                    return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
-                })->isNotEmpty() // Verifica si el usuario es revisor
-            ]
-        );
-
-        return Inertia::render("{$this->source}Index", [
-            'articles'       =>  $records,
-            'title'          => 'Gestión de Artículos',
-            'isReviewer'      => User::find(Auth::id())->getRole(null, 'Revisor'),
-            'routeName'      => $this->routeName,
-            'loadingResults' => false,
-            'search'         => $request->search ?? '',
-            'direction'      => $direction,
-        ]);
+    if ($order === 'area') {
+        $query = $query->join('knowledge_areas', 'knowledge_areas.id', '=', 'articles.knowledge_area_id')
+            ->orderBy('knowledge_areas.name', $direction);
+    } else if ($order === 'status') {
+        $query = $query->join('article_statuses', 'article_statuses.id', '=', 'articles.article_status_id')
+            ->orderBy('article_statuses.name', $direction);
+    } else if ($order === 'type') {
+        $query = $query->join('article_types', 'article_types.id', '=', 'articles.article_type_id')
+            ->orderBy('article_types.name', $direction);
+    } else {
+        $query = $query->orderBy($order, $direction);
     }
+
+    $records = $query->paginate(8)->withQueryString()->through(
+        fn($article) => [
+            'id' => $article->id,
+            'folio' => $article->article_folio,
+            'title' => $article->title,
+            'article_type' => [
+                'id' => $article->articleType?->id,
+                'name' => $article->articleType?->name,
+            ],
+            'abstract' => $article->abstract,
+            'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
+            'status' => $article->articleStatus ?? null,
+            'paymentVoucherStatus' => $article?->paymentVoucher?->paymentVoucherStatus ?? null,
+            'isPostulant' => $article->postulant_id === Auth::id() ? true : false,
+            'statusReviewer' => $article->articleReviews->filter(function ($review) {
+                return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
+            })->isNotEmpty()
+        ]
+    );
+
+    return Inertia::render("{$this->source}Index", [
+        'articles'       =>  $records,
+        'title'          => 'Gestión de Artículos',
+        'isReviewer'      => User::find(Auth::id())->getRole(null, 'Revisor'),
+        'routeName'      => $this->routeName,
+        'loadingResults' => false,
+        'search'         => $request->search ?? '',
+        'direction'      => $direction,
+    ]);
+}
+
 
     /**
      * Show the form for creating a new resource.
