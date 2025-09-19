@@ -30,37 +30,49 @@ class KnowledgeSubAreaController extends Controller
         $this->middleware("permission:{$this->module}.delete")->only(['destroy']);
     }
 
-    public function index(Request $request)
-    {
-        $direction = $request->direction ?? 'desc';
-        $order = $request->order ?? 'created_at';
+   public function index(Request $request)
+{
+    $direction = $request->direction ?? 'desc';
+    $order = $request->order ?? 'created_at';
 
-        $records = $this->model->with('parent')->where('parent_id', '!=', null);
+    // 👇 prefijo explícito en parent_id
+    $records = $this->model->with('parent')->whereNotNull('knowledge_areas.parent_id');
 
-        $records->when($request->search, function ($query, $search) {
-            if ($search != '') {
-                $query->where('name', 'LIKE', '%' . $search . '%')
-                    ->orWhere('description', 'LIKE', '%' . $search . '%');
-            }
-        });
+    $records->when($request->search, function ($query, $search) {
+        if ($search != '') {
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('knowledge_areas.name', 'LIKE', '%' . $search . '%')
+                    ->orWhere('knowledge_areas.description', 'LIKE', '%' . $search . '%');
+            });
+        }
+    });
 
-        $records = $records->orderBy($order, $direction)->paginate(8)->withQueryString()->through(
-            fn($data) => [
-                'id' => $data->id,
-                'name' => $data->name,
-                'description' => $data->description,
-                'parent' => $data->parent->name
-            ]
-        );
-
-        return Inertia::render("{$this->source}Index", [
-            'subareas'        =>  $records,
-            'title'          => 'Gestión de Áreas Prioritarias',
-            'routeName'      => $this->routeName,
-            'search'         => $request->search ?? '',
-            'direction'     => $direction
-        ]);
+    if ($order === 'parent') {
+        $records = $records
+            ->join('knowledge_areas as parents', 'parents.id', '=', 'knowledge_areas.parent_id')
+            ->orderBy('parents.name', $direction)
+            ->select('knowledge_areas.*'); // evita columnas duplicadas
+    } else {
+        $records = $records->orderBy("knowledge_areas.$order", $direction);
     }
+
+    $records = $records->paginate(8)->withQueryString()->through(
+        fn($data) => [
+            'id' => $data->id,
+            'name' => $data->name,
+            'description' => $data->description,
+            'parent' => $data->parent?->name,
+        ]
+    );
+
+    return Inertia::render("{$this->source}Index", [
+        'subareas'   => $records,
+        'title'      => 'Gestión de Áreas Prioritarias',
+        'routeName'  => $this->routeName,
+        'search'     => $request->search ?? '',
+        'direction'  => $direction,
+    ]);
+}
 
     public function create()
     {

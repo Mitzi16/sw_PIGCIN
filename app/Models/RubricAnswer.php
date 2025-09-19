@@ -15,4 +15,8 @@ class RubricAnswer extends Model
     {
         return $this->belongsTo(RubricItem::class, 'rubric_item_id');
     }
+      public function evaluations()
+    {
+        return $this->hasMany(ArticleEvaluation::class);
+    }
 }

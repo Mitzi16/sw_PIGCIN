@@ -9,6 +9,7 @@ import LayoutAuthenticated from "@/Layouts/LayoutAuthenticated.vue";
 import SectionTitleLineWithButton from "@/Components/SectionTitleLineWithButton.vue";
 import HeadLogo from "@/Components/HeadLogo.vue";
 import CardBox from "@/Components/CardBox.vue";
+import TemplatesGuide from "@/Components/TemplatesGuide.vue";
 import { Chart, registerables } from 'chart.js';
 import { debounce } from 'lodash';
 
@@ -175,7 +176,7 @@ watch([dateStart, dateEnd], validateDates);
   <HeadLogo title="Inicio" />
   <LayoutAuthenticated>
     <SectionMain>
-      <template v-if="data">
+      <template v-if="role === 'Admin' || role === 'Editor'">
         <SectionTitleLineWithButton
           :icon="mdiChartTimelineVariant"
           title="Descripción general"
@@ -328,7 +329,14 @@ watch([dateStart, dateEnd], validateDates);
           </div>
         </CardBox>
       </template>
-      <template v-else>
+
+      <template v-else-if="role === 'Postulante'">
+        <CardBox>
+          <TemplatesGuide />
+        </CardBox>
+      </template>
+
+      <template v-else >
         <CardBox>
           <div class="text-center py-12">
             <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Bienvenido al sistema</h3>
