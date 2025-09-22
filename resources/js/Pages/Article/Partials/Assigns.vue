@@ -5,13 +5,13 @@ import {
     mdiContentSave,
     mdiClose
 } from "@mdi/js";
-import { computed, watch, ref, onMounted, inject } from "vue";
+import { computed, inject } from "vue";
 import FormField from "@/Components/FormField.vue";
 import FormControl from "@/Components/FormControl.vue";
 import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
 import BaseButtons from "@/Components/BaseButtons.vue";
 import BaseButton from "@/Components/BaseButton.vue";
-import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 
 const props = inject('props');
 const getRole = inject('getRole');
@@ -43,7 +43,6 @@ const toggleReviewer = (reviewer) => {
         form.reviewers.splice(index, 1);
     }
 };
-
 </script>
 
 <template>
@@ -66,18 +65,21 @@ const toggleReviewer = (reviewer) => {
                         Revisores asignados: <strong>{{ TotalAssigned }}</strong>
                     </span>
                 </div>
-                <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 overflow-y-auto ">
-                    <ul >
+
+                <!-- Lista con scroll y clases fijas para evitar purge -->
+                <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 max-h-60 overflow-y-auto">
+                    <ul class="flex flex-col divide-y divide-gray-200">
                         <li v-for="item in props.reviewers" :key="item.id">
-                            <label class="p-2 justify-between flex items-center px-3" :class="{
-                                'cursor-not-allowed': !getRole(['Editor', 'Admin', 'Admin-Revista']),
-                                'cursor-pointer': getRole(['Editor', 'Admin', 'Admin-Revista'])
-                            }">
+                            <label class="p-2 justify-between flex items-center px-3"
+                                :class="{
+                                    'cursor-not-allowed': !getRole(['Editor', 'Admin', 'Admin-Revista']),
+                                    'cursor-pointer': getRole(['Editor', 'Admin', 'Admin-Revista'])
+                                }">
                                 <span class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                     {{ item.name }}
                                     <span v-if="item.area" class="ml-2">- {{ item.area }}</span>
                                     <span v-if="item.subarea" class="ml-2">- {{ item.subarea }}</span>
-                                    <p class="text-gray-500 dark:text-gray-400 mt-1">
+                                    <p class="text-gray-500 dark:text-gray-400 mt-1 text-xs">
                                         Número de Artículos Asignados: {{ item.assigned_count }}
                                     </p>
                                 </span>
@@ -90,7 +92,8 @@ const toggleReviewer = (reviewer) => {
                                     :checked="checkedReviewer(item)"
                                     @change="toggleReviewer(item)">
 
-                                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
+                                <div
+                                    class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
                                     dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700
                                     peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full
                                     peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px]
@@ -104,6 +107,7 @@ const toggleReviewer = (reviewer) => {
                 <CardBoxComponentEmpty v-else />
             </FormField>
         </div>
+
         <BaseButtons class="mt-5">
             <BaseButton :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])" @click="saveAssign()"
                 :icon="mdiContentSave" color="success" label="Asignar" small />
