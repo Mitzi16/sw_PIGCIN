@@ -65,11 +65,11 @@ const toggleReviewer = (reviewer) => {
         <div class="lg:mb-5 col-span-2">
             <FormField required label="Selecciona uno o más revisores:" :error="form.errors.reviewers">
                 <!-- Contador -->
-                <div class="flex items-center justify-between mb-2">
+                <!-- <div class="flex items-center justify-between mb-2">
                     <span class="text-gray-600 dark:text-gray-400">
                         Revisores asignados: <strong>{{ TotalAssigned }}</strong>
                     </span>
-                </div>
+                </div> -->
 
                 <!-- Lista con scroll -->
                 <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 max-h-60 overflow-y-auto">
