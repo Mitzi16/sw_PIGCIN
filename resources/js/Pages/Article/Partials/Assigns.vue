@@ -49,7 +49,7 @@ const toggleReviewer = (reviewer) => {
     <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
         Asignar editor y revisores
     </h2>
-    <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="mt-5 grid grid-cols-1 gap-3">
         <!-- Selección de editor -->
         <div class="lg:mb-5">
             <FormField required label="Selecciona un editor:" :error="form.errors.editor_id">
