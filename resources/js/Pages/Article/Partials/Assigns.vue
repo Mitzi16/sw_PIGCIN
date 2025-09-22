@@ -60,14 +60,16 @@ const toggleReviewer = (reviewer) => {
 
         <div class="lg:mb-5">
             <FormField required label="Selecciona uno o más revisores:" :error="form.errors.reviewers">
-                <!-- Contador global -->
+                <!-- Contador -->
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                    <span class=" text-gray-600 dark:text-gray-400">
                         Revisores asignados: <strong>{{ TotalAssigned }}</strong>
                     </span>
                 </div>
 
-                <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 overflow-y-auto ">
+                <!-- Lista con scroll -->
+                <div v-if="props.reviewers.length > 0"
+                     class="border rounded border-gray-400 max-h-60 overflow-y-auto">
                     <ul class="flex flex-col divide-y divide-gray-200">
                         <li v-for="item in props.reviewers" :key="item.id">
                             <label class="p-2 justify-between flex items-center px-3"
@@ -79,8 +81,6 @@ const toggleReviewer = (reviewer) => {
                                     {{ item.name }}
                                     <span v-if="item.area" class="ml-2">- {{ item.area }}</span>
                                     <span v-if="item.subarea" class="ml-2">- {{ item.subarea }}</span>
-
-                                    <!-- Contador por revisor -->
                                     <p class="text-gray-500 dark:text-gray-400 mt-1 text-xs">
                                         Número de Artículos Asignados: {{ item.assigned_count }}
                                     </p>
