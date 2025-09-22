@@ -12,15 +12,16 @@ use Illuminate\Http\Request;
 
 class ArticleGraphController extends Controller
 {
-    public function institution()
+   public function institution()
     {
     $institutions = DB::table('institutions')
         ->join('authors', 'institutions.id', '=', 'authors.institution_id')
-        ->whereNotNull('authors.article_id') // asegura que tenga artículo vinculado
+        ->whereNotNull('authors.article_id')
+        ->where('authors.is_corresponding', 1) 
         ->select(
             'institutions.id',
             'institutions.name',
-            DB::raw('COUNT(DISTINCT authors.article_id) as articles_count')
+            DB::raw('COUNT(authors.article_id) as articles_count')
         )
         ->groupBy('institutions.id', 'institutions.name')
         ->orderByDesc('articles_count')
