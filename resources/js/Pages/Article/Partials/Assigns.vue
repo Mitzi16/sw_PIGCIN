@@ -58,7 +58,7 @@ const toggleReviewer = (reviewer) => {
             </FormField>
         </div>
 
-        <div class="lg:mb-5">
+        <div class="lg:mb-5 col-span-1">
             <FormField required label="Selecciona uno o más revisores:" :error="form.errors.reviewers">
                 <!-- Contador -->
                 <div class="flex items-center justify-between mb-2">
@@ -67,7 +67,7 @@ const toggleReviewer = (reviewer) => {
                     </span>
                 </div>
                 <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 overflow-y-auto ">
-                    <ul class="flex flex-col divide-y divide-gray-200">
+                    <ul >
                         <li v-for="item in props.reviewers" :key="item.id">
                             <label class="p-2 justify-between flex items-center px-3" :class="{
                                 'cursor-not-allowed': !getRole(['Editor', 'Admin', 'Admin-Revista']),
