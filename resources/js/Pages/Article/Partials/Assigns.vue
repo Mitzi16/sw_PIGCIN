@@ -49,10 +49,9 @@ const toggleReviewer = (reviewer) => {
     <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
         Asignar editor y revisores
     </h2>
-
-    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+    <div class="mt-5 grid grid-cols-1 gap-3">
         <!-- Selección de editor -->
-        <div class="lg:mb-5 col-span-2">
+        <div class="lg:mb-5">
             <FormField required label="Selecciona un editor:" :error="form.errors.editor_id">
                 <FormControl 
                     :disabled="!getRole(['Admin', 'Admin-Revista'])" 
@@ -62,16 +61,15 @@ const toggleReviewer = (reviewer) => {
             </FormField>
         </div>
 
-        <!-- Selección de revisores -->
+        <!-- Selección de revisores (ocupa todo el ancho) -->
         <div class="lg:mb-5 col-span-2">
             <FormField required label="Selecciona uno o más revisores:" :error="form.errors.reviewers">
-                
                 <!-- Contador -->
-                <div class="flex items-center justify-between mb-2 col-span-2">
+                <!-- <div class="flex items-center justify-between mb-2">
                     <span class="text-gray-600 dark:text-gray-400">
                         Revisores asignados: <strong>{{ TotalAssigned }}</strong>
                     </span>
-                </div>
+                </div> -->
 
                 <!-- Lista con scroll -->
                 <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 max-h-60 overflow-y-auto">
