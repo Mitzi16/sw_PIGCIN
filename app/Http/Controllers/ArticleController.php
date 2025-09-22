@@ -240,6 +240,8 @@ class ArticleController extends Controller
                 ];
             });
 
+        dd('Componente cargado: Article/Show');
+
         return Inertia::render("{$this->source}Show", [
             'title' => 'Visualizar Artículo',
             'article' => $article,
