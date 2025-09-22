@@ -16,8 +16,6 @@ import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
 const props = inject('props');
 const getRole = inject('getRole');
 
-const TotalAssigned = computed(() => form.reviewers.length);
-
 const form = useForm({
     article_id: props.article.id,
     editor_id: props.article.editor_id,
@@ -26,6 +24,8 @@ const form = useForm({
         (reviewer) => reviewer.reviewer_id
     ),
 })
+
+const TotalAssigned = computed(() => form.reviewers.length);
 
 const saveAssign = () => {
     form.post(route('articleReview.store'));
@@ -67,9 +67,9 @@ const toggleReviewer = (reviewer) => {
                     </span>
                 </div>
                 <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 overflow-y-auto ">
-                    <ul class="">
+                    <ul class="flex flex-col divide-y divide-gray-200">
                         <li v-for="item in props.reviewers" :key="item.id">
-                            <label class="p-2 justify-between flex items-center border-b border-slate-200 px-3" :class="{
+                            <label class="p-2 justify-between flex items-center px-3" :class="{
                                 'cursor-not-allowed': !getRole(['Editor', 'Admin', 'Admin-Revista']),
                                 'cursor-pointer': getRole(['Editor', 'Admin', 'Admin-Revista'])
                             }">
@@ -82,18 +82,20 @@ const toggleReviewer = (reviewer) => {
                                     </p>
                                 </span>
 
-
-
-                                <input :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])" type="checkbox"
-                                    class="sr-only peer" :value="{ id: item.id }" :id="'reviewer_' + item.id"
-                                    :checked="checkedReviewer(item)" @change="toggleReviewer(item)">
+                                <input :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])"
+                                    type="checkbox"
+                                    class="sr-only peer"
+                                    :value="item.id"
+                                    :id="'reviewer_' + item.id"
+                                    :checked="checkedReviewer(item)"
+                                    @change="toggleReviewer(item)">
 
                                 <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
-      dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700
-      peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full
-      peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px]
-      after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5
-      after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+                                    dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700
+                                    peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full
+                                    peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px]
+                                    after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5
+                                    after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
                                 </div>
                             </label>
                         </li>
