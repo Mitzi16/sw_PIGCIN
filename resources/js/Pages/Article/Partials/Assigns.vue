@@ -1,11 +1,8 @@
 <script setup>
 import {
-    mdiPencil,
-    mdiTrashCan,
-    mdiContentSave,
-    mdiClose
+    mdiContentSave
 } from "@mdi/js";
-import { computed, inject } from "vue";
+import { computed, inject, ref } from "vue";
 import FormField from "@/Components/FormField.vue";
 import FormControl from "@/Components/FormControl.vue";
 import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
@@ -23,13 +20,13 @@ const form = useForm({
     reviewers: props.article.article_reviews.map(
         (reviewer) => reviewer.reviewer_id
     ),
-})
+});
 
 const TotalAssigned = computed(() => form.reviewers.length);
 
 const saveAssign = () => {
     form.post(route('articleReview.store'));
-}
+};
 
 const checkedReviewer = (reviewer) => {
     return form.reviewers.includes(reviewer.id);
@@ -43,6 +40,39 @@ const toggleReviewer = (reviewer) => {
         form.reviewers.splice(index, 1);
     }
 };
+
+/* ---- 🔹 Buscador ---- */
+const search = ref("");
+
+const filteredReviewers = computed(() => {
+    if (!search.value) return props.reviewers;
+    return props.reviewers.filter(r =>
+        r.name.toLowerCase().includes(search.value.toLowerCase()) ||
+        (r.area && r.area.toLowerCase().includes(search.value.toLowerCase())) ||
+        (r.subarea && r.subarea.toLowerCase().includes(search.value.toLowerCase()))
+    );
+});
+
+/* ---- 🔹 Paginación ---- */
+const currentPage = ref(1);
+const perPage = 10; // cantidad de revisores por página
+
+const totalPages = computed(() =>
+    Math.ceil(filteredReviewers.value.length / perPage)
+);
+
+const paginatedReviewers = computed(() => {
+    const start = (currentPage.value - 1) * perPage;
+    return filteredReviewers.value.slice(start, start + perPage);
+});
+
+const nextPage = () => {
+    if (currentPage.value < totalPages.value) currentPage.value++;
+};
+
+const prevPage = () => {
+    if (currentPage.value > 1) currentPage.value--;
+};
 </script>
 
 <template>
@@ -53,28 +83,30 @@ const toggleReviewer = (reviewer) => {
         <!-- Selección de editor -->
         <div class="lg:mb-5">
             <FormField required label="Selecciona un editor:" :error="form.errors.editor_id">
-                <FormControl 
-                    :disabled="!getRole(['Admin', 'Admin-Revista'])" 
+                <FormControl
+                    :disabled="!getRole(['Admin', 'Admin-Revista'])"
                     v-model="form.editor_id"
-                    :options="props.editors" 
+                    :options="props.editors"
                 />
             </FormField>
         </div>
 
-        <!-- Selección de revisores (ocupa todo el ancho) -->
+        <!-- Selección de revisores -->
         <div class="lg:mb-5 col-span-2">
             <FormField required label="Selecciona uno o más revisores:" :error="form.errors.reviewers">
-                <!-- Contador -->
-                <!-- <div class="flex items-center justify-between mb-2">
-                    <span class="text-gray-600 dark:text-gray-400">
-                        Revisores asignados: <strong>{{ TotalAssigned }}</strong>
-                    </span>
-                </div> -->
 
-                <!-- Lista con scroll -->
-                <div v-if="props.reviewers.length > 0" class="border rounded border-gray-400 max-h-60 overflow-y-auto">
+                <!-- Buscador -->
+                <div class="mb-3">
+                    <FormControl
+                        v-model="search"
+                        placeholder="Buscar por nombre, área o subárea..."
+                    />
+                </div>
+
+                <!-- Lista de revisores -->
+                <div v-if="filteredReviewers.length > 0" class="border rounded border-gray-400">
                     <ul class="flex flex-col divide-y divide-gray-200">
-                        <li v-for="item in props.reviewers" :key="item.id">
+                        <li v-for="item in paginatedReviewers" :key="item.id">
                             <label class="p-2 justify-between flex items-center px-3"
                                 :class="{
                                     'cursor-not-allowed': !getRole(['Editor', 'Admin', 'Admin-Revista']),
@@ -85,11 +117,11 @@ const toggleReviewer = (reviewer) => {
                                     <span v-if="item.area" class="ml-2">- {{ item.area }}</span>
                                     <span v-if="item.subarea" class="ml-2">- {{ item.subarea }}</span>
                                     <p class="text-gray-500 dark:text-gray-400 mt-1 text-xs">
-                                        Número de Artículos Asignados: {{ item.assigned_count }}
+                                        Artículos asignados: {{ item.assigned_count }}
                                     </p>
                                 </span>
 
-                                <input 
+                                <input
                                     :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])"
                                     type="checkbox"
                                     class="sr-only peer"
@@ -98,7 +130,6 @@ const toggleReviewer = (reviewer) => {
                                     :checked="checkedReviewer(item)"
                                     @change="toggleReviewer(item)"
                                 >
-
                                 <div
                                     class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300
                                     dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700
@@ -110,6 +141,21 @@ const toggleReviewer = (reviewer) => {
                             </label>
                         </li>
                     </ul>
+
+                    <!-- Controles de paginación -->
+                    <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800">
+                        <button @click="prevPage" :disabled="currentPage === 1"
+                            class="px-3 py-1 text-sm rounded border text-white bg-green-500 hover:bg-green-600 dark:bg-gray-700"
+                        >
+                            Anterior
+                        </button>
+                        <span class="text-sm">Página {{ currentPage }} de {{ totalPages }}</span>
+                        <button @click="nextPage" :disabled="currentPage === totalPages"
+                            class="px-3 py-1 text-sm rounded border text-white bg-green-500 hover:bg-green-600 dark:bg-gray-700"
+                        >
+                            Siguiente
+                        </button>
+                    </div>
                 </div>
                 <CardBoxComponentEmpty v-else />
             </FormField>
@@ -118,13 +164,13 @@ const toggleReviewer = (reviewer) => {
         <!-- Botón guardar -->
         <div class="col-span-2">
             <BaseButtons class="mt-5">
-                <BaseButton 
-                    :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])" 
+                <BaseButton
+                    :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])"
                     @click="saveAssign()"
-                    :icon="mdiContentSave" 
-                    color="success" 
-                    label="Asignar" 
-                    small 
+                    :icon="mdiContentSave"
+                    color="success"
+                    label="Asignar"
+                    small
                 />
             </BaseButtons>
         </div>
