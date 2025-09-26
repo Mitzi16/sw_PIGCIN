@@ -17,6 +17,12 @@ class PaymentVoucher extends Model
         'comments',
         'payment_voucher_status_id',
         'user_id',
+
+        'requires_invoice',
+        'rfc',
+        'direccion_fiscal',
+        'regimen_fiscal',
+        'uso_cfdi',
     ];
 
     public function article()
@@ -36,6 +42,12 @@ class PaymentVoucher extends Model
 
     public function file()
     {
-        return $this->morphOne(File::class, 'fileable');
+        return $this->morphOne(File::class, 'fileable')->where('category', 'voucher');
     }
+
+    public function constancia()
+    {
+        return $this->morphOne(File::class, 'fileable')->where('category', 'constancia');
+    }
+
 }
