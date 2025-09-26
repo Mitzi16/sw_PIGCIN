@@ -20,7 +20,9 @@ const props = defineProps({
   areas: { type: Array, required: true },
   articleTypes: { type: Array, required: true },
   filters: { type: Object, default: () => ({}) },
-  totalFilteredArticles: { type: Number, default: 0 }
+  totalFilteredArticles: { type: Number, default: 0 },
+  // NUEVO: Recibimos el conteo de artículos por tipo
+  articleCountsByType: { type: Array, default: () => [] }
 });
 
 // Filtros reactivos
@@ -60,9 +62,14 @@ const chartConfig = computed(() => {
       data: {
         labels: props.articleTypes.map(type => type.name),
         datasets: [{
-          data: props.articleTypes.map(type =>
-            props.totalFilteredArticles * (1 / props.articleTypes.length)
-          ),
+          // MODIFICADO: Mapeamos los tipos de artículo para encontrar su conteo real
+          data: props.articleTypes.map(type => {
+            const countData = props.articleCountsByType.find(
+              item => item.article_type_id === type.id
+            );
+            // Si un tipo no tiene artículos, devolvemos 0
+            return countData ? countData.count : 0;
+          }),
           backgroundColor: [
             'rgba(255, 99, 132, 0.7)',
             'rgba(54, 162, 235, 0.7)',
@@ -82,7 +89,29 @@ const chartConfig = computed(() => {
           borderWidth: 1
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false }
+      options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        if (context.parsed !== null) {
+                            const total = context.dataset.data.reduce((acc, value) => acc + value, 0);
+                            const value = context.parsed;
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(2) : 0;
+                            label += `${value} (${percentage}%)`;
+                        }
+                        return label;
+                    }
+                }
+            }
+        }
+      }
     };
   } else {
     return {
@@ -123,15 +152,21 @@ const applyFilters = () => {
     preserveState: true,
     preserveScroll: true,
     replace: true,
-    only: ['totalFilteredArticles', 'filters'],
+    // MODIFICADO: Asegúrate de que articleCountsByType se actualice si la lógica cambia
+    only: ['totalFilteredArticles', 'filters', 'articleCountsByType'],
     onFinish: () => {
       isLoading.value = false;
-      initChart();
+      // initChart() es llamado por el watcher de chartConfig
     }
   });
 };
 
 const debouncedApplyFilters = debounce(applyFilters, 500);
+
+// MODIFICADO: Observamos chartConfig para redibujar el gráfico si cambia su estructura
+watch(chartConfig, () => {
+    initChart();
+});
 
 watch([selectedType, dateStart, dateEnd, programsType, areasType], () => {
   debouncedApplyFilters();
@@ -213,8 +248,8 @@ watch([dateStart, dateEnd], validateDates);
         </div>
 
         <!-- Filtros -->
-        <CardBox class="mb-6" has-table>
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <CardBox class="mb-6 p-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
             <!-- Select Programas -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -223,8 +258,8 @@ watch([dateStart, dateEnd], validateDates);
               <select 
                 v-model="programsType"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 
-                      focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
-                      dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                       focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
+                       dark:bg-slate-800 dark:border-gray-600 dark:text-white"
                 @change="areasType = 'all'" 
               >
                 <option value="all">Todos los programas</option>
@@ -246,8 +281,8 @@ watch([dateStart, dateEnd], validateDates);
               <select 
                 v-model="areasType"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 
-                      focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
-                      dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                       focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
+                       dark:bg-slate-800 dark:border-gray-600 dark:text-white"
                 :disabled="isLoading || programsType === 'all'"
               >
                 <option value="all">
@@ -262,7 +297,7 @@ watch([dateStart, dateEnd], validateDates);
                 </option>
               </select>
               <p v-if="programsType !== 'all' && !filteredAreas.length" class="text-xs text-gray-500 mt-1">
-                No hay áreas disponibles para este programa
+                No hay áreas para este programa
               </p>
             </div>
 
@@ -274,8 +309,8 @@ watch([dateStart, dateEnd], validateDates);
               <select 
                 v-model="selectedType"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 
-                      focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
-                      dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                       focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
+                       dark:bg-slate-800 dark:border-gray-600 dark:text-white"
               >
                 <option value="all">Todos los tipos</option>
                 <option 
@@ -295,8 +330,8 @@ watch([dateStart, dateEnd], validateDates);
                 type="date"
                 v-model="dateStart"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 
-                      focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
-                      dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                       focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
+                       dark:bg-slate-800 dark:border-gray-600 dark:text-white"
                 @change="validateDates"
               >
             </div>
@@ -307,8 +342,8 @@ watch([dateStart, dateEnd], validateDates);
                 type="date"
                 v-model="dateEnd"
                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 
-                      focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
-                      dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                       focus:ring focus:ring-indigo-200 focus:ring-opacity-50 
+                       dark:bg-slate-800 dark:border-gray-600 dark:text-white"
                 @change="validateDates"
               >
             </div>
@@ -316,16 +351,16 @@ watch([dateStart, dateEnd], validateDates);
         </CardBox>
 
         <!-- Gráfico dinámico -->
-        <CardBox>
-          <div v-if="isLoading" class="absolute inset-0 bg-gray-100 dark:bg-gray-900 bg-opacity-50 flex items-center justify-center z-10">
+        <CardBox class="relative">
+          <div v-if="isLoading" class="absolute inset-0 bg-white dark:bg-slate-900/70 flex items-center justify-center z-10 rounded-lg">
             <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
           <div class="chart-container" style="position: relative; height:400px; width:100%">
             <canvas id="articlesChart"></canvas>
           </div>
           <div class="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-            <span v-if="!hasFilters">Visualizando distribución porcentual de artículos por tipo</span>
-            <span v-else>Visualizando cantidad absoluta de artículos con los filtros aplicados</span>
+            <span v-if="!hasFilters">Mostrando la distribución total de artículos por tipo.</span>
+            <span v-else>Mostrando la cantidad de artículos que coinciden con los filtros aplicados.</span>
           </div>
         </CardBox>
       </template>
