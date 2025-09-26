@@ -20,6 +20,8 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         $role = $user->getRoleNames()->first();
+        $data = null; // MODIFICADO: Inicializar data como null
+        $articleCountsByType = []; // NUEVO: Inicializar array para el conteo
 
         // Normalizamos valores nulos a 'all'
         $filters = [
@@ -47,6 +49,12 @@ class DashboardController extends Controller
                 'calls' => Call::count(),
                 'callsActives' => Call::where('status', true)->count(),
             ];
+
+            // NUEVO: Conteo de artículos por tipo para el gráfico circular
+            $articleCountsByType = DB::table('articles')
+                ->select('article_type_id', DB::raw('count(*) as count'))
+                ->groupBy('article_type_id')
+                ->get();
         }
 
         // Programas y áreas para selects
@@ -107,13 +115,14 @@ class DashboardController extends Controller
             ->count();
 
         return Inertia::render('Dashboard', [
-            'data' => $data ?? null,
+            'data' => $data,
             'role' => $role,
             'programs' => $programs,
             'areas' => $areas,
             'articleTypes' => $articleTypes,
             'totalFilteredArticles' => $totalFilteredArticles,
-            'filters' => $filters
+            'filters' => $filters,
+            'articleCountsByType' => $articleCountsByType // NUEVO: Pasamos el nuevo dato
         ]);
     }
 }

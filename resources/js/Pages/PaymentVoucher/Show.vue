@@ -31,7 +31,8 @@ const props = defineProps({
     title: { type: String, required: true },
     routeName: { type: String, required: true },
     paymentVoucher: { type: Object, required: true },
-    filePath: { type: String, required: true },
+    filePath: { type: [String, null], required: true },
+    constanciaPath: { type: [String, null], required: false },
 });
 
 const activeTab = ref('paymentVoucher')
@@ -56,6 +57,7 @@ const reload = () => {
             </svg>
             </Link>
         </SectionTitleLineWithButton>
+
         <NotificationBar v-if="$page.props.flash.success" color="success" :icon="mdiInformation" :outline="false">
             {{ $page.props.flash.success }}
         </NotificationBar>
@@ -74,12 +76,12 @@ const reload = () => {
                         <LabelControl :value="paymentVoucher.amount" />
                     </FormField>
                 </div>
-                <FormField label="Archivo:">
-                    <div
+                <FormField label="Archivo del Comprobante:">
+                    <div v-if="paymentVoucher.file"
                         class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 md:p-10 mb-4 dark:bg-gray-800 dark:border-gray-600">
                         <div class="w-auto mb-2 text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
                             <p class="font-semibold mt-2">
-                                Nombre del archivo: {{ paymentVoucher.file.name }}
+                                Nombre del archivo: {{ paymentVoucher.file.original_name }}
                             </p>
                             <p class="font-semibold">
                                 Tamaño: {{ (paymentVoucher.file.size / 1000).toFixed(2) }} KB
@@ -95,20 +97,72 @@ const reload = () => {
                             </template>
                         </div>
                     </div>
+                    <div v-else
+                        class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 md:p-10 mb-4 dark:bg-gray-800 dark:border-gray-600">
+                        <p class="font-semibold text-gray-500">No se ha subido ningún archivo.</p>
+                    </div>
                 </FormField>
-                <BaseButtons>
-                    <BaseButton :icon="mdiClose" :routeName="`${routeName}index`" label="Salir" />
+                
+                <div class="border-t border-gray-300 dark:border-gray-700 pt-6 mt-6 space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                        Datos de Facturación
+                    </h3>
+
+                    <FormField label="¿Requiere factura?">
+                        <LabelControl :value="paymentVoucher.requires_invoice ? 'Sí' : 'No'" />
+                    </FormField>
+
+                    <div v-if="paymentVoucher.requires_invoice" class="space-y-5">
+
+                        <FormField label="RFC:">
+                            <LabelControl :value="paymentVoucher.rfc" />
+                        </FormField>
+
+                        <FormField label="Dirección Fiscal:">
+                            <LabelControl :value="paymentVoucher.direccion_fiscal" />
+                        </FormField>
+
+                        <FormField label="Régimen Fiscal:">
+                            <LabelControl :value="paymentVoucher.regimen_fiscal" />
+                        </FormField>
+
+                        <FormField label="Uso de CFDI:">
+                            <LabelControl :value="paymentVoucher.uso_cfdi" />
+                        </FormField>
+                        
+                        <FormField label="Constancia de Situación Fiscal:">
+                            <div v-if="paymentVoucher.constancia"
+                                class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 dark:bg-gray-800 dark:border-gray-600">
+                                <div class="w-auto text-center font-medium text-gray-700 dark:text-gray-300">
+                                    <p class="font-semibold">
+                                        {{ paymentVoucher.constancia.original_name }}
+                                    </p>
+                                    <a :href="constanciaPath" target="_blank" class="text-blue-500 hover:underline mt-2 inline-block">
+                                        Ver Constancia
+                                    </a>
+                                </div>
+                            </div>
+                            <div v-else
+                                class="bg-slate-100 border-4 border-dashed border-gray-400 flex items-center justify-center rounded-lg p-6 dark:bg-gray-800 dark:border-gray-600">
+                                <p class="font-semibold text-gray-500">No se adjuntó constancia fiscal.</p>
+                            </div>
+                        </FormField>
+                    </div>
+                </div>
+                <BaseButtons class="mt-6">
+                    <BaseButton :icon="mdiClose" :routeName="`${routeName}index`" label="Salir" color="info" outline />
                 </BaseButtons>
+
             </CardBox>
             <div class="col-span-2 h-full lg:relative">
                 <CardBox class="lg:sticky lg:top-14 lg:overflow-y-auto">
                     <Tabs v-model="activeTab" variant="underline" class="p-5">
                         <Tab name="paymentVoucher" title="Comprobante" :disabled="false">
                             <FormField label="Estatus:">
-                                <LabelControl :value="paymentVoucher.payment_voucher_status.name" />
+                                <LabelControl :value="paymentVoucher.payment_voucher_status?.name" />
                             </FormField>
                             <FormField label="Comentarios:">
-                                <LabelControl :value="paymentVoucher.comments" height="h-20" />
+                                <LabelControl :value="paymentVoucher.comments || 'Sin comentarios'" height="h-20" />
                             </FormField>
                         </Tab>
                         <Tab name="postulant" title="Postulante" :disabled="false">
@@ -133,7 +187,7 @@ const reload = () => {
                             </div>
                         </Tab>
                         <Tab name="article" title="Articulo" :disabled="false">
-                        
+
                             <div class="grid grid-cols-1 gap-2 md:grid-cols-2 mb-5">
                                 <FormField label="Identificador:">
                                     <LabelControl :value="paymentVoucher.article.article_folio" />
@@ -142,17 +196,17 @@ const reload = () => {
                                     <LabelControl :value="paymentVoucher.article.title" />
                                 </FormField>
                                 <FormField label="Tipo:">
-                                    <LabelControl :value="paymentVoucher.article.article_type.name" />
+                                    <LabelControl :value="paymentVoucher.article.article_type?.name" />
                                 </FormField>
                                 <FormField label="Editor:">
-                                    <LabelControl :value="paymentVoucher.article.editor.name" />
+                                    <LabelControl :value="paymentVoucher.article.editor?.name" />
                                 </FormField>
                                 <FormField label="Estatus:">
-                                    <LabelControl :value="paymentVoucher.article.article_status.name" />
+                                    <LabelControl :value="paymentVoucher.article.article_status?.name" />
                                 </FormField>
                             </div>
                             <FormField label="Comprobante:">
-                                <LabelControl :value="paymentVoucher.payment_voucher_status.name" />
+                                <LabelControl :value="paymentVoucher.payment_voucher_status?.name" />
                             </FormField>
                         </Tab>
                     </Tabs>
