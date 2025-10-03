@@ -50,22 +50,35 @@
                                 <!-- Body content -->
                                 <tr>
                                     <td class="content-cell" style="box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; position: relative; max-width: 100vw; padding: 32px;">
+
+                                        <!-- Saludo (compatible con 'recipient_name' o 'name') -->
                                         <h1 style="box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; position: relative; color: #3d4852; font-size: 18px; font-weight: bold; margin-top: 0; text-align: left;">
-                                            Hola {{ $articleData['name'] }}
+                                            Hola {{ $articleData['recipient_name'] ?? $articleData['name'] ?? 'usuario' }}
                                         </h1>
+
+                                        <!-- Mensaje condicional según quien asignó -->
                                         <p style="box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; position: relative; font-size: 16px; line-height: 1.5em; margin-top: 0; text-align: left; color: #718096;">
-                                            Este es un correo del sistema CITCA, queremos informarte que se te ha asignado un nuevo artículo para su evaluación.
+                                            @if(isset($articleData['assigner_role']) && strtolower($articleData['assigner_role']) === 'admin')
+                                                El artículo ha sido asignado por el administrador <strong>{{ $articleData['assigner_name'] ?? 'Administrador' }}</strong>.
+                                            @elseif(isset($articleData['assigner_role']) && strtolower($articleData['assigner_role']) === 'editor')
+                                                El artículo ha sido asignado por el editor <strong>{{ $articleData['assigner_name'] ?? 'Editor' }}</strong>.
+                                            @elseif(isset($articleData['assigner_name']))
+                                                El artículo ha sido asignado por <strong>{{ $articleData['assigner_name'] }}</strong>.
+                                            @else
+                                                Este es un correo del sistema CITCA, queremos informarte que se te ha asignado un nuevo artículo para su evaluación.
+                                            @endif
+
+                                            <br><br>
 
                                             Puedes revisar el contenido a través del siguiente botón:
                                         </p>
-                                        
-                                         <p style="font-size: 14px; line-height: 1.5em; margin-top: 15px; text-align: left; color: #e53e3e; font-weight: bold;">
+
+                                        <p style="font-size: 14px; line-height: 1.5em; margin-top: 15px; text-align: left; color: #e53e3e; font-weight: bold;">
                                             Nota: si se te asignó un artículo que no es de tu área, por favor contacta al correo:
                                             <a href="mailto:citca_editores@cenidet.tecnm.mx" style="color: #2b6cb0; text-decoration: underline;">
                                                 citca_editores@cenidet.tecnm.mx
                                             </a>
                                         </p>
-                                        
 
                                         <table class="action" align="center" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; position: relative; -premailer-cellpadding: 0; -premailer-cellspacing: 0; -premailer-width: 100%; margin: 30px auto; padding: 0; text-align: center; width: 100%;">
                                             <tr>

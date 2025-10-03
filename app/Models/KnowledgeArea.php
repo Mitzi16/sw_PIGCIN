@@ -17,6 +17,11 @@ class KnowledgeArea extends Model
     {
         return $this->belongsTo(KnowledgeArea::class, 'parent_id');
     }
+    // programa -> children (áreas priorizadas)
+    public function children()
+    {
+        return $this->hasMany(KnowledgeArea::class, 'parent_id');
+    }
 
     // public function articles()
     // {

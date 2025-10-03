@@ -1,0 +1,1 @@
+import{o as s,a as t,e as r}from"./app-C8VQvZ0f.js";const a={class:"w-full flex justify-center"},c=["src"],u={__name:"Iframe",props:{url:{type:String}},setup(e){return(l,o)=>(s(),t("div",a,[r("iframe",{src:e.url,class:"w-full md:w-2/3 h-96 md:h-[400px]"},null,8,c)]))}};export{u as default};

@@ -1,0 +1,1 @@
+import{o as e,a as o,q as s}from"./app-C8VQvZ0f.js";const c={__name:"BaseDivider",props:{navBar:Boolean},setup(r){const a=r;return(n,t)=>(e(),o("hr",{class:s([a.navBar?"lg:my-0.5 dark:border-slate-700":"my-6 dark:border-slate-500 border-neutral-200","border-t-2 border-gray-100"])},null,2))}};export{c as _};

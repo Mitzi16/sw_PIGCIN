@@ -10,6 +10,7 @@ use App\Mail\AssignEditor;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 
 class ArticleReviewController extends Controller
 {
@@ -39,9 +40,30 @@ class ArticleReviewController extends Controller
      */
     public function store(StoreArticleReviewRequest $request)
     {
-        $fields = $request->validated();
+        //dd($request);
+        /*  $fields = $request->validated();
         $article = $this->storeReviewers($request, $fields);
         $this->sendEmail($article);
+        return redirect()->route("article.index")->with('success', 'Artículo asignado correctamente!'); */
+        $fields = $request->validated();
+        $article = $this->storeReviewers($request, $fields);
+
+        // Obtener info del usuario que realiza la asignación
+        $assigner = Auth::user();
+        $assignerName = $assigner->name ?? ($assigner->fullname ?? ''); // fallback si tu modelo usa otro campo
+        // Intentamos detectar rol con hasRole (spatie) o con un atributo role
+        $assignerRole = null;
+        if (method_exists($assigner, 'hasRole')) {
+            if ($assigner->hasRole('Admin')) $assignerRole = 'Admin';
+            elseif ($assigner->hasRole('Editor')) $assignerRole = 'Editor';
+            else $assignerRole = 'User';
+        } else {
+            // fallback al atributo role (ajusta si usas otro nombre)
+            $assignerRole = $assigner->role ?? 'User';
+        }
+
+        $this->sendEmail($article, $assignerName, $assignerRole);
+
         return redirect()->route("article.index")->with('success', 'Artículo asignado correctamente!');
     }
 
@@ -116,9 +138,10 @@ class ArticleReviewController extends Controller
         return $article;
     }
 
-    public function sendEmail(Article $article)
+   public function sendEmail(Article $article, string $assignerName, string $assignerRole)
     {
-        $editor = $article->editor;
+        /* $editor = $article->editor;
+        dd($editor);
         $reviewers = $article->articleReviews->pluck('reviewer');
 
         $articleData = [
@@ -129,6 +152,35 @@ class ArticleReviewController extends Controller
 
         foreach ($reviewers as $reviewer) {
             $articleData['name'] = $reviewer->name;
+            Mail::to($reviewer->email)->queue(new AssignArticle($articleData));
+        } */
+        // Editor asignado al artículo
+        $editor = $article->editor; // asumiendo relación editor()
+        // Revisores asignados
+        $reviewers = $article->articleReviews->pluck('reviewer');
+
+        // Email para el editor (cuando aplica)
+        if ($editor && $editor->email) {
+            $articleData = [
+                'recipient_name' => $editor->name,
+                'articleId' => $article->id,
+                'assigner_name' => $assignerName,
+                'assigner_role' => $assignerRole,
+                'recipient_role' => 'Editor', // opcional, por si la plantilla lo necesita
+            ];
+            Mail::to($editor->email)->queue(new AssignArticle($articleData));
+        }
+
+        // Emails para revisores (si hubo)
+        foreach ($reviewers as $reviewer) {
+            if (! $reviewer || ! isset($reviewer->email)) continue;
+            $articleData = [
+                'recipient_name' => $reviewer->name,
+                'articleId' => $article->id,
+                'assigner_name' => $assignerName,
+                'assigner_role' => $assignerRole,
+                'recipient_role' => 'Reviewer',
+            ];
             Mail::to($reviewer->email)->queue(new AssignArticle($articleData));
         }
     }

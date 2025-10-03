@@ -85,7 +85,7 @@ const opts = [
     { label: "Identificador", key: "folio", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
     { label: "Titulo", key: "title", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
     { label: "Tipo", key: "type", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
-    { label: "Resumen", key: "abstract", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
+    { label: "Programa_Estudio", key: "program", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
     { label: "Area_Prioritaria", key: "area", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
     { label: "Estatus", key: "status", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
 ];
@@ -141,7 +141,7 @@ provide("filterBy", filterBy);
 
             </div>
         </form>
-
+      
         <CardBox v-if="articles.data.length > 0">
             <table>
                 <thead>
@@ -157,7 +157,7 @@ provide("filterBy", filterBy);
                             <Dropdown title="Tipo" :options="opts" />
                         </th>
                         <th>
-                            <Dropdown title="Resumen" :options="opts" />
+                            <Dropdown title="Programa_Estudio" :options="opts" />
                         </th>
                         <th>
                             <Dropdown title="Area_Prioritaria" :options="opts" />
@@ -187,7 +187,7 @@ provide("filterBy", filterBy);
                         <td data-label="Identificador">{{ item.folio }}</td>
                         <td data-label="Titulo">{{ limitText(item.title, 50) }}</td>
                         <td data-label="Tipo">{{ item.article_type?.name ?? "Sin tipo" }}</td>
-                        <td data-label="Resumen">{{ limitText(item.abstract, 50) }}</td>
+                        <td data-label="Programa_Estudio">{{item.program}}</td>
                         <td data-label="Area">{{ item.area }}</td>
                         <td v-if="isReviewer" data-label="Estatus de evaluación">
                             <div class="dark:bg-green-800 dark:text-green-200 bg-green-100 rounded-full text-green-500 px-2 dark:opacity-95 opacity-85 w-max text-center"
