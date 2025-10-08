@@ -68,14 +68,38 @@ class ArticleController extends Controller
         $query = $this->model::query()->with(['articleReviews', 'articleType', 'knowledgeArea.parent']);
         $user = User::findOrFail(Auth::id());
 
+        $currentRouteName = $request->route()->getName();
+        $title = 'Gestión de Artículos';
+
         if (! $user->canPermission('article.all')) {
+           if ($currentRouteName === 'article.qualify') {
+            $title = 'Artículos para Calificar';
+            // Filtra para mostrar SOLO los artículos donde el usuario es Revisor.
+            $query->whereHas('articleReviews', function ($query) {
+                $query->where('reviewer_id', Auth::id());
+            });
+
+        } elseif ($currentRouteName === 'article.diffuse') {
+            $title = 'Artículos para Difundir';
+            // Filtra para mostrar SOLO los artículos donde el usuario es Editor o Postulante.
             $query->where(function ($query) {
                 $query->where('editor_id', Auth::id())
-                    ->orWhere('postulant_id', Auth::id())
-                    ->orWhereHas('articleReviews', function ($query) {
-                        $query->where('reviewer_id', Auth::id());
-                    });
+                      ->orWhere('postulant_id', Auth::id());
             });
+            $query->whereDoesntHave('articleReviews', function ($subQuery) {
+                $subQuery->where('reviewer_id', Auth::id());
+            });
+
+        } else {
+            // Comportamiento original si se accede desde article.index (la lista mezclada).
+            $query->where(function ($query) {
+                $query->where('editor_id', Auth::id())
+                      ->orWhere('postulant_id', Auth::id())
+                      ->orWhereHas('articleReviews', function ($query) {
+                          $query->where('reviewer_id', Auth::id());
+                      });
+            });
+        }
         }
 
         // --- Filtrado por rol para tipos de artículo (más robusto) ---
@@ -212,7 +236,7 @@ class ArticleController extends Controller
 
         return Inertia::render("{$this->source}Index", [
             'articles' => $records,
-            'title' => 'Gestión de Artículos',
+            'title' => $title,
             'isReviewer' => User::find(Auth::id())->getRole(null, 'Revisor'),
             'routeName' => $this->routeName,
             'loadingResults' => false,
