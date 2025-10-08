@@ -84,6 +84,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //
     Route::resource('article', ArticleController::class)->parameters(['article' => 'article']);
     Route::resource('articleTypes', ArticleTypeController::class)->names('articleType')->except(['show']);
+    Route::get('articles/qualify', [ArticleController::class, 'index'])->middleware(['auth'])->name('article.qualify');
+    Route::get('articles/diffuse', [ArticleController::class, 'index'])->middleware(['auth'])->name('article.diffuse'); 
 
     //Exports to Excel 
 
