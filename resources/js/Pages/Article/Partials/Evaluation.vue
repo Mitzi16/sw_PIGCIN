@@ -5,7 +5,7 @@ import {
     mdiContentSave,
     mdiClose
 } from "@mdi/js";
-import { ref, reactive, onMounted, inject } from "vue";
+import { ref, reactive, onMounted, inject, computed } from "vue";
 import FormField from "@/Components/FormField.vue";
 import FormControl from "@/Components/FormControl.vue";
 import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
@@ -18,6 +18,7 @@ import EvaluacionModal from '@/Components/EvaluacionModal.vue';
 import ResultModal from '@/Components/ResultModal.vue';
 import axios from 'axios';
 
+
 const props = inject('props');
 const user = usePage().props.auth.user;
 const getRole = inject('getRole');
@@ -26,23 +27,28 @@ const showModal = ref(false);
 const showResultsModal = ref(false);
 const selectedReviewerId = ref(null);
 const currentArticleId = ref(props.article.id);
-
-// Estado reactivo para el artículo
 const article = reactive({ ...props.article });
 
-// Formulario del revisor
-const filterArticleReview = article.article_reviews.find(ar => ar.reviewer_id === user.id);
+
+const filterArticleReview = computed(() => 
+    article.article_reviews.find(ar => ar.reviewer_id === user.id)
+);
+
+const isUserReviewerOfThisArticle = computed(() => !!filterArticleReview.value);
+const isUserEditorOfThisArticle = computed(() => article.editor_id === user.id);
+const isUserPostulantOfThisArticle = computed(() => article.postulant_id === user.id);
+
 const formReviewer = useForm({
-    id: filterArticleReview?.id ?? null,
-    comment: filterArticleReview?.comment ?? null,
-    comment_for_editor: filterArticleReview?.comment_for_editor ?? null,
-    reviewer_id: filterArticleReview?.reviewer_id ?? null,
-    article_status_id: filterArticleReview?.article_status_id ?? null,
+    id: filterArticleReview.value?.id ?? null,
+    comment: filterArticleReview.value?.comment ?? null,
+    comment_for_editor: filterArticleReview.value?.comment_for_editor ?? null,
+    reviewer_id: filterArticleReview.value?.reviewer_id ?? null,
+    article_status_id: filterArticleReview.value?.article_status_id ?? null,
     article_id: article.id,
-    criteria: filterArticleReview?.criteria?.map(c => c.id) ?? []
+    criteria: filterArticleReview.value?.criteria?.map(c => c.id) ?? []
 });
 
-// Formulario del editor
+// Formulario del EDITOR: Se inicializa con los datos generales del artículo.
 const formEditor = useForm({
     id: article.id,
     article_status_id: article.article_status.is_evaluation ? article.article_status_id : null,
@@ -51,7 +57,7 @@ const formEditor = useForm({
     article_id: article.id,
 });
 
-// Puntaje total
+// --- ESTADO Y FUNCIONES ---
 const totalScore = ref(null);
 
 const updateScoreInRealTime = async () => {
@@ -59,52 +65,36 @@ const updateScoreInRealTime = async () => {
         const params = getRole(user) === 'revisor'
             ? { reviewer_id: user.id }
             : {};
-
         const { data } = await axios.get(`/api/article-evaluation/${article.id}`, { params });
-        
         totalScore.value = data.article_score ?? null;
-        
-        // Update article reviews with new score
         article.article_reviews = article.article_reviews.map(r => ({
             ...r,
             article_score: r.article_score ?? data.article_score
         }));
-        
-        console.log('[v0] Score updated in real-time:', totalScore.value);
     } catch (error) {
-        console.error('[v0] Error updating score:', error);
+        console.error('Error actualizando el puntaje:', error);
     }
 };
 
 const handleEvaluationSaved = async (evaluationData) => {
-    console.log('[v0] Evaluation saved, updating score:', evaluationData);
-    
-    // Update the total score immediately
     totalScore.value = evaluationData.totalScore;
-    
-    // Also refresh from backend to ensure consistency
     await updateScoreInRealTime();
-    
-    // Show success message or notification here if needed
 };
 
-// Abrir modal de resultados
 const openReviewerResults = (reviewerId) => {
     selectedReviewerId.value = reviewerId;
     showResultsModal.value = true;
 };
 
-// Guardar evaluación del revisor
 const saveReviewer = async () => {
     try {
-        await formReviewer.put(route(`articleReview.update`, filterArticleReview?.id));
+        await formReviewer.put(route(`articleReview.update`, filterArticleReview.value?.id));
         await updateScoreInRealTime();
     } catch (error) {
-        console.error('[v0] Error saving reviewer evaluation:', error);
+        console.error('Error guardando evaluación del revisor:', error);
     }
 };
 
-// Guardar evaluación del editor
 const saveEditor = async () => {
     try {
         await formEditor.patch(route(`${props.routeName}evaluate`, article.id));
@@ -112,11 +102,10 @@ const saveEditor = async () => {
         article.comment = formEditor.comment;
         article.comment_for_editor = formEditor.comment_for_editor;
     } catch (error) {
-        console.error('[v0] Error saving editor evaluation:', error);
+        console.error('Error guardando evaluación del editor:', error);
     }
 };
 
-// Funciones de criterios
 const checkedCriterion = (criterion) => formReviewer.criteria.includes(criterion.id);
 const toggleCriterion = (criterion) => {
     const index = formReviewer.criteria.indexOf(criterion.id);
@@ -124,18 +113,16 @@ const toggleCriterion = (criterion) => {
     else formReviewer.criteria.splice(index, 1);
 };
 
-// Filtrar estados de evaluación
 const filterArticleStatuses = () => props.articleStatuses.filter(status => status.is_evaluation);
 
-// Cargar puntaje total al montar
 onMounted(async () => {
     await updateScoreInRealTime();
 });
 </script>
 
 <template>
-    <!-- FORM PARA EL REVISOR -->
-    <div v-if="getRole(['Revisor'])">
+<!-- FORM REVISOR -->
+    <div v-if="isUserReviewerOfThisArticle">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación de criterios y comentarios
         </h2>
@@ -149,7 +136,6 @@ onMounted(async () => {
                         Evaluar artículo
                     </button>
                 </div>
-
                 <EvaluacionModal 
                     :showModal="showModal" 
                     :articleTypeId="props.article.article_type_id"
@@ -168,7 +154,6 @@ onMounted(async () => {
                 </div>
             </FormField>
         </div>
-
         <BaseDivider />
         <FormField required label="Selecciona un resultado:" :error="formReviewer.errors.article_status_id">
             <FormControl v-model="formReviewer.article_status_id" :options="filterArticleStatuses()" />
@@ -186,16 +171,14 @@ onMounted(async () => {
                 label="Guardar" small />
         </BaseButtons>
     </div>
-
-    <!-- FORM PARA EL EDITOR -->
-    <div v-else-if="getRole('Editor') || getRole('Admin') || getRole('Admin-Revista')">
+<!-- FORM EDITOR -->
+    <div v-else-if="(getRole(['Editor', 'Admin', 'Admin-Revista'])) && isUserEditorOfThisArticle">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación final
         </h2>
         <p class="text-slate-500 text-sm mb-2">
             Los comentarios y resultado final se verán reflejados en el estatus del postulante.
         </p>
-
         <FormField required label="Selecciona un resultado:" :error="formEditor.errors.article_status_id">
             <FormControl v-model="formEditor.article_status_id" :options="filterArticleStatuses()" />
         </FormField>
@@ -207,9 +190,7 @@ onMounted(async () => {
             <BaseButton :disabled="props.article.article_status_id === 4" @click="saveEditor" :icon="mdiContentSave"
                 color="success" label="Guardar" small />
         </BaseButtons>
-
         <BaseDivider />
-
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación de los revisores
         </h2>
@@ -260,7 +241,19 @@ onMounted(async () => {
         <CardBoxComponentEmpty v-else />
     </div>
 
-    <!-- Modal de Resultados -->
+    <div v-else-if="isUserPostulantOfThisArticle">
+        <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
+            Estado de tu Artículo
+        </h2>
+        <p class="text-slate-500 text-sm mb-2">
+            Actualmente tu artículo se encuentra en revisión. Aquí podrás ver el estado y los comentarios finales una vez que el proceso haya concluido.
+        </p>
+        </div>
+
+    <div v-else>
+        <CardBoxComponentEmpty message="No tienes permisos de edición para este artículo." />
+    </div>
+
     <ResultModal :showModal="showResultsModal" :article_id="currentArticleId" :reviewerId="selectedReviewerId"
         @close="showResultsModal = false" />
 </template>

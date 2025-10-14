@@ -1,9 +1,9 @@
 <script setup>
 import { mdiForwardburger, mdiBackburger, mdiMenu } from "@mdi/js";
-import { ref } from "vue";
-import { Head, router } from "@inertiajs/vue3";
-//import { useRouter } from "vue-router";
-import menuAside from "@/menuAside.js";
+import { ref, computed } from "vue";
+import { Head, router, usePage } from "@inertiajs/vue3";
+
+import { getMenu } from "@/menuAside.js";
 import menuNavBar from "@/menuNavBar.js";
 import { useMainStore } from "@/stores/main.js";
 import { useStyleStore } from "@/stores/style.js";
@@ -13,6 +13,14 @@ import NavBar from "@/Components/NavBar.vue";
 import NavBarItemPlain from "@/Components/NavBarItemPlain.vue";
 import AsideMenu from "@/Components/AsideMenu.vue";
 import FooterBar from "@/Components/FooterBar.vue";
+
+const userRoles = computed(() => {
+    const roles = usePage().props.auth.user?.roles || [];
+
+    return roles.map(role => role.name);
+});
+
+const menuAside = computed(() => getMenu(userRoles.value));
 
 useMainStore().setUser({
   name: "",
@@ -25,15 +33,8 @@ const layoutAsidePadding = "xl:pl-60";
 
 const styleStore = useStyleStore();
 
-//const router = useRouter();
-
 const isAsideMobileExpanded = ref(false);
 const isAsideLgActive = ref(false);
-
-/*router.beforeEach(() => {
-  isAsideMobileExpanded.value = false;
-  isAsideLgActive.value = false;
-});*/
 
 router.on("navigate", () => {
   isAsideMobileExpanded.value = false;

@@ -57,8 +57,8 @@ const itemLabel = computed(() => {
     return usePage().props.auth.user.name;
   } else if (props.item.isRol) {
     const roles = usePage().props.auth.user.roles;
-    if (roles.length > 0) {
-      return roles[0].name;
+    if (roles && roles.length > 0) {
+      return roles.map(role => role.name).join(' / ');
     } else {
       return "Sin Rol"; // Cuando el user no tiene rol
     }
