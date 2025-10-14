@@ -53,7 +53,6 @@ const filteredReviewers = computed(() => {
   );
 });
 
-/* ---- 🔹 Paginación ---- */
 const currentPage = ref(1);
 const perPage = 10; // cantidad de revisores por página
 

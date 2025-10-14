@@ -73,14 +73,14 @@ class ArticleController extends Controller
 
         if (! $user->canPermission('article.all')) {
            if ($currentRouteName === 'article.qualify') {
-            $title = 'Artículos para Calificar';
+            $title = 'Artículos para Evaluar';
             // Filtra para mostrar SOLO los artículos donde el usuario es Revisor.
             $query->whereHas('articleReviews', function ($query) {
                 $query->where('reviewer_id', Auth::id());
             });
 
         } elseif ($currentRouteName === 'article.diffuse') {
-            $title = 'Artículos para Difundir';
+            $title = 'Artículos para Distribuir';
             // Filtra para mostrar SOLO los artículos donde el usuario es Editor o Postulante.
             $query->where(function ($query) {
                 $query->where('editor_id', Auth::id())
@@ -128,7 +128,7 @@ class ArticleController extends Controller
             } else {
                 // Si no se encontró ningún tipo coincidente, NO aplicamos filtro para evitar lista vacía.
                 // (opcional: registrar log para depurar)
-                \Log::warning('Admin-Revista: no se encontraron article_types con nombre similar a Revistas');
+                Log::warning('Admin-Revista: no se encontraron article_types con nombre similar a Revistas');
             }
         } elseif (in_array('Admin', $roleNames, true)) {
             // buscaremos tipos relacionados con Congreso y Póster (tolerante)
@@ -144,7 +144,7 @@ class ArticleController extends Controller
                 $query->whereIn('article_type_id', $ids);
             } else {
                 // No se encontraron coincidencias: no filtramos para evitar lista vacía y lo registramos
-                \Log::warning('Admin: no se encontraron article_types para Congreso/Póster con las keywords proporcionadas');
+                Log::warning('Admin: no se encontraron article_types para Congreso/Póster con las keywords proporcionadas');
             }
         }
         // --- fin filtrado por rol ---
@@ -289,133 +289,145 @@ class ArticleController extends Controller
      */
     public function show(Article $article)
     {
-        $article->load(
-            'knowledgeArea',
-            'articleStatus',
-            'articleType',
-            'authors.institution:id,name',
-            'file',
-            'editor:id,name,email',
-            'editor.file',
-            'articleReviews.reviewer:id,name,email',
-            'articleReviews.reviewer.file',
-            'articleReviews.articleStatus',
-            'articleReviews.criteria:id',
-            'call',
-            'paymentVoucher'
-        );
+    $article->load(
+        'knowledgeArea',
+        'articleStatus',
+        'articleType',
+        'authors.institution:id,name',
+        'file',
+        'editor:id,name,email',
+        'editor.file',
+        'articleReviews.reviewer:id,name,email',
+        'articleReviews.reviewer.file',
+        'articleReviews.articleStatus',
+        'articleReviews.criteria:id',
+        'call',
+        'paymentVoucher'
+    );
 
-        $institutions = $article->authors->map(function ($author) {
+    $institutions = $article->authors->map(function ($author) {
+        return [
+            'id' => $author->institution?->id,
+            'name' => $author->institution?->name,
+        ];
+    })->unique('id')->values();
+
+    // Editores (rol ID = 2)
+    $editors = User::with('knowledgeArea.parent')
+        ->role(2)
+        ->get()
+        ->map(function ($u) {
             return [
-                'id' => $author->institution?->id,
-                'name' => $author->institution?->name,
+                'id' => $u->id,
+                'name' => $u->name,
+                'area' => $u->mainArea()?->name,
+                'subarea' => $u->subArea()?->name,
             ];
-        })->unique('id')->values();
+        });
 
-        // Editores (rol ID = 2)
-        $editors = User::with('knowledgeArea.parent')
-            ->role(2)
-            ->get()
-            ->map(function ($u) {
-                return [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'area' => $u->mainArea()?->name,
-                    'subarea' => $u->subArea()?->name,
-                ];
-            });
+    $assignedEditorId = $article->editor_id;
 
-        // Revisores (rol ID = 3)
-        $reviewers = User::with('knowledgeArea.parent')
-            ->role(3)
-            ->orderBy('name')
-            ->withCount('articleReviews')
-            ->get()
-            ->map(function ($u) {
-                return [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'area' => $u->mainArea()?->name,
-                    'subarea' => $u->subArea()?->name,
-                    'assigned_count' => $u->article_reviews_count,
+    $reviewersQuery = User::with('knowledgeArea.parent')
+        ->role(3) // Rol ID 3
+        ->orderBy('name');
 
-                ];
-            });
-        return Inertia::render("{$this->source}Show", [
-            'title' => 'Visualizar Artículo',
-            'article' => $article,
-            'filePath' => $this->getFile($article->file),
-            'articleStatuses' => ArticleStatus::orderBy('id')->get(),
-            'editors' => $editors,
-            'reviewers' => $reviewers,
-            'criteria' => Criterion::orderBy('id')->get(),
-            'user' => User::with('roles')->find(Auth::id()),
-            'areas' => KnowledgeArea::orderBy('name')->get(),
-            'institutions' => $institutions,
-            'statusReviewer' => $article->articleReviews->filter(function ($review) {
-                return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
-            })->isNotEmpty(),
-            'routeName' => $this->routeName,
-        ]);
+    if ($assignedEditorId) {
+        $reviewersQuery->where('id', '!=', $assignedEditorId);
+    }
+
+    $reviewers = $reviewersQuery->withCount('articleReviews')
+        ->get()
+        ->map(function ($u) {
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'area' => $u->mainArea()?->name,
+                'subarea' => $u->subArea()?->name,
+                'assigned_count' => $u->article_reviews_count,
+            ];
+        });
+
+    return Inertia::render("{$this->source}Show", [
+        'title' => 'Visualizar Artículo',
+        'article' => $article,
+        'filePath' => $this->getFile($article->file),
+        'articleStatuses' => ArticleStatus::orderBy('id')->get(),
+        'editors' => $editors,
+        'reviewers' => $reviewers, // Se envía la lista ya filtrada
+        'criteria' => Criterion::orderBy('id')->get(),
+        'user' => User::with('roles')->find(Auth::id()),
+        'areas' => KnowledgeArea::orderBy('name')->get(),
+        'institutions' => $institutions,
+        'statusReviewer' => $article->articleReviews->filter(function ($review) {
+            return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
+        })->isNotEmpty(),
+        'routeName' => $this->routeName,
+    ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
     public function edit(Article $article)
-    {
-        $user = User::with('roles')->find(Auth::id());
+{
+    $user = User::with('roles')->find(Auth::id());
 
-        $institutions = $article->authors->map(function ($author) {
+    $institutions = $article->authors->map(function ($author) {
+        return [
+            'id' => $author->institution?->id,
+            'name' => $author->institution?->name,
+        ];
+    })->unique('id')->values();
+
+    $editors = User::role('Editor')
+        ->orderBy('name')
+        ->get()
+        ->map(function($u) {
             return [
-                'id' => $author->institution?->id,
-                'name' => $author->institution?->name,
+                'id' => $u->id,
+                'name' => $u->name,
             ];
-        })->unique('id')->values();
+        });
 
-        $editors = User::role('Editor')
-            ->orderBy('name')
-            ->get()
-            ->map(function($u) {
-                return [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                ];
-            });
+    $assignedEditorId = $article->editor_id;
 
-        // Ordenar los revisores por nombre
-        $reviewers = User::with('knowledgeArea.parent')
-            ->role(3)  // si usas nombre de rol en Spatie
-            ->orderBy('name')   // <- aquí se ordena alfabéticamente
-            ->get()
-            ->map(function ($u) {
-                return [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'area' => $u->mainArea()?->name,
-                    'subarea' => $u->subArea()?->name,
-                ];
-            });
+    $reviewersQuery = User::with('knowledgeArea.parent')
+        ->role(3) 
+        ->orderBy('name'); // <- aquí se ordena alfabéticamente
 
-        return Inertia::render("{$this->source}Edit", [
-            'title' => 'Editar Artículo',
-            'article' => $article->load(
-                'knowledgeArea',
-                'articleStatus',
-                'authors',
-                'file',
-                'articleReviews',
-                'call'
-            ),
-            'filePath' => $this->getFile($article->file),
-            'articleStatuses' => ArticleStatus::orderBy('id')->get(),
-            'user' => $user,
-            'areas' => KnowledgeArea::orderBy('name')->get(),
-            'institutions' => $institutions,
-            'editors' => $editors,
-            'reviewers' => $reviewers,
-            'routeName' => $this->routeName,
-        ]);
+    if ($assignedEditorId) {
+        $reviewersQuery->where('id', '!=', $assignedEditorId);
+    }
+
+    $reviewers = $reviewersQuery->get()
+        ->map(function ($u) {
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'area' => $u->mainArea()?->name,
+                'subarea' => $u->subArea()?->name,
+            ];
+        });
+
+    return Inertia::render("{$this->source}Edit", [
+        'title' => 'Editar Artículo',
+        'article' => $article->load(
+            'knowledgeArea',
+            'articleStatus',
+            'authors',
+            'file',
+            'articleReviews',
+            'call'
+        ),
+        'filePath' => $this->getFile($article->file),
+        'articleStatuses' => ArticleStatus::orderBy('id')->get(),
+        'user' => $user,
+        'areas' => KnowledgeArea::orderBy('name')->get(),
+        'institutions' => $institutions,
+        'editors' => $editors,
+        'reviewers' => $reviewers, // Se envía la lista ya filtrada
+        'routeName' => $this->routeName,
+    ]);
     }
 
     /**
@@ -646,7 +658,7 @@ class ArticleController extends Controller
         if (in_array('Admin-Revista', $roleNames, true)) {
             $typeIds = $getTypeIdsByKeywords(['Revista', 'Artículo Revista', 'Articulo Revista']);
             if (empty($typeIds)) {
-                \Log::warning('Admin-Revista export: no se hallaron tipos de artículo con keywords de Revista; exportará todo como fallback.');
+                Log::warning('Admin-Revista export: no se hallaron tipos de artículo con keywords de Revista; exportará todo como fallback.');
                 $typeIds = [];
             }
         } elseif (in_array('Admin', $roleNames, true)) {
@@ -659,7 +671,7 @@ class ArticleController extends Controller
                 'Póster',
             ]);
             if (empty($typeIds)) {
-                \Log::warning('Admin export: no se hallaron tipos de artículo para Congreso/Póster; exportará todo como fallback.');
+                Log::warning('Admin export: no se hallaron tipos de artículo para Congreso/Póster; exportará todo como fallback.');
                 $typeIds = [];
             }
         }
