@@ -194,7 +194,7 @@ provide("filterBy", filterBy);
                                 v-if="item.statusReviewer">
                                 Evaluado
                             </div>
-                            <div v-else
+                            <div 
                                 class="dark:bg-yellow-800 dark:text-yellow-200 bg-yellow-100 rounded-full text-yellow-500 px-2 dark:opacity-95 opacity-85 w-max text-center"
                                 v-if="!item.statusReviewer">
                                 Pendiente de evaluar

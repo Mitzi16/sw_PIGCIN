@@ -104,38 +104,44 @@ class ArticleReviewController extends Controller
 
     private function storeReviewers(Request $request, $fields)
     {
-        if ($request->has('reviewers')) {
-            $reviewerIds = $request->reviewers;
-            $currentReviewerIds = ArticleReview::where('article_id', $request->article_id)->pluck('reviewer_id')->toArray();
-            $reviewerIdsToDelete = array_diff($currentReviewerIds, $reviewerIds);
-            $reviewerIdsToAdd = array_diff($reviewerIds, $currentReviewerIds);
+    $article = Article::find($request->article_id);
 
-            if (!empty($reviewerIdsToDelete)) {
-                ArticleReview::where('article_id', $request->article_id)
-                    ->whereIn('reviewer_id', $reviewerIdsToDelete)
-                    ->delete();
-            }
+    if ($request->has('reviewers')) {
+        $reviewerIds = $request->reviewers;
 
-            if (!empty($reviewerIdsToAdd)) {
-                foreach ($reviewerIdsToAdd as $reviewerId) {
-                    ArticleReview::create([
-                        'reviewer_id' => $reviewerId,
-                        'article_id' => $request->article_id
-                    ]);
-                }
-            }
-            $hasReviewers = ArticleReview::where('article_id', $request->article_id)->exists();
-
-            if ($hasReviewers) {
-                $fields['article_status_id'] = 2; // Cambiar estatus a 'en revisión'
-            }
-            // else {
-            //     $fields['article_status_id'] = 2; // Regresar a 1er estatus CONSULTAR CON VITER
-            // }
+        //  Verifica si el editor asignado está en la lista de nuevos revisores
+        if ($article->editor_id && in_array($article->editor_id, $reviewerIds)) {
+            //  Si está, lanza un error de validación o redirige con un mensaje
+            return redirect()->back()->withErrors(['reviewers' => 'El editor asignado a este artículo no puede ser seleccionado como revisor.'])->withInput();
         }
-        $article = Article::find($request->article_id);
-        $article->update($fields);
-        return $article;
+
+        $currentReviewerIds = ArticleReview::where('article_id', $request->article_id)->pluck('reviewer_id')->toArray();
+        $reviewerIdsToDelete = array_diff($currentReviewerIds, $reviewerIds);
+        $reviewerIdsToAdd = array_diff($reviewerIds, $currentReviewerIds);
+
+        if (!empty($reviewerIdsToDelete)) {
+            ArticleReview::where('article_id', $request->article_id)
+                ->whereIn('reviewer_id', $reviewerIdsToDelete)
+                ->delete();
+        }
+
+        if (!empty($reviewerIdsToAdd)) {
+            foreach ($reviewerIdsToAdd as $reviewerId) {
+                ArticleReview::create([
+                    'reviewer_id' => $reviewerId,
+                    'article_id' => $request->article_id
+                ]);
+            }
+        }
+        $hasReviewers = ArticleReview::where('article_id', $request->article_id)->exists();
+
+        if ($hasReviewers) {
+            $fields['article_status_id'] = 2; // Cambiar estatus a 'en revisión'
+        }
+    }
+    
+    $article->update($fields);
+    return $article;
     }
 
    public function sendEmail(Article $article, string $assignerName, string $assignerRole)

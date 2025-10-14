@@ -34,13 +34,13 @@ export const getMenu = (userRoles = []) => {
             menu: [
                 {
                     route: "article.diffuse",
-                    label: "Artículos para Difundir",
+                    label: "Artículos para Distribuir", 
                     icon: mdiBullhorn, 
                     permission: "article.index", 
                 },
                 {
                     route: "article.qualify",
-                    label: "Artículos para Calificar",
+                    label: "Artículos para Evaluar",
                     icon: mdiFileDocumentCheck, 
                     permission: "article.index", 
                 },
