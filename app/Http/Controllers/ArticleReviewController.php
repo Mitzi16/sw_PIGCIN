@@ -64,7 +64,14 @@ class ArticleReviewController extends Controller
 
         $this->sendEmail($article, $assignerName, $assignerRole);
 
-        return redirect()->route("article.index")->with('success', 'Artículo asignado correctamente!');
+        $user = Auth::user();
+        if($user && $user->hasRole('Editor') && $user->hasRole('Revisor')) {
+            return redirect()->route("article.diffuse")->with('success', 'Artículo asignado correctamente!');
+        }else{
+            return redirect()->route("article.index")->with('success', 'Artículo asignado correctamente!');
+        }
+        //return redirect()->back()->with('success', 'Artículo asignado correctamente!');
+        //return redirect()->route("article.index")->with('success', 'Artículo asignado correctamente!');
     }
 
     /**
@@ -91,7 +98,18 @@ class ArticleReviewController extends Controller
         $articleReview->update($request->validated());
 
         $articleReview->criteria()->sync($request->criteria);
-        return redirect()->route("article.index")->with('success', 'Artículo evaluado correctamente!');
+
+        $user = Auth::user();
+        if($user && $user->hasRole('Editor') && $user->hasRole('Revisor')) {
+            $article = $articleReview->article;
+            if($article && $article->editor_id == $user->id) { 
+                return redirect()->route("article.diffuse")->with('success', 'Artículo evaluado correctamente!');
+            }else{
+                return redirect()->route("article.qualify")->with('success', 'Artículo evaluado correctamente!');
+            }
+        }else{
+            return redirect()->route("article.index")->with('success', 'Artículo evaluado correctamente!');
+        }
     }
 
     /**
