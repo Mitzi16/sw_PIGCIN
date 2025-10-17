@@ -121,7 +121,6 @@ onMounted(async () => {
 </script>
 
 <template>
-<!-- FORM REVISOR -->
     <div v-if="isUserReviewerOfThisArticle">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación de criterios y comentarios
@@ -169,10 +168,9 @@ onMounted(async () => {
         <BaseButtons class="mt-5">
             <BaseButton :disabled="props.statusReviewer" @click="saveReviewer" :icon="mdiContentSave" color="success"
                 label="Guardar" small />
-        </BaseButtons>
+        </BaseButtons> 
     </div>
-<!-- FORM EDITOR -->
-    <div v-else-if="(getRole(['Editor', 'Admin', 'Admin-Revista'])) && isUserEditorOfThisArticle">
+    <div v-else-if="getRole(['Admin', 'Admin-Revista']) || isUserEditorOfThisArticle">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación final
         </h2>
@@ -240,7 +238,7 @@ onMounted(async () => {
         </div>
         <CardBoxComponentEmpty v-else />
     </div>
-
+    
     <div v-else-if="isUserPostulantOfThisArticle">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Estado de tu Artículo
@@ -248,7 +246,7 @@ onMounted(async () => {
         <p class="text-slate-500 text-sm mb-2">
             Actualmente tu artículo se encuentra en revisión. Aquí podrás ver el estado y los comentarios finales una vez que el proceso haya concluido.
         </p>
-        </div>
+    </div>
 
     <div v-else>
         <CardBoxComponentEmpty message="No tienes permisos de edición para este artículo." />

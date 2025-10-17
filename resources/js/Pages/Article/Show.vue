@@ -101,13 +101,32 @@ provide('form', form);
 provide('props', props);
 provide('getRole', getRole);
 
+// Alternativa que imita la lógica del backend
+const cancelRouteName = computed(() => {
+    const userRoleNames = props.user?.roles?.map(role => role.name) ?? [];
+
+    if (userRoleNames.includes('Editor') && userRoleNames.includes('Revisor')) {
+        // Preguntamos primero si es el editor, igual que en Laravel
+        if (props.article?.editor_id === props.user?.id) {
+            // Si es el editor, su ruta de cancelación es 'diffuse'
+            return 'article.diffuse';
+        } else {
+            // Si tiene ambos roles pero NO es el editor de este artículo,
+            // asumimos que está aquí como revisor.
+            return 'article.qualify';
+        }
+    }
+
+    // Para todos los demás casos
+    return `${props.routeName}index`;
+});
 </script>
 
 <template>
     <HeadLogo :title="title" />
     <LayoutMain>
         <SectionTitleLineWithButton :icon="mdiPencil" :title="title" main>
-            <Link :href="route(`${routeName}index`)">
+            <Link :href="route(cancelRouteName)">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x"
                 viewBox="0 0 16 16">
                 <path
@@ -127,7 +146,7 @@ provide('getRole', getRole);
                 <Article />
 
                 <BaseButtons class="mt-5">
-                    <BaseButton :routeName="`${props.routeName}index`" :icon="mdiClose" color="white"
+                    <BaseButton :routeName="cancelRouteName" :icon="mdiClose" color="white"
                         label="Cancelar" />
                 </BaseButtons>
             </CardBox>
