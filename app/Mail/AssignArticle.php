@@ -29,7 +29,7 @@ class AssignArticle extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Nuevo artículo para evaluar',
+            subject: 'Asignación de contribución para revisión – CITCA',
         );
     }
 

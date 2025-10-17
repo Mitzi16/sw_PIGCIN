@@ -64,7 +64,14 @@ class ArticleReviewController extends Controller
 
         $this->sendEmail($article, $assignerName, $assignerRole);
 
-        return redirect()->route("article.index")->with('success', 'Artículo asignado correctamente!');
+        $user = Auth::user();
+        if($user && $user->hasRole('Editor') && $user->hasRole('Revisor')) {
+            return redirect()->route("article.diffuse")->with('success', 'Artículo asignado correctamente!');
+        }else{
+            return redirect()->route("article.index")->with('success', 'Artículo asignado correctamente!');
+        }
+        //return redirect()->back()->with('success', 'Artículo asignado correctamente!');
+        //return redirect()->route("article.index")->with('success', 'Artículo asignado correctamente!');
     }
 
     /**
@@ -91,7 +98,18 @@ class ArticleReviewController extends Controller
         $articleReview->update($request->validated());
 
         $articleReview->criteria()->sync($request->criteria);
-        return redirect()->route("article.index")->with('success', 'Artículo evaluado correctamente!');
+
+        $user = Auth::user();
+        if($user && $user->hasRole('Editor') && $user->hasRole('Revisor')) {
+            $article = $articleReview->article;
+            if($article && $article->editor_id == $user->id) { 
+                return redirect()->route("article.diffuse")->with('success', 'Artículo evaluado correctamente!');
+            }else{
+                return redirect()->route("article.qualify")->with('success', 'Artículo evaluado correctamente!');
+            }
+        }else{
+            return redirect()->route("article.index")->with('success', 'Artículo evaluado correctamente!');
+        }
     }
 
     /**
@@ -104,80 +122,63 @@ class ArticleReviewController extends Controller
 
     private function storeReviewers(Request $request, $fields)
     {
-    $article = Article::find($request->article_id);
+        $article = Article::find($request->article_id);
 
-    if ($request->has('reviewers')) {
-        $reviewerIds = $request->reviewers;
+        if ($request->has('reviewers')) {
+            $reviewerIds = $request->reviewers;
 
-        //  Verifica si el editor asignado está en la lista de nuevos revisores
-        if ($article->editor_id && in_array($article->editor_id, $reviewerIds)) {
-            //  Si está, lanza un error de validación o redirige con un mensaje
-            return redirect()->back()->withErrors(['reviewers' => 'El editor asignado a este artículo no puede ser seleccionado como revisor.'])->withInput();
-        }
+            //  Verifica si el editor asignado está en la lista de nuevos revisores
+            if ($article->editor_id && in_array($article->editor_id, $reviewerIds)) {
+                //  Si está, lanza un error de validación o redirige con un mensaje
+                return redirect()->back()->withErrors(['reviewers' => 'El editor asignado a este artículo no puede ser seleccionado como revisor.'])->withInput();
+            }
 
-        $currentReviewerIds = ArticleReview::where('article_id', $request->article_id)->pluck('reviewer_id')->toArray();
-        $reviewerIdsToDelete = array_diff($currentReviewerIds, $reviewerIds);
-        $reviewerIdsToAdd = array_diff($reviewerIds, $currentReviewerIds);
+            $currentReviewerIds = ArticleReview::where('article_id', $request->article_id)->pluck('reviewer_id')->toArray();
+            $reviewerIdsToDelete = array_diff($currentReviewerIds, $reviewerIds);
+            $reviewerIdsToAdd = array_diff($reviewerIds, $currentReviewerIds);
 
-        if (!empty($reviewerIdsToDelete)) {
-            ArticleReview::where('article_id', $request->article_id)
-                ->whereIn('reviewer_id', $reviewerIdsToDelete)
-                ->delete();
-        }
+            if (!empty($reviewerIdsToDelete)) {
+                ArticleReview::where('article_id', $request->article_id)
+                    ->whereIn('reviewer_id', $reviewerIdsToDelete)
+                    ->delete();
+            }
 
-        if (!empty($reviewerIdsToAdd)) {
-            foreach ($reviewerIdsToAdd as $reviewerId) {
-                ArticleReview::create([
-                    'reviewer_id' => $reviewerId,
-                    'article_id' => $request->article_id
-                ]);
+            if (!empty($reviewerIdsToAdd)) {
+                foreach ($reviewerIdsToAdd as $reviewerId) {
+                    ArticleReview::create([
+                        'reviewer_id' => $reviewerId,
+                        'article_id' => $request->article_id
+                    ]);
+                }
+            }
+            $hasReviewers = ArticleReview::where('article_id', $request->article_id)->exists();
+
+            if ($hasReviewers) {
+                $fields['article_status_id'] = 2; // Cambiar estatus a 'en revisión'
             }
         }
-        $hasReviewers = ArticleReview::where('article_id', $request->article_id)->exists();
 
-        if ($hasReviewers) {
-            $fields['article_status_id'] = 2; // Cambiar estatus a 'en revisión'
-        }
-    }
-    
-    $article->update($fields);
-    return $article;
+        $article->update($fields);
+        return $article;
     }
 
-   public function sendEmail(Article $article, string $assignerName, string $assignerRole)
+    public function sendEmail(Article $article, string $assignerName, string $assignerRole)
     {
-        /* $editor = $article->editor;
-        dd($editor);
+        $editor = $article->editor;
         $reviewers = $article->articleReviews->pluck('reviewer');
 
-        $articleData = [
-            'name' => $editor->name,
-            'articleId' => $article->id,
-        ];
-        Mail::to($editor->email)->queue(new AssignArticle($articleData));
-
-        foreach ($reviewers as $reviewer) {
-            $articleData['name'] = $reviewer->name;
-            Mail::to($reviewer->email)->queue(new AssignArticle($articleData));
-        } */
-        // Editor asignado al artículo
-        $editor = $article->editor; // asumiendo relación editor()
-        // Revisores asignados
-        $reviewers = $article->articleReviews->pluck('reviewer');
-
-        // Email para el editor (cuando aplica)
-        if ($editor && $editor->email) {
+        // Solo notificar al editor cuando el asignador NO sea un Editor
+        if ($editor && $editor->email && $assignerRole !== 'Editor') {
             $articleData = [
                 'recipient_name' => $editor->name,
                 'articleId' => $article->id,
                 'assigner_name' => $assignerName,
                 'assigner_role' => $assignerRole,
-                'recipient_role' => 'Editor', // opcional, por si la plantilla lo necesita
+                'recipient_role' => 'Editor',
             ];
             Mail::to($editor->email)->queue(new AssignArticle($articleData));
         }
 
-        // Emails para revisores (si hubo)
         foreach ($reviewers as $reviewer) {
             if (! $reviewer || ! isset($reviewer->email)) continue;
             $articleData = [

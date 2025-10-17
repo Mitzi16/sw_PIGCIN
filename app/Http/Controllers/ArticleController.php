@@ -485,7 +485,19 @@ class ArticleController extends Controller
         ];
         Mail::to($article->postulant->email)->queue(new EvaluationArticle($postulantData));
 
-        return redirect()->route("{$this->routeName}index")->with('success', 'Artículo evaluado con éxito');
+        $user = Auth::user();
+        if($user && $user->hasRole('Editor') && $user->hasRole('Revisor')) {
+            $article = $articleReview->article;
+            if($article && $article->editor_id == $user->id) { 
+                return redirect()->route("article.diffuse")->with('success', 'Artículo evaluado correctamente!');
+            }else{
+            return redirect()->route("article.qualify")->with('success', 'Artículo evaluado correctamente!');
+            }
+        }else{
+            return redirect()->route("{$this->routeName}index")->with('success', 'Artículo evaluado con éxito');
+        }
+        //redirect()->back()->with('success', 'Artículo evaluado con éxito!');
+        //return redirect()->route("{$this->routeName}index")->with('success', 'Artículo evaluado con éxito');
     }
 
     public function signPdf(Article $article)
