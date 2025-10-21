@@ -57,7 +57,6 @@ const formEditor = useForm({
     article_id: article.id,
 });
 
-// --- ESTADO Y FUNCIONES ---
 const totalScore = ref(null);
 
 const updateScoreInRealTime = async () => {
