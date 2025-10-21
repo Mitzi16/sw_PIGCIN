@@ -45,6 +45,7 @@ const props = defineProps({
     articles: { type: Object, default: () => ({}), required: true },
     isReviewer: { type: Boolean, required: true },
     routeName: { type: String, required: true },
+    currentRouteName: { type: String, required: true }, 
     search: { type: String, required: true },
     direction: { type: String, required: true },
 });
@@ -162,7 +163,7 @@ provide("filterBy", filterBy);
                         <th>
                             <Dropdown title="Area_Prioritaria" :options="opts" />
                         </th>
-                        <th class="text-sm" v-if="isReviewer">Estatus de evaluación</th>
+                        <th class="text-sm" v-if="currentRouteName === 'article.qualify'">Estatus de evaluación</th>
                         <th v-else>
                             <Dropdown title="Estatus" :options="opts" />
                         </th>
@@ -189,7 +190,7 @@ provide("filterBy", filterBy);
                         <td data-label="Tipo">{{ item.article_type?.name ?? "Sin tipo" }}</td>
                         <td data-label="Programa_Estudio">{{item.program}}</td>
                         <td data-label="Area">{{ item.area }}</td>
-                        <td v-if="isReviewer" data-label="Estatus de evaluación">
+                        <td v-if="currentRouteName === 'article.qualify'" data-label="Estatus de evaluación">
                             <div class="dark:bg-green-800 dark:text-green-200 bg-green-100 rounded-full text-green-500 px-2 dark:opacity-95 opacity-85 w-max text-center"
                                 v-if="item.statusReviewer">
                                 Evaluado
