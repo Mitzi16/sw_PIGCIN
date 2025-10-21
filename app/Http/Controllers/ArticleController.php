@@ -36,6 +36,8 @@ class ArticleController extends Controller
 
     private string $routeName;
 
+    private string $currentRouteName;
+
     private string $module = 'article';
 
     private string $storage_path = 'articles';
@@ -81,10 +83,10 @@ class ArticleController extends Controller
 
         } elseif ($currentRouteName === 'article.diffuse') {
             $title = 'Artículos para Distribuir';
-            // Filtra para mostrar SOLO los artículos donde el usuario es Editor o Postulante.
+            // Filtra para mostrar SOLO los artículos donde el usuario es Editor 
             $query->where(function ($query) {
-                $query->where('editor_id', Auth::id())
-                      ->orWhere('postulant_id', Auth::id());
+                $query->where('editor_id', Auth::id());
+                      //->orWhere('postulant_id', Auth::id());
             });
             $query->whereDoesntHave('articleReviews', function ($subQuery) {
                 $subQuery->where('reviewer_id', Auth::id());
@@ -239,6 +241,7 @@ class ArticleController extends Controller
             'title' => $title,
             'isReviewer' => User::find(Auth::id())->getRole(null, 'Revisor'),
             'routeName' => $this->routeName,
+            'currentRouteName' => $currentRouteName,
             'loadingResults' => false,
             'search' => $request->search ?? '',
             'direction' => $direction,
@@ -485,17 +488,17 @@ class ArticleController extends Controller
         ];
         Mail::to($article->postulant->email)->queue(new EvaluationArticle($postulantData));
 
-        $user = Auth::user();
-        if($user && $user->hasRole('Editor') && $user->hasRole('Revisor')) {
-            $article = $articleReview->article;
-            if($article && $article->editor_id == $user->id) { 
-                return redirect()->route("article.diffuse")->with('success', 'Artículo evaluado correctamente!');
-            }else{
-            return redirect()->route("article.qualify")->with('success', 'Artículo evaluado correctamente!');
-            }
-        }else{
-            return redirect()->route("{$this->routeName}index")->with('success', 'Artículo evaluado con éxito');
-        }
+        $user=request()->user();
+        $successMessage = 'Artículo evaluado con éxito!';
+
+        $isDualRole = $user->hasRole('Editor') && $user->hasRole('Revisor');
+        $isEditorOfArticle = $article->editor_id === $user->id;
+
+        if ($isDualRole) {
+            $routeName = $isEditorOfArticle ? 'article.diffuse' : 'article.qualify';
+            return redirect()->route($routeName)->with('success', $successMessage);
+        } 
+        return redirect()->route("{$this->routeName}index")->with('success', $successMessage);
         //redirect()->back()->with('success', 'Artículo evaluado con éxito!');
         //return redirect()->route("{$this->routeName}index")->with('success', 'Artículo evaluado con éxito');
     }
