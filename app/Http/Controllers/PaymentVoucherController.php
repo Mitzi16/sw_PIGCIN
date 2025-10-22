@@ -117,22 +117,43 @@ class PaymentVoucherController extends Controller
      */
     public function store(StorePaymentVoucherRequest $request)
     {
-        try {
+       try {
+            // 1. Encontrar el artículo
             $article = Article::findOrFail($request->article_id);
             $this->authorize('canStorePaymentVoucher', $article);
 
+            // 2. Actualizar el Artículo con sus datos
+            $article->update([
+                'references' => $request->input('references'), // <-- ¡AQUÍ SE GUARDA!
+            ]);
+
+            $this->handleEditableFile($request, $article); // <-- ¡NUEVO!
+
+            // 4. Preparar y crear el PaymentVoucher
             $fields = $request->validated();
-             if (isset($fields['requires_invoice'])) {
-            $fields['requires_invoice'] = $fields['requires_invoice'] === 'yes' ? 1 : 0;
-            }
-            $fields['payment_voucher_status_id'] = 1; // enviado a validar
-            $fields['user_id'] = Auth::id();
-            $paymentVoucher = PaymentVoucher::create($fields);
+            
+            // --- Es más seguro ser explícito ---
+            $voucherData = [
+                'reference'         => $fields['reference'],
+                'amount'            => $fields['amount'],
+                'requires_invoice'  => ($fields['requires_invoice'] ?? 'no') === 'yes' ? 1 : 0,
+                'rfc'               => $fields['rfc'] ?? null,
+                'direccion_fiscal'  => $fields['direccion_fiscal'] ?? null,
+                'regimen_fiscal'    => $fields['regimen_fiscal'] ?? null,
+                'uso_cfdi'          => $fields['uso_cfdi'] ?? null,
+                'payment_voucher_status_id' => 1, // enviado a validar
+                'user_id'           => Auth::id(),
+            ];
+            
+            $paymentVoucher = PaymentVoucher::create($voucherData); // <-- Más seguro
+            // --- Fin de la creación segura ---
+
+            // 5. Vincular el voucher al artículo
             $article->update(['payment_voucher_id' => $paymentVoucher->id]);
 
-            $this->handleFileVoucher($request, $paymentVoucher);
-            // **CORRECCIÓN: Llamar al método para manejar la constancia**
-            $this->handleFileConstancia($request, $paymentVoucher);
+            // 6. Manejar los archivos del voucher
+            $this->handleFileVoucher($request, $paymentVoucher, $article);
+            $this->handleFileConstancia($request, $paymentVoucher, $article);
 
             return redirect()->route("{$this->routeName}index")->with('success', 'Comprobante generado con éxito');
         } catch (\Exception $e) {
@@ -193,14 +214,30 @@ class PaymentVoucherController extends Controller
      */
     public function update(UpdatePaymentVoucherRequest $request, PaymentVoucher $paymentVoucher)
     {
+        $article = $paymentVoucher->article; // Asume que la relación existe
+        if ($article) {
+            $article->update([
+                'references' => $request->input('references'),
+            ]);
+
+            // 2. Manejar el archivo editable del artículo
+            $this->handleEditableFile($request, $article);
+        }
+
+        // 3. Actualizar el PaymentVoucher
         $fields = $request->validated();
-        $fields['payment_voucher_status_id'] = 1; // se reinicia el proceso, enviado a validar
+        $fields['payment_voucher_status_id'] = 1; // se reinicia el proceso
+
+        // 4. Ser explícito para no guardar 'references' o 'editable_file' en el voucher
+        unset($fields['references']);
+        unset($fields['editable_file']);
+        // (Sería mejor crear el array $voucherData como en el método 'store')
 
         $paymentVoucher->update($fields);
 
-        $this->handleFileVoucher($request, $paymentVoucher);
-        // **CORRECCIÓN: Llamar al método para manejar la constancia**
-        $this->handleFileConstancia($request, $paymentVoucher);
+        // 5. Manejar los archivos del voucher
+        $this->handleFileVoucher($request, $paymentVoucher, $article);
+        $this->handleFileConstancia($request, $paymentVoucher, $article);
 
         return redirect()->route("{$this->routeName}index")->with('success', 'Comprobante actualizado con éxito');
     }
@@ -249,63 +286,145 @@ class PaymentVoucherController extends Controller
         return URL::signedRoute('file.serve', $file, now()->addMinutes(60));
     }
 
-    private function handleFileVoucher(Request $request, PaymentVoucher $paymentVoucher)
-{
-    if ($request->hasFile('file')) {
-        $fileStorage = $request->file('file');
-        
-        $originalName = $fileStorage->getClientOriginalName();
+    /**
+     * @param PaymentVoucher $paymentVoucher
+     * @param string $requestKey      // La clave del archivo en el Request (ej: 'file', 'constancia')
+     * @param string $relationName    // El nombre del método de relación (ej: 'file', 'constancia')
+     * @param string $category        // La categoría para guardar en la BD (ej: 'voucher', 'constancia')
+     * @param bool $saveOriginalName  // Si se debe guardar el nombre original o no
+     */
+    private function handleRelatedFileUpload(
+        Request $request,
+        PaymentVoucher $paymentVoucher,
+        string $requestKey,
+        string $relationName,
+        string $category,
+        Article $article,
+        bool $saveOriginalName = false
+    ) {
+        // 1. Verificar si el archivo está presente en la solicitud
+        if (!$request->hasFile($requestKey)) {
+            return; 
+        }
 
-        $hashedPath = $fileStorage->store($this->storage_path, 'private');
+        $fileStorage = $request->file($requestKey);
 
+        //Obtener el modelo del archivo existente (si hay uno)
+        $existingFile = $paymentVoucher->{$relationName}()->first();
+
+        // 3. Eliminar el archivo físico anterior si existe
+        if ($existingFile && Storage::disk('private')->exists($existingFile->path)) {
+            Storage::disk('private')->delete($existingFile->path);
+        }
+
+        $safeBaseName = str_replace(['/', '\\'], '-', $article->article_folio);
+        $extension = $fileStorage->getClientOriginalExtension();
+        $customFileName = $safeBaseName . '_' . $category . '.' . $extension;
+
+        // 4. Almacenar el nuevo archivo de forma segura
+        $folder = '';
+        if ($category === 'constancia') {
+            $folder = 'Constancias';
+        } else {
+            $folder = $this->storage_path; // (paymentVouchers)
+        }
+        $filePath = $fileStorage->storeAs($folder, $customFileName, 'private');
+        $fileName = $customFileName;
+
+        // 5. Preparar los datos del archivo para la base de datos
         $fileData = [
-            'original_name' => $originalName,
-            'name'          => basename($hashedPath),
-            'path'          => $hashedPath,
+            'name'      => $fileName,
+            'path'      => $filePath,
+            'size'      => $fileStorage->getSize(),
+            'mime_type' => $fileStorage->getMimeType(),
+            'category'  => $category,
+        ];
+
+        // 6. Añadir el nombre original si se especificó
+        if ($saveOriginalName) {
+            $fileData['original_name'] = $fileStorage->getClientOriginalName();
+        }
+
+        // 7. Usar updateOrCreate para actualizar el registro existente o crear uno nuevo.
+        $paymentVoucher->{$relationName}()->updateOrCreate(
+            [], 
+            $fileData 
+        );
+    }
+
+    /**
+     * Maneja el archivo 'file' (voucher).
+     */
+    private function handleFileVoucher(Request $request, PaymentVoucher $paymentVoucher, Article $article)
+    {
+        $this->handleRelatedFileUpload(
+            $request,
+            $paymentVoucher,
+            'file',           // $requestKey (nombre en el form)
+            'file',           // $relationName (nombre de la relación Eloquent)
+            'voucher',     
+            $article,   
+            true              
+        );
+    }
+
+    /**
+     * Maneja el archivo 'constancia'.
+     */
+    private function handleFileConstancia(Request $request, PaymentVoucher $paymentVoucher, Article $article)
+    {
+        $this->handleRelatedFileUpload(
+            $request,
+            $paymentVoucher,
+            'constancia',     // $requestKey
+            'constancia',     // $relationName
+            'constancia', 
+            $article,    // $category
+            false             
+        );
+    } 
+
+    /**
+     * Maneja el archivo editable asociado al artículo.
+     */private function handleEditableFile(Request $request, Article $article)
+    {
+        // 1. Verificar si el archivo está presente
+        if (!$request->hasFile('editable_file')) {
+            return;
+        }
+
+        $fileStorage = $request->file('editable_file');
+        $relationName = 'editableFile'; // Nombre de la relación en el modelo Article
+        $category = 'editable'; // Categoría en la BD
+
+        // 2. Obtener el archivo existente (si hay)
+        $existingFile = $article->{$relationName}()->first();
+
+        // 3. Eliminar el archivo físico anterior
+        if ($existingFile && Storage::disk('private')->exists($existingFile->path)) {
+            Storage::disk('private')->delete($existingFile->path);
+        }
+
+        $safeBaseName = str_replace(['/', '\\'], '-', $article->article_folio);
+        //Obtenemos la extensión original del archivo
+        $extension = $fileStorage->getClientOriginalExtension();
+        // Creamos el nombre: "FOLIO_editable.zip"
+        $customFileName = $safeBaseName . '_' . $category . '.' . $extension;
+        $folderPath = 'Editables';
+        $filePath = $fileStorage->storeAs($folderPath, $customFileName, 'private');
+        $fileName = $customFileName;
+
+        // 5. Preparar datos
+        $fileData = [
+            'name'          => $fileName,
+            'original_name' => $fileStorage->getClientOriginalName(), // Guardar nombre original
+            'path'          => $filePath,
             'size'          => $fileStorage->getSize(),
             'mime_type'     => $fileStorage->getMimeType(),
-            'category'      => 'voucher',
+            'category'      => $category,
         ];
-        
-        $fileModel = $paymentVoucher->file()->first(); 
 
-        if ($fileModel) {
-            // Si ya existe un archivo, borra el físico anterior
-            Storage::disk('private')->delete($fileModel->path);
-            // Y actualiza el registro en la BD
-            $fileModel->update($fileData);
-        } else {
-            // Si no existe, crea un nuevo registro de archivo asociado
-            $paymentVoucher->file()->create($fileData);
-        }
-    }
-}
-
-    private function handleFileConstancia(Request $request, PaymentVoucher $paymentVoucher)
-    {
-        if ($request->hasFile('constancia')) {
-            $fileStorage = $request->file('constancia');
-            $fileConstancia = $paymentVoucher->constancia()->first();
-
-            // Eliminar archivo anterior si existe
-            if ($fileConstancia && Storage::disk('private')->exists($fileConstancia->path)) {
-                Storage::disk('private')->delete($fileConstancia->path);
-            }
-
-            // **MEJORA: Usar store() para un nombre de archivo único y seguro**
-            $filePath = $fileStorage->store($this->storage_path, 'private');
-            $fileName = basename($filePath);
-
-            $fileData = [
-                'name'      => $fileName,
-                'path'      => $filePath,
-                'size'      => $fileStorage->getSize(),
-                'mime_type' => $fileStorage->getMimeType(),
-                'category'  => 'constancia',
-            ];
-
-            // Actualizar o crear el registro del archivo
-            $paymentVoucher->constancia()->updateOrCreate([], $fileData);
-        }
+        // 7. Actualizar o crear el registro del archivo
+        $article->{$relationName}()->updateOrCreate([], $fileData);
     }
 }

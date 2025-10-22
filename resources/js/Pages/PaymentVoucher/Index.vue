@@ -158,7 +158,7 @@ provide("filterBy", filterBy);
                         <td data-label="Acciones">
                             <BaseButtons>
                                 <!-- CREAR COMPROBANTE -->
-                                <BaseButton v-if="!item.paymentVoucher && useCan('paymentVoucher.store')"
+                                <BaseButton v-if="!item.paymentVoucher && item.status.id === 4 && useCan('paymentVoucher.store')"
                                     color="success" iconSize="20" :icon="mdiReceiptTextSend" small
                                     :routeName="`${routeName}create`" :parameter="item.id" title="Cargar comprobante" />
 

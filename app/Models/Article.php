@@ -25,7 +25,8 @@ class Article extends Model
         'call_id',
         'payment_voucher_id',
         'article_type_id',
-        'identifier', // si tienes columna para identificador único
+        'identifier', 
+        'references',
     ];
 
     // Carga automática de relaciones frecuentes
@@ -37,10 +38,6 @@ class Article extends Model
         'created_at' => 'datetime:d-m-Y H:i',
         'updated_at' => 'datetime:d-m-Y H:i',
     ];
-
-    /* =======================
-       RELACIONES
-    ======================= */
 
     public function postulant()
     {
@@ -81,6 +78,12 @@ class Article extends Model
     public function file()
     {
         return $this->morphOne(File::class, 'fileable');
+    }
+
+    public function editableFile()
+    {
+        return $this->morphOne(File::class, 'fileable')
+                    ->where('category', 'editable_file');
     }
 
     public function articleReviews()

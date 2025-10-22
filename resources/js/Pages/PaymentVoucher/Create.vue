@@ -35,9 +35,11 @@ const form = useForm({
     payment_voucher_status_id: null,
     user_id: null,
     file: null,
+    editable_file: null,
+    references: null,
 
     // Facturación
-    requires_invoice: null,
+    requires_invoice: 'no',
     constancia: null,
     rfc: null,
     direccion_fiscal: null,
@@ -55,6 +57,10 @@ const handleFileInput = (event) => {
 
 const handleConstanciaInput = (event) => {
     form.constancia = event.target.files[0];
+};
+
+const handleEditableFileInput = (event) => {
+    form.editable_file = event.target.files[0];
 };
 
 const getFileUrl = computed(() => {
@@ -106,7 +112,7 @@ const getConstanciaUrl = computed(() => {
                 </div>
 
                 <!-- Archivo comprobante -->
-                <FormField label="Archivo:" required help="Solo archivos PDF e imagenes (MAX 10M)"
+                <FormField label="Subir Comprobante de Pago:" required help="Solo archivos PDF e imagenes (MAX 10M)"
                     :error="form.errors.file">
                     <div
                         class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 md:p-10 mb-4 dark:bg-gray-800 dark:border-gray-600">
@@ -130,7 +136,35 @@ const getConstanciaUrl = computed(() => {
                         </div>
                     </div>
                 </FormField>
-
+                <!-- Archivo editable -->  
+                <FormField label="Subir archivo editable de tu articulo:"  required help="Solo archivos Word, .Zip, PowerPoint (MAX 10M)"
+                            :error="form.errors.editable_file">
+                        <div
+                            class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 md:p-10 mb-4 dark:bg-gray-800 dark:border-gray-600">
+                            <div class="w-auto mb-2 text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
+                                <FormControl  height="h-10.5" @input="handleEditableFileInput" name="editable_file" type="file" class="w-full" />
+                                <p v-if="form.editable_file?.name" class="font-semibold mt-2">
+                                    Nombre del archivo: {{ form.editable_file?.name }}
+                                </p>
+                                <p v-if="form.editable_file?.size" class="font-semibold">
+                                    Tamaño: {{ (form.editable_file?.size / 1000).toFixed(2) }} KB
+                                </p>
+                            </div>
+                            </div>
+                </FormField>
+                <!-- Referencias bibliográficas -->
+                <FormField
+                    required
+                    label="Copia y pega todas las referencias bibliográficas de tu artículo:"
+                    :error="form.errors.references"
+                >
+                    <FormControl
+                    type="textarea"
+                    height="h-56"
+                    v-model="form.references"
+                    placeholder="Copia y pega todas las referencias bibliográficas de tu artículo"
+                    />
+                </FormField>
                 <!-- ================== BLOQUE FACTURACIÓN ================== -->
                 <div class="border-t border-gray-300 dark:border-gray-700 pt-6 mt-6 space-y-4">
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
@@ -141,7 +175,7 @@ const getConstanciaUrl = computed(() => {
                     <FormField label="¿Requieres factura?" required>
                         <select v-model="form.requires_invoice"
                             class="w-full border rounded-md p-2 focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
-                            <option value="">Selecciona una opción</option>
+                            <!--<option value="">Selecciona una opción</option>-->
                             <option value="yes">Sí</option>
                             <option value="no">No</option>
                         </select>
@@ -177,18 +211,7 @@ const getConstanciaUrl = computed(() => {
 
                         <!-- Si no hay constancia, capturar datos -->
                         <div v-if="!form.constancia" class="space-y-4">
-                            <!-- <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField label="Nombre:" required :error="form.errors.nombre">
-                                    <FormControl v-model="form.nombre" type="text" placeholder="Nombre sin acentos" />
-                                </FormField>
-                                <FormField label="Apellido Paterno:" required :error="form.errors.paterno">
-                                    <FormControl v-model="form.paterno" type="text" placeholder="Apellido Paterno sin acentos" />
-                                </FormField>
-                                <FormField label="Apellido Materno:" required :error="form.errors.materno">
-                                    <FormControl v-model="form.materno" type="text" placeholder="Apellido Materno sin acentos" />
-                                </FormField>
-                            </div> -->
-
+                            <h4 class=" text-gray-700 dark:text-white font-bold ">Si, no cuentas con una constancia de situación fiscal, por favor llena los siguientes campos:</h4>
                             <FormField label="RFC:" required :error="form.errors.rfc"> 
                                 <FormControl v-model="form.rfc"  placeholder="RFC" />
                             </FormField>
