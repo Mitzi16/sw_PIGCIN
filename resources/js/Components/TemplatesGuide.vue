@@ -116,14 +116,14 @@ const posterTemplates = [
               >
                 Descargar {{ dl.label }}
               </a>
-              <a
+              <!--<a
                 v-else
                 :href="dl.link"
                 target="_blank"
                 class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
               >
                 Abrir en {{ dl.label }}
-              </a>
+              </a>-->
             </template>
           </div>
         </div>

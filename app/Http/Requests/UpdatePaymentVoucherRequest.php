@@ -28,7 +28,8 @@ class UpdatePaymentVoucherRequest extends FormRequest
         };
 
         return [
-            // ... (otras reglas se quedan igual) ...
+            'editable_file'             => 'required|mimes:doc,docx,ppt,pptx,zip|max:10000',
+            'references'                => 'required|string|max:500',
             'reference'                 => 'required|string|max:255',
             'amount'                    => 'required|numeric|gt:0|lte:100000',
             
@@ -45,6 +46,8 @@ class UpdatePaymentVoucherRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'editable_file'             => 'archivo editable',
+            'references'                => 'referencias',
             'reference'        => 'referencia',
             'amount'           => 'monto',
             'payment_voucher_status_id' => 'estatus del comprobante',

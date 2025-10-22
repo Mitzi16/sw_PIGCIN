@@ -73,9 +73,9 @@ const dateToLocal = (date) => {
                     <p class="text-sm font-semibold text-gray-900 truncate dark:text-white">
                         Editor en Jefe
                     </p>
-                    <p class="text-sm text-gray-500 truncate dark:text-gray-400">
+                    <!--<p class="text-sm text-gray-500 truncate dark:text-gray-400">
                         Correo: {{ props.article?.editor?.email }}
-                    </p>
+                    </p>-->
                 </div>
             </div>
             <FormControl disabled type="textarea" height="h-24" v-model="props.article.comment"
