@@ -81,7 +81,7 @@ const reload = () => {
                         class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 md:p-10 mb-4 dark:bg-gray-800 dark:border-gray-600">
                         <div class="w-auto mb-2 text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
                             <p class="font-semibold mt-2">
-                                Nombre del archivo: {{ paymentVoucher.file.original_name }}
+                                Nombre del archivo: {{ paymentVoucher.file.name }}
                             </p>
                             <p class="font-semibold">
                                 Tamaño: {{ (paymentVoucher.file.size / 1000).toFixed(2) }} KB
@@ -134,12 +134,21 @@ const reload = () => {
                             <div v-if="paymentVoucher.constancia"
                                 class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 dark:bg-gray-800 dark:border-gray-600">
                                 <div class="w-auto text-center font-medium text-gray-700 dark:text-gray-300">
-                                    <p class="font-semibold">
-                                        {{ paymentVoucher.constancia.original_name }}
+                                    <p class="font-semibold mt-2">
+                                        Nombre del archivo: {{ paymentVoucher.constancia.name }}
                                     </p>
-                                    <a :href="constanciaPath" target="_blank" class="text-blue-500 hover:underline mt-2 inline-block">
-                                        Ver Constancia
-                                    </a>
+                                    <p class="font-semibold">
+                                        Tamaño: {{ (paymentVoucher.constancia.size / 1000).toFixed(2) }} KB
+                                    </p>  
+                                </div>
+                                 <div class="w-full flex justify-center mt-8 mb-4">
+                                    <template v-if="constanciaPath">
+                                        <iframe v-if="paymentVoucher.constancia.mime_type === 'application/pdf'"
+                                            class="w-full h-96 border rounded-lg shadow-md" :src="constanciaPath" />
+                                        <img v-else :src="constanciaPath"
+                                            class="max-w-full max-h-96 rounded-lg shadow-md object-contain"
+                                            alt="Vista previa de imagen" />
+                                    </template>
                                 </div>
                             </div>
                             <div v-else

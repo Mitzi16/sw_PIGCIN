@@ -25,6 +25,8 @@ class StorePaymentVoucherRequest extends FormRequest
             'amount'                    => 'required|numeric|gt:0|lte:100000',
             'file'                      => 'required|mimes:jpeg,png,jpg,pdf|max:10000',
             'payment_voucher_status_id' => 'nullable|exists:payment_voucher_statuses,id',
+            'editable_file'             => 'required|mimes:doc,docx,ppt,pptx,zip|max:10000',
+            'references'                => 'required|string|max:500',
             'user_id'                   => 'nullable|exists:users,id',
 
             // Facturación
@@ -48,6 +50,8 @@ class StorePaymentVoucherRequest extends FormRequest
             'reference'        => 'referencia',
             'amount'           => 'monto',
             'payment_voucher_status_id' => 'estatus del comprobante',
+            'editable_file'    => 'archivo editable',
+            'references'       => 'referencias',
             'user_id'          => 'usuario',
             'file'             => 'archivo',
             'requires_invoice' => '¿requiere factura?',
