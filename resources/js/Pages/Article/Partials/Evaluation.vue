@@ -57,7 +57,10 @@ const formEditor = useForm({
     article_id: article.id,
 });
 
-const totalScore = ref(null);
+const totalScore = ref(filterArticleReview.value?.article_score ?? null);
+
+const isModalEvaluationCompleted = ref(false);
+
 
 const updateScoreInRealTime = async () => {
     try {
@@ -77,7 +80,12 @@ const updateScoreInRealTime = async () => {
 
 const handleEvaluationSaved = async (evaluationData) => {
     totalScore.value = evaluationData.totalScore;
-    await updateScoreInRealTime();
+    const review = article.article_reviews.find(ar => ar.reviewer_id === user.id); 
+    if (review) {
+        review.article_score = evaluationData.totalScore;
+    } 
+    // Habilita el botón de guardar principal
+    isModalEvaluationCompleted.value = true;
 };
 
 const openReviewerResults = (reviewerId) => {
@@ -86,9 +94,22 @@ const openReviewerResults = (reviewerId) => {
 };
 
 const saveReviewer = async () => {
+    // Si el modal no se ha completado (ya sea al cargar o al guardar), muestra error
+    if (!isModalEvaluationCompleted.value) {
+        formReviewer.setError('criteria', 'Debes completar la evaluación de criterios (abrir el modal y guardar) antes de guardar.');
+        return;
+    }
+    
     try {
         await formReviewer.put(route(`articleReview.update`, filterArticleReview.value?.id));
-        await updateScoreInRealTime();
+        const review = article.article_reviews.find(ar => ar.reviewer_id === user.id);
+        if (review) {
+            review.article_status_id = formReviewer.article_status_id;
+            review.article_status = props.articleStatuses.find(s => s.id === formReviewer.article_status_id);
+            review.comment = formReviewer.comment;
+            review.comment_for_editor = formReviewer.comment_for_editor;
+            review.article_score = totalScore.value;
+        }
     } catch (error) {
         console.error('Error guardando evaluación del revisor:', error);
     }
@@ -105,6 +126,33 @@ const saveEditor = async () => {
     }
 };
 
+const loadReviewerScore = async () => {
+    if (!isUserReviewerOfThisArticle.value) return; 
+    
+    try {
+        const { data } = await axios.get(`/api/article-evaluation/${article.id}`, {
+            params: { reviewer_id: user.id } 
+        });
+
+        if (data.evaluations && data.evaluations.length > 0) {
+            // El usuario YA tiene evaluaciones guardadas (el puntaje puede ser 0 o más).
+            isModalEvaluationCompleted.value = true;
+            // Mostramos el puntaje (que podría ser 0)
+            totalScore.value = data.article_score; 
+        } else {
+            // No hay evaluaciones. Es una evaluación nueva.
+            isModalEvaluationCompleted.value = false;
+            // Forzamos el puntaje a 'null' para que muestre "Sin evaluar aún"
+            totalScore.value = null; 
+        }
+
+    } catch (error) {
+        console.error('Error cargando el puntaje del revisor:', error);
+        totalScore.value = null;
+        isModalEvaluationCompleted.value = false; // Asegurarse de que esté bloqueado en caso de error
+    }
+};
+
 const checkedCriterion = (criterion) => formReviewer.criteria.includes(criterion.id);
 const toggleCriterion = (criterion) => {
     const index = formReviewer.criteria.indexOf(criterion.id);
@@ -115,11 +163,53 @@ const toggleCriterion = (criterion) => {
 const filterArticleStatuses = () => props.articleStatuses.filter(status => status.is_evaluation);
 
 onMounted(async () => {
-    await updateScoreInRealTime();
+  // 1. Si el usuario actual es un REVISOR de este artículo
+    if (isUserReviewerOfThisArticle.value) {
+        // Cargar SU puntaje específico usando la lógica de 'evaluations'
+        await loadReviewerScore();
+    
+    } else if (getRole(['Admin', 'Admin-Revista']) || isUserEditorOfThisArticle.value) {
+        
+        try {
+            const scorePromises = article.article_reviews.map(review => {
+                // Llamamos a la API *para cada* revisor de la lista
+                return axios.get(`/api/article-evaluation/${article.id}`, {
+                    params: { reviewer_id: review.reviewer_id } 
+                });
+            });
+
+            // Esperamos que todas las llamadas a la API terminen
+            const responses = await Promise.all(scorePromises);
+            
+            const cleanedReviews = article.article_reviews.map((review, index) => {
+                
+                const { data } = responses[index]; 
+                
+                const correctScore = (data.evaluations && data.evaluations.length > 0)
+                    ? data.article_score // Puntaje real (e.g., 50, o 0)
+                    : null;               // Aún no evalúa, forzar null
+                    
+                
+                return {
+                    ...review,
+                    article_score: correctScore
+                };
+            });
+            
+           
+            article.article_reviews = cleanedReviews;
+
+        } catch (error) {
+            console.error('Error al limpiar los puntajes de los revisores:', error);
+           
+        }
+    }
+  
 });
 </script>
 
 <template>
+<!-- Evaluación del artículo -->
     <div v-if="isUserReviewerOfThisArticle">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación de criterios y comentarios
@@ -133,18 +223,23 @@ onMounted(async () => {
                     <button @click="showModal = true" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors">
                         Evaluar artículo
                     </button>
+                    <p v-if="!isModalEvaluationCompleted" class="text-sm text-gray-500 dark:text-gray-400 mt-2 italic">
+                        Debes evaluar los criterios para habilitar el botón "Guardar".
+                    </p>
                 </div>
-                <EvaluacionModal 
+                <EvaluacionModal
                     :showModal="showModal" 
                     :articleTypeId="props.article.article_type_id"
                     :articleId="props.article.id" 
                     @close="showModal = false"
+                    :reviewerId="user.id" 
                     @evaluationSaved="handleEvaluationSaved"
                 />
             </FormField>
             <FormField label="Puntuación total:">
                 <div class="flex items-center space-x-2">
                     <p class="text-gray-700 dark:text-gray-300 text-lg font-semibold">
+                        
                         {{ totalScore !== null ? totalScore : 'Sin evaluar aún' }}
                         <span v-if="totalScore !== null" class="text-sm font-normal text-gray-500">pts</span>
                     </p>
@@ -165,10 +260,18 @@ onMounted(async () => {
                 placeholder="Escribe tus comentarios..." />
         </FormField>
         <BaseButtons class="mt-5">
-            <BaseButton :disabled="props.statusReviewer" @click="saveReviewer" :icon="mdiContentSave" color="success"
-                label="Guardar" small />
+            <BaseButton 
+                :disabled="props.statusReviewer || !isModalEvaluationCompleted" 
+                @click="saveReviewer" 
+                :icon="mdiContentSave" 
+                color="success"
+                label="Guardar" 
+                small 
+            />
         </BaseButtons> 
     </div>
+    
+    <!-- Evaluación final del editor -->
     <div v-else-if="getRole(['Admin', 'Admin-Revista']) || isUserEditorOfThisArticle">
         <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
             Evaluación final
@@ -220,9 +323,9 @@ onMounted(async () => {
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300">Información de evaluación</p>
                         <div class="text-center">
                             <p class="text-sm font-semibold text-gray-800 dark:text-white">
-                                {{ totalScore !== null ? totalScore : 'Sin evaluar aún' }} pts
+                                {{ item.article_score !== null ? item.article_score : 'Sin evaluar aún' }} pts
                             </p>
-                            <div v-if="totalScore !== null" class="w-2 h-2 bg-green-500 rounded-full mx-auto mt-1"></div>
+                            <div v-if="item.article_score !== null" class="w-2 h-2 bg-green-500 rounded-full mx-auto mt-1"></div>
                         </div>
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios</p>
                         <p class="text-center text-xs text-slate-700 dark:text-slate-300 my-2">Comentarios Del Revisor</p>
