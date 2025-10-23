@@ -46,101 +46,106 @@ class RubricController extends Controller
 
     public function storeEvaluation(Request $request)
     {
-    $data = $request->validate([
-        'article_id' => 'required|integer',
-        'answers' => 'required|array',
-        'answers.*.rubric_item_id' => 'required|integer',
-        'answers.*.rubric_answer_id' => 'required|integer',
-        'answers.*.score' => 'required|integer',
-    ]);
+        $data = $request->validate([
+            'article_id' => 'required|integer',
+            'reviewer_id' => 'required|integer|exists:users,id', //  Validar el reviewer_id
+            'answers' => 'required|array',
+            'answers.*.rubric_item_id' => 'required|integer',
+            'answers.*.rubric_answer_id' => 'required|integer',
+            'answers.*.score' => 'required|integer',
+        ]);
 
-    // Obtener el revisor asignado al artículo (de article_reviews)
-    $articleReview = \App\Models\ArticleReview::where('article_id', $data['article_id'])
-                            ->first();
+        // 2. Usamos el reviewer_id del request
+        $reviewerId = $data['reviewer_id'];
 
-    if (!$articleReview) {
-        return response()->json(['message' => 'No se encontró revisión asignada para este artículo'], 404);
-    }
+        $isAssigned = \App\Models\ArticleReview::where('article_id', $data['article_id'])
+                                              ->where('reviewer_id', $reviewerId)
+                                              ->exists();
+        
+        if (!$isAssigned) {
+             return response()->json(['message' => 'Este revisor no está asignado a este artículo'], 403);
+        }
+        
+        
+        $article = \App\Models\Article::find($data['article_id']);
+        $rubric = \App\Models\Rubric::where('article_type_id', $article->article_type_id)
+            ->withCount('items')
+            ->first();
 
-    // El user_id del revisor asignado
-    $reviewerId = $articleReview->reviewer_id;
+        if (!$rubric) {
+            return response()->json(['message' => 'No se encontró rúbrica asociada a este artículo'], 404);
+        }
 
-    //  Contar cuántos ítems de rúbrica tiene el artículo
-    $rubric = \App\Models\Rubric::where('article_type_id', $articleReview->article->article_type_id)
-                ->withCount('items')
-                ->first();
+        if (count($data['answers']) < $rubric->items_count) {
+            return response()->json([
+                'message' => 'La evaluación está incompleta, debes responder todas las preguntas'
+            ], 422);
+        }
+        
 
-    if (!$rubric) {
-        return response()->json(['message' => 'No se encontró rúbrica asociada a este artículo'], 404);
-    }
+        // 4. Guardar/actualizar cada respuesta
+        foreach ($data['answers'] as $answer) {
+            \App\Models\ArticleEvaluation::updateOrCreate(
+                [
+                    'article_id' => $data['article_id'],
+                    'rubric_item_id' => $answer['rubric_item_id'],
+                    'user_id' => $reviewerId, // <-- 5. Usamos el $reviewerId correcto
+                ],
+                [
+                    'rubric_answer_id' => $answer['rubric_answer_id'],
+                    'score' => $answer['score'],
+                ]
+            );
+        }
 
-    // Validar que se hayan contestado todos los ítems
-    if (count($data['answers']) < $rubric->items_count) {
+        // 6. Calcular la suma total solo de las respuestas de este revisor
+        $totalScore = collect($data['answers'])->sum('score');
+
+        // 7. Actualizar el puntaje SÓLO en las filas de este revisor
+        \App\Models\ArticleEvaluation::where('article_id', $data['article_id'])
+            ->where('user_id', $reviewerId) 
+            ->update(['article_score' => $totalScore]);
+
         return response()->json([
-            'message' => 'La evaluación está incompleta, debes responder todas las preguntas'
-        ], 422);
-    }
-
-    // Guardar/actualizar cada respuesta
-    foreach ($data['answers'] as $answer) {
-        \App\Models\ArticleEvaluation::updateOrCreate(
-            [
-                'article_id' => $data['article_id'],
-                'rubric_item_id' => $answer['rubric_item_id'],
-                'user_id' => $reviewerId,
-            ],
-            [
-                'rubric_answer_id' => $answer['rubric_answer_id'],
-                'score' => $answer['score'],
-            ]
-        );
-    }
-
-    // Calcular la suma total para el artículo
-    $totalScore = \App\Models\ArticleEvaluation::where('article_id', $data['article_id'])
-        ->sum('score');
-
-    // Actualizar todas las filas de ese artículo con el nuevo total
-    \App\Models\ArticleEvaluation::where('article_id', $data['article_id'])
-        ->update(['article_score' => $totalScore]);
-
-    return response()->json([
-        'message' => 'Evaluación guardada con éxito',
-        'total_score' => $totalScore,
-        'reviewer_id' => $reviewerId
-    ]);
+            'message' => 'Evaluación guardada con éxito',
+            'total_score' => $totalScore,
+            'reviewer_id' => $reviewerId
+        ]);
     }
 
     public function getArticleEvaluation($articleId, Request $request)
     {
-    $reviewerId = $request->query('reviewer_id');
-    
-    $query = \App\Models\ArticleEvaluation::where('article_id', $articleId)
-        ->with([
-            'rubricItem:id,question',
-            'rubricAnswer:id,text',
-            'reviewer:id,name'
+        $reviewerId = $request->query('reviewer_id');
+        
+        $query = \App\Models\ArticleEvaluation::where('article_id', $articleId)
+            ->with([
+                'rubricItem:id,question',
+                'rubricAnswer:id,text',
+                'reviewer:id,name'
+            ]);
+
+        if ($reviewerId) {
+            // Este filtro es la clave.
+            $query->where('user_id', $reviewerId);
+        }
+
+        // 1. Ejecutamos la consulta UNA SOLA VEZ.
+        $evaluations = $query->get();
+
+        // 2. Calculamos la suma A PARTIR DE LA COLECCIÓN que ya está filtrada.
+        $articleScore = $evaluations->sum('score');
+
+        return response()->json([
+            'evaluations' => $evaluations->map(function($eval) {
+                // Se añaden ?? para evitar errores si una relación es nula
+                return [
+                    'question' => $eval->rubricItem->question ?? 'Pregunta no disponible',
+                    'answer' => $eval->rubricAnswer->text ?? 'Respuesta no disponible',
+                    'score' => $eval->score,
+                    'reviewer_name' => $eval->reviewer->name ?? 'Desconocido'
+                ];
+            }),
+            'article_score' => $articleScore // Devolvemos el puntaje calculado
         ]);
-
-    if ($reviewerId) {
-        $query->where('user_id', $reviewerId);
-    }
-
-    $evaluations = $query->get();
-
-    // calcular el total directamente con sum()
-    $articleScore = $query->sum('score');
-
-    return response()->json([
-        'evaluations' => $evaluations->map(function($eval) {
-            return [
-                'question' => $eval->rubricItem->question,
-                'answer' => $eval->rubricAnswer->text,
-                'score' => $eval->score,
-                'reviewer_name' => $eval->reviewer->name ?? 'Desconocido'
-            ];
-        }),
-        'article_score' => $articleScore
-    ]);
     }
 }
