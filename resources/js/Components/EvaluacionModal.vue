@@ -1,3 +1,181 @@
+<script setup>
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import axios from 'axios'
+
+const props = defineProps({
+  showModal: {
+    type: Boolean,
+    required: true
+  },
+  articleTypeId: {
+    type: Number,
+    required: true
+  },
+  articleId: {
+    type: Number,
+    required: true
+  },
+  reviewerId: {
+    type: Number,
+    required: true
+  } 
+})
+
+const emit = defineEmits(['close', 'evaluationSaved'])
+
+// State
+const loading = ref(false)
+const submitting = ref(false)
+const error = ref(null)
+const rubric = ref(null)
+const selectedAnswers = reactive({})
+const currentScore = ref(0)
+
+// Computed
+const isFormComplete = computed(() => {
+  if (!rubric.value) return false
+  return rubric.value.items.every(item => selectedAnswers[item.id])
+})
+
+const maxScore = computed(() => {
+  if (!rubric.value) return 0
+  return rubric.value.items.reduce((total, item) => {
+    const maxItemScore = Math.max(...item.answers.map(answer => answer.score))
+    return total + maxItemScore
+  }, 0)
+})
+
+const scorePercentage = computed(() => {
+  if (maxScore.value === 0) return 0
+  return Math.round((currentScore.value / maxScore.value) * 100)
+})
+
+// Methods
+const loadRubric = async () => {
+  loading.value = true
+  error.value = null
+
+  try {
+    const { data } = await axios.get(`/api/rubrics/by-article-type/${props.articleTypeId}`)
+    rubric.value = data.rubric
+
+    // Load existing evaluation if any
+    await loadExistingEvaluation()
+  } catch (err) {
+    error.value = 'Error al cargar la rúbrica. Por favor, inténtalo de nuevo.'
+    console.error('Error loading rubric:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadExistingEvaluation = async () => {
+  try {
+    const { data } = await axios.get(`/api/article-evaluation/${props.articleId}`, {
+      params: {
+        reviewer_id: props.reviewerId
+      }
+    })
+
+    if (data.evaluations && data.evaluations.length > 0) {
+      // Pre-fill existing answers
+      data.evaluations.forEach(evaluation => {
+        const item = rubric.value.items.find(i => i.question === evaluation.question)
+        if (item) {
+          const answer = item.answers.find(a => a.text === evaluation.answer)
+          if (answer) {
+            selectedAnswers[item.id] = answer.id
+          }
+        }
+      })
+      updateScore()
+    }
+  } catch (err) {
+    // No existing evaluation, that's fine
+    console.log('No existing evaluation found')
+  }
+}
+
+const updateScore = () => {
+  if (!rubric.value) return
+
+  let total = 0
+  rubric.value.items.forEach(item => {
+    const selectedAnswerId = selectedAnswers[item.id]
+    if (selectedAnswerId) {
+      const answer = item.answers.find(a => a.id === selectedAnswerId)
+      if (answer) {
+        total += answer.score
+      }
+    }
+  })
+
+  currentScore.value = total
+}
+
+const submitEvaluation = async () => {
+  if (!isFormComplete.value) return
+
+  submitting.value = true
+
+  try {
+    const answers = rubric.value.items.map(item => {
+      const selectedAnswerId = selectedAnswers[item.id]
+      const answer = item.answers.find(a => a.id === selectedAnswerId)
+
+      return {
+        rubric_item_id: item.id,
+        rubric_answer_id: selectedAnswerId,
+        score: answer.score
+      }
+    })
+
+    const { data } = await axios.post('/api/evaluations', {
+      article_id: props.articleId,
+      reviewer_id: props.reviewerId,
+      answers: answers
+    })
+
+    // Emit event with the new score
+    emit('evaluationSaved', {
+      totalScore: data.total_score,
+      reviewerId: data.reviewer_id
+    })
+
+    closeModal()
+  } catch (err) {
+    error.value = 'Error al guardar la evaluación. Por favor, inténtalo de nuevo.'
+    console.error('Error saving evaluation:', err)
+  } finally {
+    submitting.value = false
+  }
+}
+
+const closeModal = () => {
+  emit('close')
+}
+
+// Watchers
+watch(() => props.showModal, (newValue) => {
+  if (newValue) {
+    loadRubric()
+  } else {
+    // Reset state when modal closes
+    rubric.value = null
+    Object.keys(selectedAnswers).forEach(key => delete selectedAnswers[key])
+    currentScore.value = 0
+    error.value = null
+  }
+})
+
+// Load rubric when component mounts if modal is already open
+onMounted(() => {
+  if (props.showModal) {
+    loadRubric()
+  }
+})
+</script>
+
 <template>
   <div v-if="showModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div
@@ -29,8 +207,6 @@
               Responde todas las preguntas para completar la evaluación
             </p>
           </div>
-
-
 
           <!-- Questions -->
           <form @submit.prevent="submitEvaluation" class="space-y-6">
@@ -104,172 +280,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
-import axios from 'axios'
-
-const props = defineProps({
-  showModal: {
-    type: Boolean,
-    required: true
-  },
-  articleTypeId: {
-    type: Number,
-    required: true
-  },
-  articleId: {
-    type: Number,
-    required: true
-  }
-})
-
-const emit = defineEmits(['close', 'evaluationSaved'])
-
-// State
-const loading = ref(false)
-const submitting = ref(false)
-const error = ref(null)
-const rubric = ref(null)
-const selectedAnswers = reactive({})
-const currentScore = ref(0)
-
-// Computed
-const isFormComplete = computed(() => {
-  if (!rubric.value) return false
-  return rubric.value.items.every(item => selectedAnswers[item.id])
-})
-
-const maxScore = computed(() => {
-  if (!rubric.value) return 0
-  return rubric.value.items.reduce((total, item) => {
-    const maxItemScore = Math.max(...item.answers.map(answer => answer.score))
-    return total + maxItemScore
-  }, 0)
-})
-
-const scorePercentage = computed(() => {
-  if (maxScore.value === 0) return 0
-  return Math.round((currentScore.value / maxScore.value) * 100)
-})
-
-// Methods
-const loadRubric = async () => {
-  loading.value = true
-  error.value = null
-
-  try {
-    const { data } = await axios.get(`/api/rubrics/by-article-type/${props.articleTypeId}`)
-    rubric.value = data.rubric
-
-    // Load existing evaluation if any
-    await loadExistingEvaluation()
-  } catch (err) {
-    error.value = 'Error al cargar la rúbrica. Por favor, inténtalo de nuevo.'
-    console.error('Error loading rubric:', err)
-  } finally {
-    loading.value = false
-  }
-}
-
-const loadExistingEvaluation = async () => {
-  try {
-    const { data } = await axios.get(`/api/article-evaluation/${props.articleId}`)
-
-    if (data.evaluations && data.evaluations.length > 0) {
-      // Pre-fill existing answers
-      data.evaluations.forEach(evaluation => {
-        const item = rubric.value.items.find(i => i.question === evaluation.question)
-        if (item) {
-          const answer = item.answers.find(a => a.text === evaluation.answer)
-          if (answer) {
-            selectedAnswers[item.id] = answer.id
-          }
-        }
-      })
-      updateScore()
-    }
-  } catch (err) {
-    // No existing evaluation, that's fine
-    console.log('No existing evaluation found')
-  }
-}
-
-const updateScore = () => {
-  if (!rubric.value) return
-
-  let total = 0
-  rubric.value.items.forEach(item => {
-    const selectedAnswerId = selectedAnswers[item.id]
-    if (selectedAnswerId) {
-      const answer = item.answers.find(a => a.id === selectedAnswerId)
-      if (answer) {
-        total += answer.score
-      }
-    }
-  })
-
-  currentScore.value = total
-}
-
-const submitEvaluation = async () => {
-  if (!isFormComplete.value) return
-
-  submitting.value = true
-
-  try {
-    const answers = rubric.value.items.map(item => {
-      const selectedAnswerId = selectedAnswers[item.id]
-      const answer = item.answers.find(a => a.id === selectedAnswerId)
-
-      return {
-        rubric_item_id: item.id,
-        rubric_answer_id: selectedAnswerId,
-        score: answer.score
-      }
-    })
-
-    const { data } = await axios.post('/api/evaluations', {
-      article_id: props.articleId,
-      answers: answers
-    })
-
-    // Emit event with the new score
-    emit('evaluationSaved', {
-      totalScore: data.total_score,
-      reviewerId: data.reviewer_id
-    })
-
-    closeModal()
-  } catch (err) {
-    error.value = 'Error al guardar la evaluación. Por favor, inténtalo de nuevo.'
-    console.error('Error saving evaluation:', err)
-  } finally {
-    submitting.value = false
-  }
-}
-
-const closeModal = () => {
-  emit('close')
-}
-
-// Watchers
-watch(() => props.showModal, (newValue) => {
-  if (newValue) {
-    loadRubric()
-  } else {
-    // Reset state when modal closes
-    rubric.value = null
-    Object.keys(selectedAnswers).forEach(key => delete selectedAnswers[key])
-    currentScore.value = 0
-    error.value = null
-  }
-})
-
-// Load rubric when component mounts if modal is already open
-onMounted(() => {
-  if (props.showModal) {
-    loadRubric()
-  }
-})
-</script>
