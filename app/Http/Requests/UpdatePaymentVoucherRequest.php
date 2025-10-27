@@ -29,7 +29,7 @@ class UpdatePaymentVoucherRequest extends FormRequest
 
         return [
             'editable_file'             => 'required|mimes:doc,docx,ppt,pptx,zip|max:10000',
-            'references'                => 'required|string|max:500',
+            'references'                => 'required|string|max:20000',
             'reference'                 => 'required|string|max:255',
             'amount'                    => 'required|numeric|gt:0|lte:100000',
             
