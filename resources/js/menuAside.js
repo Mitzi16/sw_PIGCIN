@@ -20,13 +20,13 @@ import {
  * @returns {Array} 
  */
 export const getMenu = (userRoles = []) => {
-    const hasRevisorAndEditorRoles =
-        userRoles.includes("Revisor") && userRoles.includes("Editor");
+    const isRevisor = userRoles.includes("Revisor");
+    const isEditor = userRoles.includes("Editor");
 
-    let articleMenuItem;
-
-    if (hasRevisorAndEditorRoles) {
-        // Si tiene ambos roles, creamos un submenú desplegable.
+    let articleMenuItem;  
+    
+    if (isRevisor && isEditor) {
+        // Caso 1: Tiene AMBOS roles. Muestra el submenú.
         articleMenuItem = {
             label: "Artículos",
             icon: mdiBook,
@@ -34,20 +34,39 @@ export const getMenu = (userRoles = []) => {
             menu: [
                 {
                     route: "article.diffuse",
-                    label: "Artículos para Distribuir", 
-                    icon: mdiBullhorn, 
-                    permission: "article.index", 
+                    label: "Artículos para Distribuir",
+                    icon: mdiBullhorn,
+                    permission: "article.index",
                 },
                 {
                     route: "article.qualify",
                     label: "Artículos para Evaluar",
-                    icon: mdiFileDocumentCheck, 
-                    permission: "article.index", 
+                    icon: mdiFileDocumentCheck,
+                    permission: "article.index",
                 },
             ],
         };
+    } else if (isRevisor) {
+        // Caso 2: Es SÓLO Revisor (no Editor).
+        // Muestra un enlace simple directo a la ruta de calificar.
+        articleMenuItem = {
+            route: "article.qualify",
+            label: "Artículos para Evaluar",
+            icon: mdiFileDocumentCheck,
+            permission: "article.index",
+        };
+    } else if (isEditor) {
+        // Caso 3: Es SÓLO Editor (no Revisor).
+        // Muestra un enlace simple directo a la ruta de distribuir.
+        articleMenuItem = {
+            route: "article.diffuse",
+            label: "Artículos para Distribuir",
+            icon: mdiBullhorn,
+            permission: "article.index",
+        };
     } else {
-        // Si no tiene ambos roles, se muestra el enlace simple de siempre.
+        // Caso 4: No es ni Revisor ni Editor (ej. Postulante, Admin).
+        // Muestra el enlace genérico a la lista.
         articleMenuItem = {
             route: "article.index",
             label: "Artículos",

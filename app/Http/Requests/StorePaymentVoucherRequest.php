@@ -26,7 +26,7 @@ class StorePaymentVoucherRequest extends FormRequest
             'file'                      => 'required|mimes:jpeg,png,jpg,pdf|max:10000',
             'payment_voucher_status_id' => 'nullable|exists:payment_voucher_statuses,id',
             'editable_file'             => 'required|mimes:doc,docx,ppt,pptx,zip|max:10000',
-            'references'                => 'required|string|max:500',
+            'references'                => 'required|string|max:20000',
             'user_id'                   => 'nullable|exists:users,id',
 
             // Facturación
