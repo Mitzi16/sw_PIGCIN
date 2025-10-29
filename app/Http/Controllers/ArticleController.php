@@ -445,7 +445,7 @@ class ArticleController extends Controller
             $this->updateFile($request, $article);
             $this->updateAuthors($request, $article->id);
 
-            $this->sendEmail($article->id);
+            $this->sendEmail($article->id, $article->article_folio);
 
             return redirect()->route("{$this->routeName}index")->with('success', 'Artículo modificado con éxito!');
         } catch (\Exception $e) {
@@ -534,7 +534,7 @@ class ArticleController extends Controller
         }
     }
 
-    private function sendEmail($id)
+    private function sendEmail($id,$folio)
     {
         $user = User::find(Auth::id());
         $allAdmins = User::role(1)->get();
@@ -542,6 +542,7 @@ class ArticleController extends Controller
         $userData = [
             'name' => $user->name,
             'articleId' => $id,
+            'folio' => $folio,
         ];
 
         foreach ($allAdmins as $admin) {
