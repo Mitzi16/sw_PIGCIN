@@ -215,6 +215,12 @@ export const getMenu = (userRoles = []) => {
                 },
             ],
         },
+        {
+            label: "Constancias",
+            role: "Postulante",
+            route: "constancia.name",
+            icon:  mdiShieldCrown,
+        }
     ];
 
     return menu;

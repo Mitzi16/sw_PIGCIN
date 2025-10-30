@@ -54,9 +54,11 @@
                                             Hola {{ $admin }}
                                         </h1>
                                         <p style="box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; position: relative; font-size: 16px; line-height: 1.5em; margin-top: 0; text-align: left; color: #718096;">
-                                            Este es un correo del sistema CITCA, queremos informarte que el postulante {{ $userData['name'] }} acaba de registrar un nuevo artículo.
+                                            Este es un correo del sistema CITCA.
 
-                                            Por favor, visualíza el contenido a través del siguiente botón:
+                                            Queremos informarte que el postulante {{ $userData['name'] }} realizó las modificaciones correspondientes y ha vuelto a enviar su artículo con identificador {{ $userData['folio'] }}  para su posible aceptación.
+
+                                            Por favor, visualiza el contenido actualizado a través del siguiente botón:
                                         </p>
 
 

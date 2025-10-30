@@ -31,7 +31,7 @@ class StoreArticle extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Nuevo artículo de un postulante',
+            subject: 'Actualización de artículo por parte del postulante',
         );
     }
 

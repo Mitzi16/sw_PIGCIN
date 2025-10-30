@@ -14,51 +14,28 @@ class UpdatePaymentVoucherRequest extends FormRequest
 
     public function rules(): array
     {
-        // Obtenemos el registro actual que se está actualizando
-        $paymentVoucher = $this->route('payment_voucher');
+       return [
+            'reference' => 'required|string|max:255',
+            'amount'    => 'required|numeric|gt:0|lte:100000',
 
-        // LA FORMA CORRECTA DE REVISAR, USANDO TU RELACIÓN:
-        // Si la relación ->constancia devuelve un modelo, significa que ya existe un archivo.
-        $hasExistingConstancia = !empty($paymentVoucher->constancia);
+            // Se agrega 'file' como 'nullable'.
+            // 'nullable' significa que si no se envía un archivo nuevo,
+            // la validación pasa. Si SÍ se envía, debe ser pdf/max:10MB.
+            'file'      => 'nullable|mimes:pdf|max:10000',
 
-        $requiresManualBilling = function () use ($hasExistingConstancia) {
-            return $this->input('requires_invoice') === 'yes'   // Quiere factura
-                && !$this->hasFile('constancia')                // Y no sube un archivo nuevo
-                && !$hasExistingConstancia;                     // Y no tiene uno guardado previamente
-        };
-
-        return [
-            'editable_file'             => 'required|mimes:doc,docx,ppt,pptx,zip|max:10000',
-            'references'                => 'required|string|max:20000',
-            'reference'                 => 'required|string|max:255',
-            'amount'                    => 'required|numeric|gt:0|lte:100000',
-            
-            // Facturación
-            'requires_invoice'          => 'nullable|string|in:yes,no',
-            'constancia'                => 'nullable|mimes:pdf|max:10000',
-            'rfc'                       => ['nullable', 'string', 'max:255', Rule::requiredIf($requiresManualBilling)],
-            'direccion_fiscal'          => ['nullable', 'string', 'max:500', Rule::requiredIf($requiresManualBilling)],
-            'regimen_fiscal'            => ['nullable', 'string', 'max:255', Rule::requiredIf($requiresManualBilling)],
-            'uso_cfdi'                  => ['nullable', 'string', 'max:255', Rule::requiredIf($requiresManualBilling)],
+            // --- CAMPOS ELIMINADOS DE LA VALIDACIÓN ---
+            // 'editable_file'
+            // 'references'
+            // Todos los campos de facturación (requires_invoice, rfc, etc.)
         ];
     }
     
     public function attributes(): array
     {
-        return [
-            'editable_file'             => 'archivo editable',
-            'references'                => 'referencias',
-            'reference'        => 'referencia',
-            'amount'           => 'monto',
-            'payment_voucher_status_id' => 'estatus del comprobante',
-            'user_id'          => 'usuario',
-            'file'             => 'archivo',
-            'requires_invoice' => '¿requiere factura?',
-            'constancia'       => 'constancia de situación fiscal',
-            'rfc'              => 'RFC',
-            'direccion_fiscal' => 'dirección fiscal',
-            'regimen_fiscal'   => 'régimen fiscal',
-            'uso_cfdi'         => 'uso de CFDI',
+       return [
+            'reference' => 'referencia',
+            'amount'    => 'monto',
+            'file'      => 'archivo', // <-- El comprobante
         ];
     }
 }

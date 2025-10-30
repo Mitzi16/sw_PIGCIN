@@ -17,6 +17,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\TemplateDownloadController;
 use App\Http\Controllers\ArticleGraphController;
 use App\Models\Module;
@@ -54,6 +55,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route::get('/dashboard', function () {
     //     return Inertia::render('Dashboard', ['users' => User::all(), 'modulos' => Module::all()]);
     // })->name('dashboard');
+
+    Route::get('/constancias/article', [ConstanciaController::class, 'constancia'])->name('constancia.name')->middleware(['auth']);
+    Route::get('/articles/{article}/certificate', [ConstanciaController::class, 'generateCertificate'])
+    ->name('article.certificate') // Un nombre de ruta para la descarga
+    ->middleware(['auth']);      // ¡Importante! También debe estar protegida.
+
 
     Route::get('/graficas/article/institution', [ArticleGraphController::class, 'institution'])->name('article.graphs.institution');
     Route::get('/graficas/article/articleType', [ArticleGraphController::class, 'articleType'])->name('article.graphs.articleType');

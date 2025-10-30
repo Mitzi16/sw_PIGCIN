@@ -1,1 +1,0 @@
-import{o as a,h as r,d as n,e as o,u as i,Z as l}from"./app-C8VQvZ0f.js";const u={__name:"HeadLogo",props:{title:{type:String,default:"page"}},setup(t){return(s,e)=>(a(),r(i(l),{title:t.title},{default:n(()=>e[0]||(e[0]=[o("link",{rel:"shortcut icon",type:"image/png",href:"/img/tecnm_white.png"},null,-1)])),_:1},8,["title"]))}};export{u as _};
