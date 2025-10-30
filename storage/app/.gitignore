@@ -1,4 +1,4 @@
 *
 !public/
-!app/private
+!app/private/
 !.gitignore
