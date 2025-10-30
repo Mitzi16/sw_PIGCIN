@@ -160,7 +160,8 @@ const toggleCriterion = (criterion) => {
     else formReviewer.criteria.splice(index, 1);
 };
 
-const filterArticleStatuses = () => props.articleStatuses.filter(status => status.is_evaluation);
+const allowedStatusIds = [3, 4, 5];
+const filterArticleStatuses = () => props.articleStatuses.filter(status => allowedStatusIds.includes(status.id));
 
 onMounted(async () => {
   // 1. Si el usuario actual es un REVISOR de este artículo

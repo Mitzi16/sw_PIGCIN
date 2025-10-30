@@ -282,7 +282,7 @@ class ArticleController extends Controller
 
         $this->storeFile($request, $article, $nombre_archivo);
         $this->storeAuthors($request, $article->id);
-        $this->sendEmail($article->id);
+        $this->sendEmail($article->id, $article->article_folio);
 
         return redirect()->route("{$this->routeName}index")->with('success', 'Artículo creado con éxito!');
     }
@@ -440,7 +440,7 @@ class ArticleController extends Controller
     {
         try {
             $fields = $request->validated();
-            $fields['article_status_id'] = 1; // se reinicia el proceso
+            $fields['article_status_id'] = 6; // se reinicia el proceso
             $article->update($fields);
             $this->updateFile($request, $article);
             $this->updateAuthors($request, $article->id);

@@ -75,6 +75,11 @@ class Article extends Model
         return $this->hasMany(Author::class);
     }
 
+    public function correspondingAuthor()
+    {
+        return $this->hasOne(Author::class)->where('is_corresponding', 1);
+    }
+
     public function file()
     {
         return $this->morphOne(File::class, 'fileable');
