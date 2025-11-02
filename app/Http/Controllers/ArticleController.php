@@ -503,6 +503,40 @@ class ArticleController extends Controller
         //return redirect()->route("{$this->routeName}index")->with('success', 'Artículo evaluado con éxito');
     }
 
+    /**
+     * Obtiene todos los autores de un artículo para el reconocimiento grupal.
+     *
+     * @param  \App\Models\Article  $article
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getArticleAuthors(Article $article)
+    {
+        // 1. Autorizar que el usuario pueda ver este artículo
+        // (Usa la misma política que 'show' o 'view')
+        try {
+            $this->authorize('view', $article);
+        } catch (\Exception $e) {
+            // Si no tiene permiso, devolver un error
+            return response()->json(['error' => 'No autorizado para ver este artículo.'], 403);
+        }
+
+        // 2. Obtener los autores usando la relación que ya existe
+        $authors = $article->authors; // Esto carga la colección de autores
+
+        // 3. Formatear los nombres
+        // Itera sobre cada objeto 'Author' y crea un string con el nombre completo
+        $formattedNames = $authors->map(function ($author) {
+            // Formato: "Prefijo Nombre Apellido" (ej: "Doctor(a) felipe tr")
+            // trim() elimina espacios extra si el prefijo estuviera vacío
+            return trim($author->prefix . ' ' . $author->name . ' ' . $author->surname);
+        });
+
+        // 4. Devolver la respuesta JSON que el frontend espera
+        return response()->json([
+            'authors' => $formattedNames
+        ]);
+    }
+
     public function signPdf(Article $article)
     {
         try {
