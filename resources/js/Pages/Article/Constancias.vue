@@ -116,6 +116,12 @@ watch(
                             >
                                 Título del Artículo
                             </th>
+                             <th
+                                scope="col"
+                                class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-600 dark:text-gray-300 uppercase"
+                            >
+                                Folio
+                            </th>
                             <th
                                 scope="col"
                                 class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-600 dark:text-gray-300 uppercase"
@@ -156,6 +162,11 @@ watch(
                                 class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100"
                             >
                                 {{ article.title }}
+                            </td>
+                            <td
+                                class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100"
+                            >
+                                {{ article.article_folio }}
                             </td>
                             <td
                                 class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap"
