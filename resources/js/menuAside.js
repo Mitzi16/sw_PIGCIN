@@ -215,6 +215,18 @@ export const getMenu = (userRoles = []) => {
                 },
             ],
         },
+        {
+            label: "Constancias",
+            role: "Postulante",
+            route: "constancia.name",
+            icon:  mdiShieldCrown,
+        },
+        /*{
+            label: "Diapositivas",
+            route: "article.diapositivas",
+            icon: mdiBook,
+            role:"Postulante",
+        }*/
     ];
 
     return menu;

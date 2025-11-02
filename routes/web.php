@@ -17,8 +17,10 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\TemplateDownloadController;
 use App\Http\Controllers\ArticleGraphController;
+use App\Http\Controllers\DiapositivaController;
 use App\Models\Module;
 use App\Models\User;
 use Illuminate\Foundation\Application;
@@ -55,6 +57,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //     return Inertia::render('Dashboard', ['users' => User::all(), 'modulos' => Module::all()]);
     // })->name('dashboard');
 
+    Route::get('/constancias/article', [ConstanciaController::class, 'constancia'])->name('constancia.name')->middleware(['auth']);
+    Route::get('/articles/{article}/certificate', [ConstanciaController::class, 'generateCertificate'])->name('article.certificate') ->middleware(['auth']);      
+    Route::get('/diapositivas/upload', [DiapositivaController::class, 'index'])->name('article.diapositivas')->middleware(['auth']);
+    Route::get('/diapositivas/upload/{article}/create', [DiapositivaController::class, 'create'])->name('diapositiva.create')->middleware(['auth']);
+
+     // Graphs Routes
     Route::get('/graficas/article/institution', [ArticleGraphController::class, 'institution'])->name('article.graphs.institution');
     Route::get('/graficas/article/articleType', [ArticleGraphController::class, 'articleType'])->name('article.graphs.articleType');
     Route::get('/graficas/article/status', [ArticleGraphController::class, 'status'])->name('article.graphs.status');
@@ -86,6 +94,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('articleTypes', ArticleTypeController::class)->names('articleType')->except(['show']);
     Route::get('articles/qualify', [ArticleController::class, 'index'])->middleware(['auth'])->name('article.qualify');
     Route::get('articles/diffuse', [ArticleController::class, 'index'])->middleware(['auth'])->name('article.diffuse'); 
+    Route::get('/article/{article}/authors', [ArticleController::class, 'getArticleAuthors'])->middleware(['auth']) ->name('article.getAuthors'); 
 
     //Exports to Excel 
 

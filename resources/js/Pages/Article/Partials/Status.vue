@@ -6,6 +6,19 @@ import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
 
 const props = inject('props');
 
+// --- INICIO DE LA MODIFICACIÓN ---
+
+// Creamos una propiedad computada para filtrar los estatus
+// Esto solo incluirá los estatus con id <= 5
+const filteredStatuses = computed(() => {
+    if (!props.articleStatuses) {
+        return [];
+    }
+    return props.articleStatuses.filter(item => item.id <= 5);
+});
+
+// --- FIN DE LA MODIFICACIÓN ---
+
 const dateToLocal = (date) => {
     if (!date) return "";
     const [fecha, hora] = date.split(" ");
@@ -25,8 +38,9 @@ const dateToLocal = (date) => {
     <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">Pasos del proceso</h2>
     <div class="mt-5 px-5">
         <ol class="relative text-gray-500 border-s border-gray-200 dark:border-gray-700 dark:text-gray-400">
-            <li v-for="item in props.articleStatuses" :key="item.id" class="mb-10 ms-6">
-                <span v-if="props.article.article_status_id === item.id"
+            
+            <li v-for="item in filteredStatuses" :key="item.id" class="mb-10 ms-6">
+            <span v-if="props.article.article_status_id === item.id"
                     class="absolute flex items-center justify-center w-8 h-8 bg-green-200 rounded-full -start-4 ring-4 ring-white dark:ring-gray-900 dark:bg-green-900">
                     <svg class="w-3.5 h-3.5 text-green-500 dark:text-green-400" aria-hidden="true"
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 12">
@@ -73,10 +87,7 @@ const dateToLocal = (date) => {
                     <p class="text-sm font-semibold text-gray-900 truncate dark:text-white">
                         Editor en Jefe
                     </p>
-                    <!--<p class="text-sm text-gray-500 truncate dark:text-gray-400">
-                        Correo: {{ props.article?.editor?.email }}
-                    </p>-->
-                </div>
+                    </div>
             </div>
             <FormControl disabled type="textarea" height="h-24" v-model="props.article.comment"
                 placeholder="Sin comentarios..." />

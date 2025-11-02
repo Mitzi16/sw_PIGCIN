@@ -214,32 +214,40 @@ class PaymentVoucherController extends Controller
      */
     public function update(UpdatePaymentVoucherRequest $request, PaymentVoucher $paymentVoucher)
     {
-        $article = $paymentVoucher->article; // Asume que la relación existe
-        if ($article) {
-            $article->update([
-                'references' => $request->input('references'),
-            ]);
+        try {
+            // 1. Obtener el artículo (necesario para la función que guarda el archivo)
+            $article = $paymentVoucher->article;
 
-            // 2. Manejar el archivo editable del artículo
-            $this->handleEditableFile($request, $article);
+            // 2. Obtener los campos validados (solo 'reference' y 'amount')
+            $fields = $request->validated();
+            
+            // 3. Quitar 'file' del array, ya que no es una columna
+            // en la tabla 'payment_vouchers' y se maneja por separado.
+            if (isset($fields['file'])) {
+                unset($fields['file']);
+            }
+
+            // 4. ¡Importante! Reiniciar el estatus para que vuelva a validación
+            $fields['payment_voucher_status_id'] = 1; // se reinicia el proceso
+
+            // 5. Actualizar el comprobante (solo 'reference' y 'amount')
+            $paymentVoucher->update($fields);
+
+            // 6. Manejar el archivo del comprobante (si se subió uno nuevo)
+            // La función handleFileVoucher ya es segura y verifica si el archivo existe.
+            if ($article) {
+                $this->handleFileVoucher($request, $paymentVoucher, $article);
+            } else {
+                // Opcional: Registrar un error si el artículo no se encuentra
+                Log::warning("El artículo asociado al voucher {$paymentVoucher->id} no fue encontrado durante la actualización.");
+            }
+
+            return redirect()->route("{$this->routeName}index")->with('success', 'Comprobante actualizado con éxito');
+
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar el comprobante: ' . $e->getMessage());
+            return Redirect::back()->with('error', 'Ocurrió un error al actualizar el comprobante.');
         }
-
-        // 3. Actualizar el PaymentVoucher
-        $fields = $request->validated();
-        $fields['payment_voucher_status_id'] = 1; // se reinicia el proceso
-
-        // 4. Ser explícito para no guardar 'references' o 'editable_file' en el voucher
-        unset($fields['references']);
-        unset($fields['editable_file']);
-        // (Sería mejor crear el array $voucherData como en el método 'store')
-
-        $paymentVoucher->update($fields);
-
-        // 5. Manejar los archivos del voucher
-        $this->handleFileVoucher($request, $paymentVoucher, $article);
-        $this->handleFileConstancia($request, $paymentVoucher, $article);
-
-        return redirect()->route("{$this->routeName}index")->with('success', 'Comprobante actualizado con éxito');
     }
 
     /**
