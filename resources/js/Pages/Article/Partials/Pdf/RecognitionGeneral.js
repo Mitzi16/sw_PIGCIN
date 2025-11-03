@@ -49,7 +49,7 @@ export default async function getPdf(authors, title, id) {
         text = authors;
     }
 
-    const urlPdf = "/pdfs/Template.pdf";
+    const urlPdf = "/pdfs/Templates.pdf";
     const existingPdfBytes = await fetch(urlPdf).then((res) =>
         res.arrayBuffer()
     );
@@ -57,17 +57,19 @@ export default async function getPdf(authors, title, id) {
     const pages = pdfDoc.getPages();
     const firstPage = pages[0];
     const { width, height } = firstPage.getSize();
+    const secondPage = pdfDoc.addPage([width, height]);
 
     const centerX = width / 2;
     let y; // 'y' se definirá dinámicamente
 
-    let font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    let font = fontBold;
     let fontSize = 15;
 
     const maxAuthorWidth = 500; // Ancho máximo para el nombre/s
     const wrappedText = wrapText(text, maxAuthorWidth, font, fontSize);
     const textLines = wrappedText.split('\n');
-    const lineHeight = fontSize * 1.2; // Espaciado de 1.2
+    const lineHeight = fontSize * 1.5; // Espaciado de 1.2
 
    
     const totalTextBlockHeight = (textLines.length - 1) * lineHeight;
@@ -75,7 +77,7 @@ export default async function getPdf(authors, title, id) {
 
     for (const line of textLines) {
         let textWidth = font.widthOfTextAtSize(line, fontSize);
-        let x = centerX - textWidth / 2; // Centrar cada línea
+        let x = (centerX - textWidth / 2 ) - 20; // Centrar cada línea
         
         firstPage.drawText(line, {
             x: x,
@@ -94,7 +96,7 @@ export default async function getPdf(authors, title, id) {
     const authorBlockHeight = textLines.length * lineHeight;
     y = (height / 2 + 30) - (authorBlockHeight / 2) - 40; // 40px de espacio
 
-    let x = centerX - textWidth / 2;
+    let x = (centerX - textWidth / 2) - 20; // Centrar la leyenda
 
     firstPage.drawText(legend, {
         x: x,
@@ -105,25 +107,25 @@ export default async function getPdf(authors, title, id) {
         size: fontSize,
     });
 
-    await addQR(pdfDoc, firstPage, title, text); // <--- CAMBIO: Pasa 'text' (la cadena de autores) al QR
+    await addQR(pdfDoc, secondPage, title, text, height); // <--- CAMBIO: Pasa 'text' (la cadena de autores) al QR
 
-    drawText(title, font, 12, firstPage, (y -= 16), centerX);
-    drawText("En el II Congreso Internacional de Tecnología y Ciencia Aplicada, desarrollado en el Tecnológico", font, 12, firstPage, (y -= 16), centerX);
-    drawText("Nacional de México/Centro Nacional de Investigación y Desarrollo Tecnológico, TecNM/CENIDET,", font, 12, firstPage, (y -= 16), centerX);
-    drawText("del 22 al 24 de mayo de 2024.", font, 12, firstPage, (y -= 16), centerX);
-    drawText("Cuernavaca, Morelos, 24 de mayo de 2024", font, 12, firstPage, (y -= 50), centerX);
+    drawText(title, fontBold, 12, firstPage, (y -= 32), (centerX - 20));
+    drawText("En el II Congreso Internacional de Tecnología y Ciencia Aplicada, desarrollado en el Tecnológico", font, 10, firstPage, (y -= 32), (centerX - 20));
+    drawText("Nacional de México/Centro Nacional de Investigación y Desarrollo Tecnológico, TecNM/CENIDET,", font, 10, firstPage, (y -= 16), (centerX - 20));
+    drawText("del 22 al 24 de mayo de 2024.", font, 10, firstPage, (y -= 16), (centerX - 20));
+    drawText("Cuernavaca, Morelos, 24 de mayo de 2024", font, 10, firstPage, (y -= 25), centerX );
     // SERV
-    let sealY = 150;
+    let sealY = height - 50;
     let sealLeftX = 110;
     let titleFontSize = 10;
-    firstPage.drawText('Sello Digital:', {
+    secondPage.drawText('Sello Digital:', {
         x: sealLeftX, // <-- Usa el margen izquierdo
         y: sealY - titleFontSize / 2,
         font: font, // (Ya es Helvetica)
         size: titleFontSize,
         color: rgb(0.2, 0.255, 0.333),
     });
-    fontSize = 6;
+    fontSize = 8;
     sealY -= 10;
     const lines = splitAndJustifyText(signedText, font, fontSize, 400);
     console.log(centerX);
@@ -142,7 +144,7 @@ export default async function getPdf(authors, title, id) {
         }
 
         for (let char of line) {
-            firstPage.drawText(char, {
+            secondPage.drawText(char, {
                 x: currentX,
                 y: sealY - fontSize / 2,
                 font: font,
@@ -173,7 +175,7 @@ const getSignedText = async (id) => {
 
 const drawText = (text, font, fontSize, page, y, centerX) => {
     const textWidth = font.widthOfTextAtSize(text, fontSize);
-    const x = Math.max(centerX - textWidth / 2, 52);
+    const x = centerX - textWidth / 2;
 
     page.drawText(text, {
         x: x,
@@ -224,7 +226,7 @@ const wrapText = (text, width, font, fontSize) => {
     return result;
   }
 
-const addQR = async (pdfDoc, firstPage, title, user) => { 
+const addQR = async (pdfDoc, firstPage, title, user, height) => { 
     const qr = generateQR(title, user); 
     if (!qr) {
         console.error("No se pudo generar el QR");
@@ -233,12 +235,23 @@ const addQR = async (pdfDoc, firstPage, title, user) => {
     const base64Data = qr.replace(/^data:image\/(png|jpeg);base64,/, '');
     const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
     const image = await pdfDoc.embedJpg(imageBytes); 
-    const qrFixedSize = 80;
+    const qrFixedSize = 90;
+    const qrX = 10;
+    const qrY = 580;
     firstPage.drawImage(image, {
-        x: 25,
-        y: 70,
+        x: qrX,
+        y: qrY,
         width: qrFixedSize,
         height: qrFixedSize,
+    });
+
+    firstPage.drawRectangle({
+        x: qrX,
+        y: qrY,
+        width: qrFixedSize,
+        height: qrFixedSize,
+        borderWidth: 1,
+        borderColor: rgb(0, 0, 0), // 0, 0, 0 es negro
     });
 }
 
