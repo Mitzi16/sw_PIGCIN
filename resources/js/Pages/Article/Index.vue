@@ -27,6 +27,7 @@ import { limitText } from "@/Hooks/useFormato";
 import { useCan } from "@/Hooks/usePermissions";
 import { computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
+import Swal from "sweetalert2";
 
 const page = usePage();
 
@@ -101,6 +102,38 @@ const canEdit = (id) => {
     return false;
 };
 
+const confirmContribution = () => {
+    Swal.fire({
+        title: '¿Estás seguro de registrar tu contribución? ',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, registrar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.get(route(`${props.routeName}create`));
+        }
+    });
+}
+
+const confirmEditContribution = (id) => {
+    Swal.fire({
+        title: '¿Estás seguro que deseas enviar nueva mente tu contribución con atención a observaciones? ',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, editar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.get(route(`${props.routeName}edit`,  id ));
+        }
+    });
+}
+
 provide("filterBy", filterBy);
 
 </script>
@@ -133,7 +166,7 @@ provide("filterBy", filterBy);
 
                 <BaseButtons class="flex space-x-2 w-full max-w-sm">
                     <!-- max-w-sm opcional para que no se estiren demasiado -->
-                    <BaseButton v-if="useCan('article.store')" :routeName="`${routeName}create`" color="info"
+                    <BaseButton v-if="useCan('article.store')" @click="confirmContribution" color="info"
                         :icon="mdiPlus" label="Agregar artículo" class="flex-1 h-11 rounded-l-lg " />
 
                     <BaseButton :icon="mdiReceiptText" color="success" label="Exportar Excel" @click="exportExcel"
@@ -208,7 +241,7 @@ provide("filterBy", filterBy);
                         <td data-label="Acciones">
                             <BaseButtons>
                                 <BaseButton v-if="canEdit(item.id)" color="info" :icon="mdiPencil" small
-                                    :routeName="`${routeName}edit`" :parameter="item.id" title="Editar artículo" />
+                                    @click="confirmEditContribution(item.id)" title="Editar artículo" />
                                 <BaseButton color="info" :icon="mdiCheckDecagram" iconSize="22" small
                                     :routeName="`${routeName}show`" :parameter="item.id" title="Ver artículo" />
                             </BaseButtons>

@@ -63,7 +63,7 @@ class PaymentVoucherController extends Controller
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('title', 'LIKE', '%' . $search . '%')
                         ->orWhere('article_folio', 'LIKE', '%' . $search . '%')
-                        ->orWhere('type', 'LIKE', '%' . $search . '%')
+                        ->orWhere('article_type_id', 'LIKE', '%' . $search . '%')
                         ->orWhere('abstract', 'LIKE', '%' . $search . '%')
                         ->orWhere('key_works', 'LIKE', '%' . $search . '%')
                         ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
