@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\MorphMany; 
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Article extends Model
 {
@@ -83,6 +85,11 @@ class Article extends Model
     public function file()
     {
         return $this->morphOne(File::class, 'fileable');
+    }
+
+    public function files (): MorphMany
+    {
+        return $this->morphMany(File::class, 'fileable');
     }
 
     public function editableFile()

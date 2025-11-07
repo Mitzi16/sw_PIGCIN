@@ -6,11 +6,12 @@
 
 <style>
 /* ================================
-   CONFIGURACIÓN GENERAL DE PÁGINA
+    CONFIGURACIÓN GENERAL DE PÁGINA
 ================================= */
 @page {
-    size: A4;
-    margin: 80px 40px 80px 40px; /* Márgenes reducidos */
+    /* --- MODIFICADO --- */
+    size: letter; /* Cambiado de A4 a letter */
+    margin: 80px 70px 80px 70px; /* Márgenes laterales aumentados a 70px */
 }
 
 html, body {
@@ -30,7 +31,7 @@ body {
 }
 
 /* ================================
-   ENCABEZADO
+    ENCABEZADO
 ================================= */
 .header {
     position: fixed;
@@ -64,7 +65,7 @@ body {
 }
 
 /* ================================
-   PIE DE PÁGINA
+    PIE DE PÁGINA
 ================================= */
 .footer {
     position: fixed;
@@ -82,7 +83,7 @@ body {
 }
 
 /* ================================
-   CONTENIDO PRINCIPAL
+    CONTENIDO PRINCIPAL
 ================================= */
 main {
     margin-top: 10px;
@@ -115,7 +116,7 @@ p {
 }
 
 /* =========================================
-   NUEVO: FORMATO CARTA INVITACIÓN (PÁG 1)
+    NUEVO: FORMATO CARTA INVITACIÓN (PÁG 1)
 ========================================= */
 .first-page-content {
     /* Fuente serif elegante. Se aplica solo al contenido de la pág 1 */
@@ -170,10 +171,10 @@ p {
 
 
 /* ================================
-   BLOQUE DE FIRMAS (PÁG 1) - CON NUEVO FORMATO
+    BLOQUE DE FIRMAS (PÁG 1) - CON NUEVO FORMATO
 ================================= */
 .signatures-wrapper {
-    margin-top: 20px;
+    margin-top: 18px;
     page-break-inside: avoid; /* Intenta no romper el bloque de firmas */
     font-family: DejaVu Serif, Georgia, "Times New Roman", serif; /* Fuente formal */
 }
@@ -249,7 +250,7 @@ p {
 }
 
 /* =========================================
-   BLOQUE DE VALIDACIÓN (PÁG 2)
+    BLOQUE DE VALIDACIÓN (PÁG 2)
 ========================================= */
 .second-page-validation {
     page-break-before: always; /* FUERZA EL SALTO A LA PÁGINA 2 */
@@ -285,7 +286,8 @@ p {
     font-size: 6px;
     margin-top: 2px;
     text-align: justify;
-    font-weight: bold;
+    /* --- CORREGIDO (de f_textont-weight) --- */
+    font-weight: bold; 
 }
 
 .digital-seal {
@@ -376,7 +378,9 @@ p {
 
         <p class="p">Reciban un cordial saludo.</p>
     
-    </div> <div class="signatures-wrapper">
+    </div> 
+    
+    <div class="signatures-wrapper">
         <div class="signatures-container">
             <div class="atentamente-block">
                 <p class="center bold">A T E N T A M E N T E</p>
@@ -409,7 +413,9 @@ p {
                 <a href="mailto:vin_cenidet@tecnm.mx">vin_cenidet@tecnm.mx</a>
             </div>
         </div>
-    </div> <div class="second-page-validation">
+    </div> 
+
+    <div class="second-page-validation">
         <div class="validation-container">
             <div class="qr-code">
                 <img src="{{ $qrCodeBase64 ?? '' }}" alt="Código QR de Verificación">
@@ -423,7 +429,8 @@ p {
                 otorgan a los documentos con firma autógrafa</p>
             </div>
         </div>
-    </div> </main>
+    </div> 
+    </main>
 
 <div class="footer">
     <img src="{{ public_path('img/piep.png') }}" alt="Pie de página">

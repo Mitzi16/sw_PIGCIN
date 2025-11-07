@@ -21,6 +21,7 @@ use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\TemplateDownloadController;
 use App\Http\Controllers\ArticleGraphController;
 use App\Http\Controllers\DiapositivaController;
+use App\Http\Controllers\VerificationController;
 use App\Models\Module;
 use App\Models\User;
 use Illuminate\Foundation\Application;
@@ -58,7 +59,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // })->name('dashboard');
 
     Route::get('/constancias/article', [ConstanciaController::class, 'constancia'])->name('constancia.name')->middleware(['auth']);
-    Route::get('/articles/{article}/certificate', [ConstanciaController::class, 'generateCertificate'])->name('article.certificate') ->middleware(['auth']);      
+    Route::get('/articles/{article}/certificate', [ConstanciaController::class, 'generateCertificate'])->name('article.certificate') ->middleware(['auth']);
+    Route::get('/verificar/{folio}', [VerificationController::class, 'verifyConstancia'])->name('constancia.verify');
+    Route::get('/verifica/reconocimiento/{id}', [VerificationController::class, 'verifyReconocimiento'])->name('certificate.verify');
+    Route::get('/articles/{article}/acceptance-letter-data', [ConstanciaController::class, 'getAcceptanceLetterData'])->name('article.acceptanceLetterData') ->middleware(['auth']);      
     Route::get('/diapositivas/upload', [DiapositivaController::class, 'index'])->name('article.diapositivas')->middleware(['auth']);
     Route::get('/diapositivas/upload/{article}/create', [DiapositivaController::class, 'create'])->name('diapositiva.create')->middleware(['auth']);
 

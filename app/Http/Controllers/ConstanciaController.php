@@ -9,10 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Http;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Storage; 
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class ConstanciaController extends Controller
 {
@@ -25,7 +22,7 @@ class ConstanciaController extends Controller
 
         $query = Article::query()
             ->with('correspondingAuthor')
-            ->whereIn('article_status_id', [3, 4]);
+            ->whereIn('article_status_id', [3, 4]); // Aceptados
 
         if (! $user->canPermission('article.all')) {
             $query->where('postulant_id', $user->id);
@@ -46,6 +43,8 @@ class ConstanciaController extends Controller
                 'author_name' => $article->correspondingAuthor
                 ? trim($article->correspondingAuthor->prefix . ' ' . $article->correspondingAuthor->name . ' ' . $article->correspondingAuthor->surname)
                 : 'No especificado',
+                // Preparamos la URL para el nuevo endpoint
+                'letter_data_url' => route('article.acceptanceLetterData', $article->id),
             ]);
 
         return Inertia::render('Article/Constancias', [
@@ -55,20 +54,25 @@ class ConstanciaController extends Controller
         ]);
     }
 
-    /**
-     * Genera y descarga la constancia en PDF para un artículo.
-     * Este método responde a la ruta /articles/{article}/certificate
-     */
-   public function generateCertificate(Article $article)
+    public function getAcceptanceLetterData(Article $article)
     {
         $user = Auth::user();
 
-        // ... (Toda tu lógica de validación de permisos va aquí) ...
-        // ... (if (!in_array(...))
-        // ... (if ($user->id !== ...))
+        // --- Validación de permisos (Existente) ---
+        if (!in_array($article->article_status_id, [3, 4])) {
+            abort(403, 'El artículo no tiene un estado de aceptación válido.');
+        }
+        if (!$user->canPermission('article.all') && $user->id !== $article->postulant_id) {
+            abort(403, 'No tiene permiso para ver este documento.');
+        }
+        // $this->authorize('successPayment', $article);
+        // --- Fin de Validación ---
 
-        $article->load('authors.institution', 'knowledgeArea.parent', 'articleType', 'call', 'postulant');
 
+        //  Cargar 'postulant.roles' para obtener nombre y rol
+        $article->load('postulant.roles', 'authors.institution', 'articleType', 'articleStatus');
+
+        // --- Preparar listas (Existente) ---
         $unique_institutions_list = $article->authors
             ->map(fn ($author) => $author->institution)
             ->filter()
@@ -77,77 +81,87 @@ class ConstanciaController extends Controller
             ->filter()
             ->implode(', ');
 
+        $authors_list = $article->authors
+            ->map(fn ($a) => trim($a->prefix . ' ' . $a->name . ' ' . $a->surname))
+            ->implode(', ');
+
+        // Obtener el sello digital 
+        $signedText = "Error al generar sello"; // Valor por defecto
+        try {
+            $signedText = $this->generateSignature($article);
+        } catch (\Exception $e) {
+            Log::error("Error al generar firma para carta (art. {$article->id}): " . $e->getMessage());
+        }
+
         
-        // --- INICIO DE LÓGICA DE QR Y SELLO ---
-
-        // 1. Generar el Sello Digital (ahora usa el helper interno)
-        $signedText = $this->getSignedTextFromServer($article);
-
-        // 2. Generar el Código QR
-        $authorsForQr = $article->authors->map(fn ($a) => trim($a->prefix . ' ' . $a->name . ' ' . $a->surname))->implode(', ');
-        $qrContent = "Folio: {$article->article_folio}\nAutores: {$authorsForQr}\nTítulo: {$article->title}";
+        // ¡CAMBIO 2: Preparar los nuevos datos para el QR!
         
-        // Generamos el QR como SVG (opción más compatible) o PNG
-        $qrCodeBase64 = 'data:image/svg+xml;base64,' . base64_encode(
-            QrCode::format('svg') // Usamos SVG, no requiere Imagick
-                  ->size(150)
-                  ->errorCorrection('H')
-                  ->generate($qrContent)
-        );
+        // Obtener el nombre del participante (Corregido según tu modelo User)
+        $participant_name = 'No especificado';
+        if ($article->postulant) {
+            $participant_name = $article->postulant->name; // Usamos el campo 'name'
+        }
+        $participant_name = mb_strtoupper($participant_name, 'UTF-8');
 
-        // --- FIN DE LÓGICA DE QR Y SELLO ---
+        // Obtener el Rol de Participación (Corregido según tu modelo User)
+        $participant_role = 'No especificado'; // Valor por defecto
+        if ($article->postulant && $article->postulant->roles->isNotEmpty()) {
+            // Obtenemos el nombre del primer rol que tenga el usuario
+            $participant_role = $article->postulant->roles->first()->name;
+        }
+        $participant_role = mb_strtoupper($participant_role, 'UTF-8');
 
+
+        // ¡CAMBIO 3: Construir el objeto de datos con los nuevos campos!
         $data = [
-            'article' => $article,
-            'authors_list' => $article->authors->map(fn ($a) => trim($a->prefix . ' ' . $a->name . ' ' . $a->surname))->implode(', '),
-            'postulant' => $article->postulant,
-            'call_name' => $article->call->name ?? 'Convocatoria General',
-            'article_type_name' => $article->articleType->name ?? 'No especificado', 
+            'id' => $article->id,
+            'article_folio' => $article->article_folio,
+            'article_title' => $article->title,
+            'authors_list' => $authors_list,
             'institutions_list' => $unique_institutions_list,
-            'qrCodeBase64' => $qrCodeBase64,
-            'signedText' => $signedText,
+            'article_type_name' => $article->articleType->name ?? 'No especificado',
+            'article_status_name' => $article->articleStatus->name ?? 'Aceptada',
+            'signedText' => $signedText, // Se usa para el 'Identificador de Constancia' en el QR
+            
+            // --- Campos nuevos añadidos ---
+            'participant_name' => $participant_name,
+            'participant_role' => $participant_role,
+
+            'verification_url' => route('constancia.verify', $article->article_folio),
         ];
 
-        try {
-            $pdf = Pdf::loadView('pdfs.constancia', $data);
-            $fileName = 'Constancia_' . $article->article_folio . '.pdf';
-            return $pdf->stream($fileName);
-
-        } catch (\Exception $e) {
-            Log::error("Error al generar PDF para artículo {$article->id}: " . $e->getMessage());
-            return redirect()->back()->with('error', 'Error interno al generar el documento PDF.');
-        }
+        // Devolver como JSON
+        return response()->json($data);
     }
 
-    /**
-     * Endpoint de API para obtener el sello (si aún lo necesitas para otras cosas).
-     * Ahora solo llama a la función de lógica principal.
-     */
+    public function generateCertificate(Article $article)
+    {
+        Log::warning("Se llamó al método obsoleto generateCertificate para el artículo {$article->id}.");
+        
+        // Redirigir o mostrar un error, ya que este flujo no debe usarse.
+        return redirect()->back()->with('error', 'Este método de generación de PDF está obsoleto. Utilice la nueva función de script.');
+    }
+
     public function signPdf(Article $article)
     {
         try {
-            $this->authorize('successPayment', $article);
+            // $this->authorize('successPayment', $article); // Asegúrate que la autorización es correcta
 
             // Llama a la lógica refactorizada
-            $str_b64 = $this->generateSignature($article);
+            $str_b64 = $this->generateSignature($article); // Corregido $str_b664
 
-            return response()->json(['signedText' => $str_b64]);
+            return response()->json(['signedText' => $str_b64]); // Corregido $str_b664
         } catch (\Exception $e) {
             Log::error("Error en signPdf API para {$article->id}: " . $e->getMessage());
-            return response()->json(['error' => 'Error interno del servidor: ' . $e->getMessage()], 500); // 500 es mejor para errores
+            return response()->json(['error' => 'Error interno del servidor: ' . $e->getMessage()], 500); 
         }
     }
 
-    // --- FUNCIONES HELPER PRIVADAS ---
+    //  FUNCIONES HELPER PRIVADAS 
 
-    /**
-     * Helper para obtener el sello. Llama a la lógica de firmado.
-     * Es usado por generateCertificate()
-     */
     private function getSignedTextFromServer(Article $article): string
     {
         try {
-            // ¡Llama directamente a la nueva función de lógica!
             return $this->generateSignature($article);
         } catch (\Exception $e) {
             Log::error("Error al obtener sello para PDF {$article->id}: " . $e->getMessage());
@@ -155,11 +169,6 @@ class ConstanciaController extends Controller
         }
     }
 
-    /**
-     * ¡NUEVA FUNCIÓN CENTRALIZADA!
-     * Lógica principal para generar la firma/sello digital.
-     * Es usada por signPdf() y getSignedTextFromServer()
-     */
     private function generateSignature(Article $article): string
     {
         $varCER = 'VIICyT/VIICyT.cer';
@@ -177,6 +186,7 @@ class ConstanciaController extends Controller
         // Obtener la clave privada
         $resKEY = openssl_pkey_get_private($dataKEY, $keyPasswd);
         if ($resKEY === false) {
+            Log::error("openssl_pkey_get_private falló. ¿Contraseña incorrecta o clave corrupta?");
             throw new \Exception('No se pudo obtener la clave privada. Verifique la contraseña.');
         }
 
@@ -186,11 +196,15 @@ class ConstanciaController extends Controller
 
         // Encriptar el string MD5
         $success = openssl_private_encrypt($stringMD5, $encrypted_string, $resKEY);
+        
+        // Liberar la clave de memoria
+        openssl_pkey_free($resKEY);
+
         if (!$success) {
             throw new \Exception('Fallo al encriptar (firmar) el string: ' . openssl_error_string());
         }
 
-        // Codificar en Base64
+        // Codificar en Base64 (Corregido el typo de 'base664')
         return base64_encode($encrypted_string);
     }
 

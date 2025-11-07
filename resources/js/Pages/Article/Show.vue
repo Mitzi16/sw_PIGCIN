@@ -27,6 +27,7 @@ import Evaluation from "./Partials/Evaluation.vue";
 import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
 import NotificationBar from "@/Components/NotificationBar.vue";
 import getRecognition from './Partials/Pdf/RecognitionGeneral.js'
+import { generateGroupCertificate } from './Partials/Pdf/RecognitionGeneral.js';
 import Modal from "@/Components/Modal.vue";
 import HeadLogo from "@/Components/HeadLogo.vue";
 
@@ -79,21 +80,34 @@ const getRole = (roleNames) => {
     return Array.isArray(props.user.roles) && props.user.roles.some(role => roleNames.includes(role.name));
 }
 
-const getPdf = async (type) => {
+const getPdf = async (isPersonal) => {
     try {
-        const user = props.user.name;
-        const authors = props.article.authors
-            .map(author => `${author.name} ${author.surname}`) // Combina nombre y apellido
-            .join(', ');
-        const title = props.article.title;
-        const id = props.article.id;
-        const name = type ? user : authors;
+        let url;
 
-        const url = await getRecognition(name, title, id);
-        urlPdf.value = url;
-        showModal.value = true;
+        if (isPersonal) {   
+            const userName = props.user.name; // Nombre del usuario logueado
+            const title = props.article.title;
+            const id = props.article.id;
+
+            url = await getRecognition(userName, title, id);
+
+        } else {          
+            url = await generateGroupCertificate(
+                props.article.id, 
+                props.article.title
+            );
+        }
+        
+        if (url) {
+            urlPdf.value = url;
+            showModal.value = true;
+        } else {
+            Swal.fire('Error', 'No se pudo generar el reconocimiento.', 'error');
+        }
+
     } catch (error) {
-        console.error("Error al obtener el PDF:", error);
+        console.error(`Error al obtener el PDF (${isPersonal ? 'Personal' : 'Grupal'}):`, error);
+        Swal.fire('Error', 'Hubo un error al generar el reconocimiento.', 'error');
     }
 };
 

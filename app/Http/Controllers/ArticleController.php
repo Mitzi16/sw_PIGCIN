@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
 
 class ArticleController extends Controller
 {
@@ -590,51 +591,157 @@ class ArticleController extends Controller
     }
 
     private function storeFile(Request $request, Article $article, $nombre_archivo)
-    {
-        // Verifica si el archivo ya existe y lo elimina
-        /* $existingFile = File::where([
-            ['fileable_type', Article::class],
-            ['fileable_id', $article->id]
-        ])->first();
-
-        if ($existingFile) {
-            Storage::disk('private')->delete($existingFile->path);
-            $existingFile->delete();
-        } */
-
-        if ($request->hasFile('file')) {
-            $fileStorage = $request->file('file');
-            $fileName = (File::max('id') + 1) . '-' . $nombre_archivo;
-            $path = $fileStorage->storeAs($this->storage_path, $fileName, 'private');
-            $article->file()->create([
-                'name' => $fileName,
-                'path' => $path,
-                'size' => $fileStorage->getSize(),
-                'mime_type' => $fileStorage->getMimeType(),
-            ]);
-        }
+{
+    if (!$request->hasFile('file')) {
+        return;
     }
 
-    private function updateFile(Request $request, Article $article)
-    {
-        if ($request->hasFile('file')) {
-            $file = File::where([
-                ['fileable_type', Article::class],
-                ['fileable_id', $article->id],
-            ])->first();
-            Storage::disk('private')->delete($file->path);
+    $fileStorage = $request->file('file');
+    $newPath = null;
+    $newPrefixedName = null;
+    $newFileRecord = null;
 
-            $fileStorage = $request->file('file');
-            $fileName = (File::max('id') + 1) . '-' . $fileStorage->getClientOriginalName();
-            $path = $fileStorage->storeAs($this->storage_path, $fileName, 'private');
-            $article->file()->update([
-                'name' => $fileName,
-                'path' => $path,
-                'size' => $fileStorage->getSize(),
-                'mime_type' => $fileStorage->getMimeType(),
-            ]);
+    try {
+        DB::beginTransaction();
+
+        // 1. Crear el registro en BD primero (con datos temporales)
+        $newFileRecord = $article->files()->create([
+            'name' => 'TEMP_STORE',
+            'path' => 'TEMP_STORE',
+            'size' => $fileStorage->getSize(),
+            'mime_type' => $fileStorage->getMimeType(),
+        ]);
+
+        // 2. Obtener el ID atómico de la BD
+        $newFileId = $newFileRecord->id;
+        $newPrefixedName = $newFileId . '-' . $nombre_archivo;
+        $newPath = $this->storage_path . '/' . $newPrefixedName;
+
+        // 3. Guardar el archivo físico
+        if (!$fileStorage->storeAs($this->storage_path, $newPrefixedName, 'private')) {
+            throw new \Exception("Fallo al guardar el archivo en storage (storeFile).");
         }
+
+        // 4. Actualizar el registro de la BD con los datos correctos
+        $newFileRecord->name = $newPrefixedName;
+        $newFileRecord->path = $newPath;
+        $newFileRecord->save();
+
+        // 5. Confirmar transacción
+        DB::commit();
+
+    } catch (\Exception $e) {
+        // 6. Algo salió mal, revertir todo
+        DB::rollBack();
+
+        // Si el archivo se guardó pero la BD falló, borrar el archivo huérfano
+        if ($newPath && Storage::disk('private')->exists($newPath)) {
+            Storage::disk('private')->delete($newPath);
+        }
+        Log::error("Error en storeFile (transacción): " . $e->getMessage());
+        // Relanzar la excepción para que el controlador 'store' falle
+        throw $e; 
     }
+}
+
+/**
+ * updateFile: MODIFICADO para ser transaccional y evitar 'race conditions'
+ */
+private function updateFile(Request $request, Article $article)
+{
+    if (!$request->hasFile('file')) {
+        return;
+    }
+
+    // --- 1. Obtener nombre base (operación de solo lectura, segura) ---
+    $originalFileRecord = $article->files()->orderBy('created_at', 'asc')->first();
+
+    if (!$originalFileRecord) {
+        Log::error("UpdateFile: No se encontró NINGÚN registro 'File' para el artículo {$article->id} al intentar actualizar.");
+        throw new \Exception("No se encontró el archivo original del artículo {$article->id}.");
+    }
+
+    $originalDbName = $originalFileRecord->name;
+    $firstDashPos = strpos($originalDbName, '-');
+    $baseNameWithExtension = $originalDbName;
+
+    if ($firstDashPos !== false) {
+        $baseNameWithExtension = substr($originalDbName, $firstDashPos + 1);
+    } else {
+        Log::warning("UpdateFile: El nombre '{$originalDbName}' no tiene el prefijo de ID. Se usará el nombre completo como base.");
+    }
+
+    $baseName = pathinfo($baseNameWithExtension, PATHINFO_FILENAME);
+    
+    // Bucle de limpieza para quitar sufijos _MOD
+    while (str_ends_with(strtoupper($baseName), '_MOD')) {
+        $baseName = substr($baseName, 0, -4);
+    }
+
+    $newModBaseName = $baseName . '_MOD.pdf';
+    // --- Fin de obtener nombre base ---
+
+    $fileStorage = $request->file('file');
+    $newPath = null;
+    $newPrefixedName = null;
+    $newFileRecord = null;
+
+    try {
+        // 2. Iniciar la transacción
+        DB::beginTransaction();
+
+        // 3. Buscar y eliminar mods anteriores
+        // ¡Importante! Usamos withTrashed() para encontrar también los soft-deleted
+        $previousModFiles = $article->files()
+            ->withTrashed() // <-- AÑADIR ESTO
+            ->where('name', 'LIKE', '%_MOD.pdf')
+            ->lockForUpdate() 
+            ->get();
+
+        foreach ($previousModFiles as $fileToDelete) {
+            Storage::disk('private')->delete($fileToDelete->path);
+            $fileToDelete->forceDelete(); // <-- ESTE ES EL CAMBIO CLAVE
+        }
+
+        // 4. Crear el *nuevo* registro en la BD (con datos temporales)
+        $newFileRecord = $article->files()->create([
+            'name' => 'TEMP_UPDATE',
+            'path' => 'TEMP_UPDATE',
+            'size' => $fileStorage->getSize(),
+            'mime_type' => $fileStorage->getMimeType(),
+        ]);
+
+        // 5. Obtener el ID atómico de la BD
+        $newFileId = $newFileRecord->id;
+        $newPrefixedName = $newFileId . '-' . $newModBaseName; 
+        $newPath = $this->storage_path . '/' . $newPrefixedName;
+
+        // 6. Guardar el archivo físico
+        if (!$fileStorage->storeAs($this->storage_path, $newPrefixedName, 'private')) {
+            throw new \Exception("Fallo al guardar el archivo en storage (updateFile).");
+        }
+
+        // 7. Actualizar el registro de la BD con los datos correctos
+        $newFileRecord->name = $newPrefixedName;
+        $newFileRecord->path = $newPath;
+        $newFileRecord->save();
+
+        // 8. Confirmar transacción
+        DB::commit();
+
+    } catch (\Exception $e) {
+        // 9. Algo salió mal, revertir todo
+        DB::rollBack();
+
+        // Si el archivo se guardó pero la BD falló, borrar el archivo huérfano
+        if ($newPath && Storage::disk('private')->exists($newPath)) {
+            Storage::disk('private')->delete($newPath);
+        }
+        Log::error("Error en updateFile (transacción): " . $e->getMessage());
+        // Relanzar la excepción para que el controlador 'update' falle
+        throw $e;
+    }
+}
 
     private function storeAuthors(Request $request, $id)
     {

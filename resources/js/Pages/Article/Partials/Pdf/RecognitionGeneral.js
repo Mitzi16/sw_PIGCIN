@@ -107,7 +107,7 @@ export default async function getPdf(authors, title, id) {
         size: fontSize,
     });
 
-    await addQR(pdfDoc, secondPage, title, text, height); // <--- CAMBIO: Pasa 'text' (la cadena de autores) al QR
+    await addQR(pdfDoc, secondPage, title, text, height, id); // <--- CAMBIO: Pasa 'text' (la cadena de autores) al QR
 
     drawText(title, fontBold, 12, firstPage, (y -= 32), (centerX - 20));
     drawText("En el II Congreso Internacional de Tecnología y Ciencia Aplicada, desarrollado en el Tecnológico", font, 10, firstPage, (y -= 32), (centerX - 20));
@@ -226,8 +226,8 @@ const wrapText = (text, width, font, fontSize) => {
     return result;
   }
 
-const addQR = async (pdfDoc, firstPage, title, user, height) => { 
-    const qr = generateQR(title, user); 
+const addQR = async (pdfDoc, firstPage, title, user, height, id) => { 
+    const qr = await generateQR(id);
     if (!qr) {
         console.error("No se pudo generar el QR");
         return;
@@ -255,24 +255,25 @@ const addQR = async (pdfDoc, firstPage, title, user, height) => {
     });
 }
 
-const generateQR = (title, user) => { 
-    let qr;
-    QRCode.toDataURL(
-        `Titulo: ${title}\nPostulante: ${user}`, // 'user' es la cadena de autores
-        {
-            type: "image/jpeg",
-            color: {
-                dark: "#000000",
-                light: "#ffffff",
-            },
-        },
-        function (error, url) {
-            if (error) {
-                console.error(error);
-            } else {
-                qr = url;
+const generateQR = async (id) => { // <-- 1. Se vuelve 'async'
+    const verificationUrl = route('certificate.verify', id);
+    
+    try {
+        // 2. Usamos 'await' para esperar el resultado
+        const url = await QRCode.toDataURL(
+            verificationUrl, // <-- 3. El contenido es la URL
+            {
+                type: "image/jpeg",
+                color: {
+                    dark: "#000000",
+                    light: "#ffffff",
+                },
             }
-        }
-    );
-    return qr;
+        );
+        return url; // 4. Retornamos la URL generada (data URL)
+    
+    } catch (error) {
+        console.error("Error al generar QR:", error);
+        return null; // 5. Manejamos el error
+    }
 };
