@@ -10,8 +10,14 @@ export async function generateGroupCertificate(articleId, articleTitle) {
         console.log("Obteniendo autores para el artículo:", articleId);
         
         const response = await axios.get(route("article.getAuthors", articleId));
+
+        const { 
+            authors: authorsArray, 
+            article_type_name,  
+            knowledge_area_name
+        } = response.data;
         
-        const authorsArray = response.data.authors;
+        //const authorsArray = response.data.authors;
 
         if (!authorsArray || authorsArray.length === 0) {
             alert("No se encontraron autores para este artículo.");
@@ -20,7 +26,20 @@ export async function generateGroupCertificate(articleId, articleTitle) {
         
         console.log("Autores encontrados:", authorsArray);
 
-        const pdfUrl = await getPdf(authorsArray, articleTitle, articleId);
+       const degreeRegex = /^(Doctor\(a\)|Maestro\(a\)|Ingeniero\(a\)|Licenciado\(a\)|Profesor\(a\)|Estudiante\(a\))\.?\s+/i;
+        const authorsWithoutDegrees = authorsArray.map(authorName => {
+            // Reemplaza el grado (si lo encuentra) con un string vacío
+            return authorName.replace(degreeRegex, ''); 
+        });
+
+        const pdfUrl = await getPdf(
+            authorsWithoutDegrees, 
+            articleTitle, // o usa apiArticleTitle
+            articleId,
+            article_type_name,   // <--- NUEVO
+            knowledge_area_name  // <--- NUEVO
+        );
+        //const pdfUrl = await getPdf(authorsWithoutDegrees, articleTitle, articleId);
 
         return pdfUrl;
 
@@ -31,9 +50,9 @@ export async function generateGroupCertificate(articleId, articleTitle) {
     }
 }
 
-export default async function getPdf(authors, title, id) { 
+export default async function getPdf(authors, title, id, articleTypeName, knowledgeAreaName) { 
     const signedText = await getSignedText(id);
-    let legend = "Por su invaluable presentación del Artículo:";
+    // let legend = "Por su invaluable presentación del Artículo:"; // Ya no se usa
     
     let text = ""; // 'text' será la cadena final de autores
     if (Array.isArray(authors)) {
@@ -41,7 +60,7 @@ export default async function getPdf(authors, title, id) {
         if (authors.length > 1) {
             const lastAuthor = authors[authors.length - 1];
             const otherAuthors = authors.slice(0, -1); 
-            text = otherAuthors.join(', ') + ' y ' + lastAuthor;
+            text = otherAuthors.join(' | ') + ' y ' + lastAuthor;
         } else if (authors.length === 1) {
             text = authors[0]; // Solo un autor en el arreglo
         }
@@ -62,59 +81,88 @@ export default async function getPdf(authors, title, id) {
     const centerX = width / 2;
     let y; // 'y' se definirá dinámicamente
 
+    // --- Definición de Colores ---
+    const authorColor = rgb(118 / 255, 117 / 255, 116 / 255); // Gris #767574
+    const goldColor = rgb(173 / 255, 132 / 255, 31 / 255);   // Dorado #AD841F
+    const defaultColor = rgb(0.2, 0.255, 0.333); // Color por defecto (gris oscuro)
+
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     let font = fontBold;
-    let fontSize = 15;
+    
+    // --- CAMBIO 1: Tamaño de fuente de autores ---
+    let fontSize = 13; // Reducido de 15 a 13
 
     const maxAuthorWidth = 500; // Ancho máximo para el nombre/s
     const wrappedText = wrapText(text, maxAuthorWidth, font, fontSize);
     const textLines = wrappedText.split('\n');
-    const lineHeight = fontSize * 1.5; // Espaciado de 1.2
+    const lineHeight = fontSize * 1.5; // Espaciado de 1.5
 
-   
+    
     const totalTextBlockHeight = (textLines.length - 1) * lineHeight;
     let currentY = (height / 2 + 30) + (totalTextBlockHeight / 2);
 
     for (const line of textLines) {
         let textWidth = font.widthOfTextAtSize(line, fontSize);
-        let x = (centerX - textWidth / 2 ) - 20; // Centrar cada línea
+        
+        // --- CAMBIO 2: Centrado de autores ---
+        let x = (centerX - textWidth / 2) - 20; // Eliminado el '- 20' para centrar correctamente
         
         firstPage.drawText(line, {
             x: x,
             y: currentY - fontSize / 2, 
             font: font,
             size: fontSize,
+            // --- CAMBIO 3: Color de autores ---
+            color: authorColor, 
         });
         currentY -= lineHeight; // Mover 'y' hacia abajo para la siguiente línea
     }
 
-    fontSize = 12;
+    // --- CAMBIO 4: Bloque de texto principal reemplazado ---
+
+    // Cargar la fuente normal (no negrita)
     font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    let textWidth = font.widthOfTextAtSize(legend, fontSize);
     
-    // Ajustar la 'y' de la leyenda para que esté debajo del bloque de autores
+    // Ajustar la 'y' para que esté debajo del bloque de autores
     const authorBlockHeight = textLines.length * lineHeight;
     y = (height / 2 + 30) - (authorBlockHeight / 2) - 40; // 40px de espacio
 
-    let x = (centerX - textWidth / 2) - 20; // Centrar la leyenda
+    // Mover la llamada al QR aquí para que no interfiera con el flujo de 'y'
+    await addQR(pdfDoc, secondPage, title, text, height, id);
 
-    firstPage.drawText(legend, {
-        x: x,
-        y: y - fontSize / 2, 
-        maxWidth: 500,
-        font: font,
-        color: rgb(0.2, 0.255, 0.333),
-        size: fontSize,
-    });
+    // --- INICIO DEL NUEVO BLOQUE DE TEXTO ---
+    
+    // "Por su destacada participación con la Contribución: [articleTypeName],"
+    drawText(`Por su destacada participación con la Contribución: ${articleTypeName},`, font, 10, firstPage, y, centerX, defaultColor);
+    y -= 16; // Espaciado
 
-    await addQR(pdfDoc, secondPage, title, text, height, id); // <--- CAMBIO: Pasa 'text' (la cadena de autores) al QR
+    // "en el área: [knowledgeAreaName], con el Título:"
+    drawText(`en el área: ${knowledgeAreaName}, con el Título:`, font, 10, firstPage, y, centerX, defaultColor);
+    y -= 25; // Más espacio antes del título
 
-    drawText(title, fontBold, 12, firstPage, (y -= 32), (centerX - 20));
-    drawText("En el II Congreso Internacional de Tecnología y Ciencia Aplicada, desarrollado en el Tecnológico", font, 10, firstPage, (y -= 32), (centerX - 20));
-    drawText("Nacional de México/Centro Nacional de Investigación y Desarrollo Tecnológico, TecNM/CENIDET,", font, 10, firstPage, (y -= 16), (centerX - 20));
-    drawText("del 22 al 24 de mayo de 2024.", font, 10, firstPage, (y -= 16), (centerX - 20));
-    drawText("Cuernavaca, Morelos, 24 de mayo de 2024", font, 10, firstPage, (y -= 25), centerX );
-    // SERV
+    // "[title]" (El título en negrita y más grande)
+    drawText(title, fontBold, 12, firstPage, y, centerX, defaultColor);
+    y -= 32; // Más espacio después del título
+
+    // "presentada en el marco del 4.° Congreso Internacional de Tecnología y Ciencia"
+    drawText("presentada en el marco del 5.° Congreso Internacional de Tecnología y Ciencia", font, 10, firstPage, y, centerX, defaultColor);
+    y -= 16; // Espaciado
+
+    // "Aplicada (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo"
+    drawText("Aplicada (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo", font, 10, firstPage, y, centerX, defaultColor);
+    y -= 16; // Espaciado
+
+    // "Tecnológico del 21 al 23 de mayo de 2025."
+    drawText("Tecnológico del 26 al 28 de Noviembre de 2025.", font, 10, firstPage, y, centerX, defaultColor);
+    y -= 25; // Espacio antes de la fecha
+    
+    // --- FIN DEL NUEVO BLOQUE DE TEXTO ---
+
+
+    // --- CAMBIO 5: Color y texto de la fecha ---
+    drawText("Cuernavaca, Morelos, 24 de noviembre de 2025", font, 10, firstPage, y, centerX, goldColor);
+    
+    // SERV (Sello Digital en la segunda página)
     let sealY = height - 50;
     let sealLeftX = 110;
     let titleFontSize = 10;
@@ -173,7 +221,8 @@ const getSignedText = async (id) => {
     }
 };
 
-const drawText = (text, font, fontSize, page, y, centerX) => {
+// --- CAMBIO 6: Se añade 'color' como parámetro a drawText ---
+const drawText = (text, font, fontSize, page, y, centerX, color = rgb(0.2, 0.255, 0.333)) => {
     const textWidth = font.widthOfTextAtSize(text, fontSize);
     const x = centerX - textWidth / 2;
 
@@ -182,7 +231,7 @@ const drawText = (text, font, fontSize, page, y, centerX) => {
         y: y - fontSize / 2, // Ajustar para centrar verticalmente
         maxWidth: 520,
         font: font,
-        color: rgb(0.2, 0.255, 0.333),
+        color: color, // Usar el parámetro de color
         size: fontSize,
     });
 };

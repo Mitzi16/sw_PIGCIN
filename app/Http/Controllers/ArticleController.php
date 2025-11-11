@@ -298,7 +298,7 @@ class ArticleController extends Controller
         'articleStatus',
         'articleType',
         'authors.institution:id,name',
-        'file',
+        //'file',
         'editor:id,name,email',
         'editor.file',
         'articleReviews.reviewer:id,name,email',
@@ -350,11 +350,37 @@ class ArticleController extends Controller
                 'assigned_count' => $u->article_reviews_count,
             ];
         });
+    
+    $modifiedFile = $article->files()
+            ->where('name', 'LIKE', '%_MOD.pdf')
+            ->latest() // Obtiene el más reciente en caso de que haya varios
+            ->first();
+    
+    // 2. Si NO existe un archivo modificado, buscamos el original.
+        $fileToShow = $modifiedFile; // Asignamos el modificado por defecto
+
+    if (! $fileToShow) {
+            // Buscamos el primer archivo que NO sea _MOD (el original)
+            $fileToShow = $article->files()
+                ->where('name', 'NOT LIKE', '%_MOD.pdf')
+                ->oldest() // Obtiene el más antiguo (el original)
+                ->first();
+        }
+
+        // 3. Generamos la URL firmada solo si encontramos un archivo
+        $filePath = null;
+        $fileName = null;
+        if ($fileToShow) {
+            // Usamos tu método privado getFile()
+            $filePath = $this->getFile($fileToShow);
+            $fileName = $fileToShow->name;
+        }
 
     return Inertia::render("{$this->source}Show", [
         'title' => 'Visualizar Artículo',
         'article' => $article,
-        'filePath' => $this->getFile($article->file),
+        'filePath' => $filePath,
+        'fileName' => $fileName,
         'articleStatuses' => ArticleStatus::orderBy('id')->get(),
         'editors' => $editors,
         'reviewers' => $reviewers, // Se envía la lista ya filtrada
@@ -521,12 +547,14 @@ class ArticleController extends Controller
             return response()->json(['error' => 'No autorizado para ver este artículo.'], 403);
         }
 
+        $article->load('authors', 'articleType', 'knowledgeArea');
+
         // 2. Obtener los autores usando la relación que ya existe
-        $authors = $article->authors; // Esto carga la colección de autores
+        //$authors = $article->authors; // Esto carga la colección de autores
 
         // 3. Formatear los nombres
         // Itera sobre cada objeto 'Author' y crea un string con el nombre completo
-        $formattedNames = $authors->map(function ($author) {
+        $formattedNames = $article->authors->map(function ($author) {
             // Formato: "Prefijo Nombre Apellido" (ej: "Doctor(a) felipe tr")
             // trim() elimina espacios extra si el prefijo estuviera vacío
             return trim($author->prefix . ' ' . $author->name . ' ' . $author->surname);
@@ -534,7 +562,11 @@ class ArticleController extends Controller
 
         // 4. Devolver la respuesta JSON que el frontend espera
         return response()->json([
-            'authors' => $formattedNames
+            'authors' => $formattedNames,
+            'article_type_name'   => optional($article->articleType)->name, 
+            'knowledge_area_name' => optional($article->knowledgeArea)->name,
+            'article_type_id' => $article->article_type_id,
+            'knowledge_area_id' => $article->knowledge_area_id,
         ]);
     }
 

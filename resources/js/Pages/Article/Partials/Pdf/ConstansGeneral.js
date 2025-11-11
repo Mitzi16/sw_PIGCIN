@@ -63,7 +63,7 @@ async function getLetterPdf(data, signedText) {
 
     // --- Fecha (Asumida, pero necesaria) ---
     const today = new Date().toLocaleDateString("es-MX", { day: 'numeric', month: 'long', year: 'numeric' });
-    const dateStr = `Cuernavaca, Mo. 31 de Octubre de 2025`; 
+    const dateStr = `Cuernavaca, Morelos, a 31 de Octubre de 2025`; 
     const dateWidth = font.widthOfTextAtSize(dateStr, 10);
     // Ajustamos la 'y' de la fecha para que use la lógica de drawWrappedText (y - fontSize)
     firstPage.drawText(dateStr, { x: rightMargin - dateWidth, y: y - 10, font: font, size: 10, color });
@@ -115,13 +115,13 @@ async function getLetterPdf(data, signedText) {
     y -= (lineHeight + paragraphSpacing); // Mover 'y' y agregar espacio
 
     // --- Párrafo 2 (Aceptación) ---
-    const p2 = `Ha sido ${data.article_status_name} para presentarse dentro del programa académico del congreso, tras un proceso de revisión por pares especialistas en el área. El CITCA 2025 se celebrará del 26 al 28 de noviembre de 2025 en las instalaciones del Centro Nacional de Investigación y Desarrollo Tecnológico (CENIDET), ubicado en Cuernavaca, Morelos, México.`;
-    y = drawWrappedText(p2, firstPage, font, 10, leftMargin, y, contentWidth, lineHeight, 'left', color); // 'justify' es difícil, usamos 'left'
+    const p2 = `Ha sido Aceptado para presentarse dentro del programa académico del congreso, tras un proceso de revisión por pares especialistas en el área. El CITCA 2025 se celebrará del 26 al 28 de noviembre de 2025 en las instalaciones del Centro Nacional de Investigación y Desarrollo Tecnológico (CENIDET), ubicado en Cuernavaca, Morelos, México.`;
+    y = drawWrappedText(p2, firstPage, font, 10, leftMargin, y, contentWidth, lineHeight, 'justify', color); // 'justify' es difícil, usamos 'left'
     y -= paragraphSpacing;
     
     // --- Párrafo 3 (Invitación) ---
     const p3 = "Les extendemos una cordial invitación a presentar su trabajo y participar en las actividades programadas, incluyendo conferencias magistrales, sesiones técnicas y espacios de intercambio académico. Agradecemos su contribución y quedamos atentos a su participación en el 5to CITCA 2025.";
-    y = drawWrappedText(p3, firstPage, font, 10, leftMargin, y, contentWidth, lineHeight, 'left', color);
+    y = drawWrappedText(p3, firstPage, font, 10, leftMargin, y, contentWidth, lineHeight, 'justify', color);
     y -= paragraphSpacing;
     
     // --- Saludo ---
@@ -268,32 +268,80 @@ function drawWrappedText(
     align = 'left',
     color = rgb(0, 0, 0)
 ) {
-    // Usamos el 'wrapText' original
     const lines = wrapText(text, maxWidth, font, fontSize).split('\n');
     let currentY = y;
+    const spaceWidth = font.widthOfTextAtSize(' ', fontSize); // Ancho de un espacio normal
 
-    for (const line of lines) {
-        let textWidth = font.widthOfTextAtSize(line, fontSize);
-        let currentX = x;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const textWidth = font.widthOfTextAtSize(line, fontSize);
+        
+        // Coordenada Y (es la misma para todas las alineaciones)
+        const lineBaseY = currentY - fontSize;
 
-        if (align === 'center') {
-            currentX = x + (maxWidth - textWidth) / 2;
-        } else if (align === 'right') {
-            currentX = x + (maxWidth - textWidth);
+        // --- INICIO DE LÓGICA DE JUSTIFICACIÓN ---
+        // Justificar solo si align es 'justify' Y no es la última línea
+        if (align === 'justify' && i < lines.length - 1) {
+            const words = line.split(' ');
+            const spaceCount = words.length - 1;
+
+            // No justificar si hay 0 o 1 palabra en la línea
+            if (spaceCount > 0) {
+                // 1. Calcular el espacio total a rellenar
+                const gapToFill = maxWidth - textWidth;
+                
+                // 2. Calcular el espacio extra a añadir a cada "espacio"
+                const extraSpacePerGap = gapToFill / spaceCount;
+                
+                // 3. El espacio total entre palabras será el normal + el extra
+                const totalSpacePerGap = spaceWidth + extraSpacePerGap;
+
+                let currentX = x; // Empezar en el margen izquierdo
+                
+                // 4. Dibujar la línea palabra por palabra
+                for (const word of words) {
+                    page.drawText(word, {
+                        x: currentX,
+                        y: lineBaseY,
+                        font: font,
+                        size: fontSize,
+                        color: color,
+                    });
+                    // Mover la 'X' para la siguiente palabra
+                    currentX += font.widthOfTextAtSize(word, fontSize) + totalSpacePerGap;
+                }
+            } else {
+                // Si solo hay una palabra, alinearla a la izquierda
+                page.drawText(line, { x, y: lineBaseY, font, size: fontSize, color });
+            }
+        
+        // --- FIN DE LÓGICA DE JUSTIFICACIÓN ---
+
+        } else {
+            // Lógica anterior para 'left', 'center', 'right'
+            // (También se usa para la última línea de un bloque justificado)
+            let currentX = x;
+
+            if (align === 'center') {
+                currentX = x + (maxWidth - textWidth) / 2;
+            } else if (align === 'right') {
+                currentX = x + (maxWidth - textWidth);
+            }
+            // 'left' usa currentX = x (por defecto)
+
+            page.drawText(line, {
+                x: currentX,
+                y: lineBaseY, 
+                font: font,
+                size: fontSize,
+                color: color,
+            });
         }
         
-        page.drawText(line, {
-            x: currentX,
-            y: currentY - fontSize, // pdf-lib dibuja desde la línea base
-            font: font,
-            size: fontSize,
-            color: color,
-        });
         currentY -= lineHeight; // Mover 'y' hacia abajo para la siguiente línea
     }
     return currentY; // Devuelve la nueva posición 'y'
 }
-
 
 /**
  * [HELPER ORIGINAL - ELIMINADO]
