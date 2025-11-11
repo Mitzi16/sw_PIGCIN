@@ -90,7 +90,7 @@ export default async function getPdf(authors, title, id, articleTypeName, knowle
     let font = fontBold;
     
     // --- CAMBIO 1: Tamaño de fuente de autores ---
-    let fontSize = 13; // Reducido de 15 a 13
+    let fontSize = 15; // Reducido de 15 a 13
 
     const maxAuthorWidth = 500; // Ancho máximo para el nombre/s
     const wrappedText = wrapText(text, maxAuthorWidth, font, fontSize);
@@ -133,34 +133,34 @@ export default async function getPdf(authors, title, id, articleTypeName, knowle
     // --- INICIO DEL NUEVO BLOQUE DE TEXTO ---
     
     // "Por su destacada participación con la Contribución: [articleTypeName],"
-    drawText(`Por su destacada participación con la Contribución: ${articleTypeName},`, font, 10, firstPage, y, centerX, defaultColor);
+    drawText(`Por su destacada participación con la Contribución: ${articleTypeName},`, font, 10, firstPage, y, centerX - 20, defaultColor);
     y -= 16; // Espaciado
 
     // "en el área: [knowledgeAreaName], con el Título:"
-    drawText(`en el área: ${knowledgeAreaName}, con el Título:`, font, 10, firstPage, y, centerX, defaultColor);
+    drawText(`en el área: ${knowledgeAreaName}, con el Título:`, font, 10, firstPage, y, centerX - 20, defaultColor);
     y -= 25; // Más espacio antes del título
 
     // "[title]" (El título en negrita y más grande)
-    drawText(title, fontBold, 12, firstPage, y, centerX, defaultColor);
+    drawText(title, fontBold, 12, firstPage, y, centerX - 20, defaultColor);
     y -= 32; // Más espacio después del título
 
     // "presentada en el marco del 4.° Congreso Internacional de Tecnología y Ciencia"
-    drawText("presentada en el marco del 5.° Congreso Internacional de Tecnología y Ciencia", font, 10, firstPage, y, centerX, defaultColor);
+    drawText("presentada en el marco del 5.° Congreso Internacional de Tecnología y Ciencia Aplicada", font, 10, firstPage, y, centerX - 25, defaultColor);
     y -= 16; // Espaciado
 
     // "Aplicada (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo"
-    drawText("Aplicada (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo", font, 10, firstPage, y, centerX, defaultColor);
+    drawText(" (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo", font, 10, firstPage, y, centerX - 25, defaultColor);
     y -= 16; // Espaciado
 
     // "Tecnológico del 21 al 23 de mayo de 2025."
-    drawText("Tecnológico del 26 al 28 de Noviembre de 2025.", font, 10, firstPage, y, centerX, defaultColor);
+    drawText("Tecnológico del 26 al 28 de Noviembre de 2025.", font, 10, firstPage, y, centerX - 20, defaultColor);
     y -= 25; // Espacio antes de la fecha
     
     // --- FIN DEL NUEVO BLOQUE DE TEXTO ---
 
 
     // --- CAMBIO 5: Color y texto de la fecha ---
-    drawText("Cuernavaca, Morelos, 24 de noviembre de 2025", font, 10, firstPage, y, centerX, goldColor);
+    drawText("Cuernavaca, Morelos, 24 de noviembre de 2025", font, 10, firstPage, y, centerX - 20, goldColor);
     
     // SERV (Sello Digital en la segunda página)
     let sealY = height - 50;
