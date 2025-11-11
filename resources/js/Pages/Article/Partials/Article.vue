@@ -30,7 +30,7 @@ const areasData = props.areas.filter((area) => area.parent_id === null) ?? [];
 const subareasData = ref([]);
 const results = ref(props.institutions);
 const fileName = computed(
-  () => form.file?.name ?? props.article.file?.name ?? "Sin archivo"
+  () => form.file?.name ?? props.fileName ?? "Sin archivo"
 );
 const fileSize = computed(
   () =>

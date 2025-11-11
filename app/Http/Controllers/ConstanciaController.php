@@ -22,7 +22,7 @@ class ConstanciaController extends Controller
 
         $query = Article::query()
             ->with('correspondingAuthor')
-            ->whereIn('article_status_id', [3, 4]); // Aceptados
+            ->whereIn('article_status_id', [3, 4, 6]); // Aceptados
 
         if (! $user->canPermission('article.all')) {
             $query->where('postulant_id', $user->id);
@@ -59,7 +59,7 @@ class ConstanciaController extends Controller
         $user = Auth::user();
 
         // --- Validación de permisos (Existente) ---
-        if (!in_array($article->article_status_id, [3, 4])) {
+        if (!in_array($article->article_status_id, [3, 4, 6])) {
             abort(403, 'El artículo no tiene un estado de aceptación válido.');
         }
         if (!$user->canPermission('article.all') && $user->id !== $article->postulant_id) {
@@ -82,8 +82,8 @@ class ConstanciaController extends Controller
             ->implode(', ');
 
         $authors_list = $article->authors
-            ->map(fn ($a) => trim($a->prefix . ' ' . $a->name . ' ' . $a->surname))
-            ->implode(', ');
+            ->map(fn ($a) => trim($a->name . ' ' . $a->surname))
+            ->implode(' | ');
 
         // Obtener el sello digital 
         $signedText = "Error al generar sello"; // Valor por defecto

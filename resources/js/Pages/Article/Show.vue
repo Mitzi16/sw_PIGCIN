@@ -30,6 +30,7 @@ import getRecognition from './Partials/Pdf/RecognitionGeneral.js'
 import { generateGroupCertificate } from './Partials/Pdf/RecognitionGeneral.js';
 import Modal from "@/Components/Modal.vue";
 import HeadLogo from "@/Components/HeadLogo.vue";
+import axios from "axios";
 
 const props = defineProps({
     name: 'Show',
@@ -42,7 +43,8 @@ const props = defineProps({
         required: true
     },
     article: { type: Object, required: true },
-    filePath: { type: String, required: true },
+    filePath: { type: String, default: null },
+    fileName: { type: String, default: null },
     articleStatuses: { type: Object, required: true },
     editors: { type: Object, required: true },
     reviewers: { type: Object, required: true },
@@ -84,14 +86,35 @@ const getPdf = async (isPersonal) => {
     try {
         let url;
 
-        if (isPersonal) {   
+        if (isPersonal) {
+            console.log("Obteniendo datos del artículo (para personal):", props.article.id);
+            const response = await axios.get(route("article.getAuthors", props.article.id));
+            
+            // 2. Extraemos los nombres que necesitamos de la respuesta
+            const { article_type_name, knowledge_area_name } = response.data;
+
+            // 3. Verificamos si los datos llegaron (evita el 'null')
+            if (!article_type_name || !knowledge_area_name) {
+                console.error("La API devolvió null para los nombres de tipo o área.", response.data);
+                Swal.fire('Error', 'Los datos del artículo (tipo o área) están incompletos en el servidor.', 'error');
+                return; // No continuar
+            }
+
+            // 4. Recolectamos los props que SÍ tenemos
             const userName = props.user.name; // Nombre del usuario logueado
             const title = props.article.title;
             const id = props.article.id;
 
-            url = await getRecognition(userName, title, id);
+            url = await getRecognition(
+                userName,            
+                title,               
+                id,                  
+                article_type_name,   
+                knowledge_area_name  
+            );
 
-        } else {          
+        } else {
+            // La lógica grupal ya es correcta porque llama a la API
             url = await generateGroupCertificate(
                 props.article.id, 
                 props.article.title

@@ -22,6 +22,8 @@ import {
 export const getMenu = (userRoles = []) => {
     const isRevisor = userRoles.includes("Revisor");
     const isEditor = userRoles.includes("Editor");
+    const isAdmin = userRoles.includes("Admin");
+    const isPostulant = userRoles.includes("Postulante");
 
     let articleMenuItem;  
     
@@ -215,12 +217,6 @@ export const getMenu = (userRoles = []) => {
                 },
             ],
         },
-        {
-            label: "Constancias",
-            role: "Postulante",
-            route: "constancia.name",
-            icon:  mdiShieldCrown,
-        },
         /*{
             label: "Diapositivas",
             route: "article.diapositivas",
@@ -228,6 +224,14 @@ export const getMenu = (userRoles = []) => {
             role:"Postulante",
         }*/
     ];
+
+    if (isPostulant || isAdmin) {
+        menu.push({
+            label: "Constancias",
+            route: "constancia.name",
+            icon: mdiShieldCrown,
+        });
+    }
 
     return menu;
 };
