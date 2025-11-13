@@ -22,7 +22,7 @@ class ConstanciaController extends Controller
 
         $query = Article::query()
             ->with('correspondingAuthor')
-            ->whereIn('article_status_id', [3, 4, 6]); // Aceptados
+            ->whereIn('article_status_id', [4]); // Aceptados
 
         if (! $user->canPermission('article.all')) {
             $query->where('postulant_id', $user->id);
@@ -58,21 +58,18 @@ class ConstanciaController extends Controller
     {
         $user = Auth::user();
 
-        // --- Validación de permisos (Existente) ---
-        if (!in_array($article->article_status_id, [3, 4, 6])) {
+        if (!in_array($article->article_status_id, [4])) {
             abort(403, 'El artículo no tiene un estado de aceptación válido.');
         }
         if (!$user->canPermission('article.all') && $user->id !== $article->postulant_id) {
             abort(403, 'No tiene permiso para ver este documento.');
         }
         // $this->authorize('successPayment', $article);
-        // --- Fin de Validación ---
 
 
         //  Cargar 'postulant.roles' para obtener nombre y rol
         $article->load('postulant.roles', 'authors.institution', 'articleType', 'articleStatus');
 
-        // --- Preparar listas (Existente) ---
         $unique_institutions_list = $article->authors
             ->map(fn ($author) => $author->institution)
             ->filter()
@@ -94,16 +91,13 @@ class ConstanciaController extends Controller
         }
 
         
-        // ¡CAMBIO 2: Preparar los nuevos datos para el QR!
         
-        // Obtener el nombre del participante (Corregido según tu modelo User)
         $participant_name = 'No especificado';
         if ($article->postulant) {
             $participant_name = $article->postulant->name; // Usamos el campo 'name'
         }
         $participant_name = mb_strtoupper($participant_name, 'UTF-8');
 
-        // Obtener el Rol de Participación (Corregido según tu modelo User)
         $participant_role = 'No especificado'; // Valor por defecto
         if ($article->postulant && $article->postulant->roles->isNotEmpty()) {
             // Obtenemos el nombre del primer rol que tenga el usuario
@@ -111,8 +105,6 @@ class ConstanciaController extends Controller
         }
         $participant_role = mb_strtoupper($participant_role, 'UTF-8');
 
-
-        // ¡CAMBIO 3: Construir el objeto de datos con los nuevos campos!
         $data = [
             'id' => $article->id,
             'article_folio' => $article->article_folio,
@@ -123,7 +115,6 @@ class ConstanciaController extends Controller
             'article_status_name' => $article->articleStatus->name ?? 'Aceptada',
             'signedText' => $signedText, // Se usa para el 'Identificador de Constancia' en el QR
             
-            // --- Campos nuevos añadidos ---
             'participant_name' => $participant_name,
             'participant_role' => $participant_role,
 
@@ -145,12 +136,10 @@ class ConstanciaController extends Controller
     public function signPdf(Article $article)
     {
         try {
-            // $this->authorize('successPayment', $article); // Asegúrate que la autorización es correcta
 
-            // Llama a la lógica refactorizada
-            $str_b64 = $this->generateSignature($article); // Corregido $str_b664
+            $str_b64 = $this->generateSignature($article); 
 
-            return response()->json(['signedText' => $str_b64]); // Corregido $str_b664
+            return response()->json(['signedText' => $str_b64]); 
         } catch (\Exception $e) {
             Log::error("Error en signPdf API para {$article->id}: " . $e->getMessage());
             return response()->json(['error' => 'Error interno del servidor: ' . $e->getMessage()], 500); 

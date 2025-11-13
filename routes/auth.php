@@ -14,6 +14,8 @@ use App\Http\Controllers\Auth\RegisteredConferencistaUserController;
 use App\Http\Controllers\Auth\RegisteredTalleristaUserController;
 use App\Http\Controllers\Auth\RegisteredAsistenteUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\RegisteredModeradorUserController;
+use App\Http\Controllers\Auth\RegisteredStaffUserController;
 use App\Http\Controllers\UserController;
 
 use Illuminate\Support\Facades\Route;
@@ -56,6 +58,16 @@ Route::middleware('guest')->group(function () {
                 ->name('registerAsistentes');
 
     Route::post('registerAsistentes', [RegisteredAsistenteUserController::class, 'storeAsistente'])->name('registerAsistente.storeAsistente');
+
+     //Rutas para el registro de Moderador 
+    Route::get('registerModeradores', [RegisteredModeradorUserController::class, 'createModeradores'])->name('registerModeradores');
+
+    Route::post('registerModeradores', [RegisteredModeradorUserController::class, 'storeModeradores'])->name('registerModeradores.storeModeradores');
+
+     //Rutas para el registro de Staff 
+    Route::get('registerStaff', [RegisteredStaffUserController::class, 'createStaff'])->name('registerStaff');
+
+    Route::post('registerStaff', [RegisteredStaffUserController::class, 'storeStaff'])->name('registerStaff.storeStaff');
 
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])

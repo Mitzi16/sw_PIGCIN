@@ -22,12 +22,14 @@ class VerificationController extends Controller
         // 2. Preparamos los datos
         $data = null;
         $signedText = null;
+        $selloDigital = null; 
         $participant_name = null;
         $participant_role = null;
 
         if ($article) {
             $data = $this->prepareVerificationData($article); // Lógica refactorizada
             $signedText = $data['signedText'];
+            $selloDigital = $data['selloDigital']; 
             $participant_name = $data['participant_name'];
             $participant_role = $data['participant_role'];
         } 
@@ -37,6 +39,7 @@ class VerificationController extends Controller
             'data' => $data,
             'folio' => $folio,
             'signedText' => $signedText,
+            'selloDigital' => $selloDigital, 
             'participant_name' => $participant_name,
             'participant_role' => $participant_role, 
         ]);
@@ -52,13 +55,16 @@ class VerificationController extends Controller
         // 2. Preparamos los datos
         $data = null;
         $signedText = null;
+        $selloDigital = null; 
         $participant_name = null;
         $participant_role = null;
         $folio_para_mostrar = $id; // Folio por defecto si no se encuentra
 
         if ($article) {
-            $data = $this->prepareVerificationData($article); // Lógica refactorizada
+            $data = $this->prepareVerificationData($article); 
             $signedText = $data['signedText'];
+            // Extraer la nueva variable del array $data
+            $selloDigital = $data['selloDigital']; 
             $participant_name = $data['participant_name'];
             $participant_role = $data['participant_role'];
             $folio_para_mostrar = $data['folio'];
@@ -69,6 +75,7 @@ class VerificationController extends Controller
             'data' => $data,
             'folio' => $folio_para_mostrar, // Pasamos el folio que encontramos (o el ID si falló)
             'signedText' => $signedText,
+            'selloDigital' => $selloDigital, 
             'participant_name' => $participant_name,
             'participant_role' => $participant_role, 
         ]);
@@ -87,12 +94,13 @@ class VerificationController extends Controller
             'status' => $article->articleStatus->name ?? 'Aceptado',
             'authors' => $authors_list,
         ];
+        
 
         // Sello Digital 
        try {
         // 1. Generamos la firma digital completa (como antes)
         $fullSignature = $this->generateSignature($article);
-
+        
         // 2. Creamos el hash SHA-256 (un identificador único de 64 caracteres)
         $hash = hash('sha256', $fullSignature);
 
@@ -103,6 +111,8 @@ class VerificationController extends Controller
     } catch (\Exception $e) {
         Log::error("Error al generar firma para VERIFICACIÓN (art. {$article->id}): " . $e->getMessage());
         $signedText = "Error al generar sello";
+        // Si hay error, asegúrate de que $fullSignature esté definida para evitar un error diferente
+        $fullSignature = "Error al generar firma";
     }
 
     // Datos del Postulante
@@ -116,7 +126,8 @@ class VerificationController extends Controller
     }
 
     // Asignar valores por defecto y devolver todo
-    // 4. Asignamos el NUEVO identificador (hash) a la variable $data['signedText']
+    // 4. Asignamos la firma completa y el hash al array $data
+    $data['selloDigital'] = $fullSignature; // Firma completa (opcional) <-- ¡Mantenida aquí!
     $data['signedText'] = $signedText;
     $data['participant_name'] = mb_strtoupper($participant_name ?? 'No especificado', 'UTF-8');
     $data['participant_role'] = mb_strtoupper($participant_role ?? 'No especificado', 'UTF-8');

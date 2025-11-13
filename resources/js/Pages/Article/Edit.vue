@@ -64,7 +64,21 @@ const form = useForm({
 });
 
 const saveForm = () => {
-    form.post(route(`${props.routeName}update`, props.article.id));
+   Swal.fire({
+        title: 'Confirmar envío',
+        text: '¿Estás seguro de haber cargado todo y que deseas enviar nuevamente tu contribución con atención a observaciones?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Si, enviar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        // Si el usuario confirma, entonces se envía el formulario
+        if (result.isConfirmed) {
+            form.post(route(`${props.routeName}update`, props.article.id));
+        }
+    });
 };
 
 const getRole = (roleNames) => {
@@ -77,6 +91,7 @@ const getRole = (roleNames) => {
 provide('form', form);
 provide('props', props);
 provide('getRole', getRole);
+
 
 </script>
 
@@ -106,7 +121,7 @@ provide('getRole', getRole);
                 <BaseButtons class="mt-5">
                     <BaseButton :routeName="`${props.routeName}index`" :icon="mdiClose" color="white"
                         label="Cancelar" />
-                    <BaseButton @click="saveForm" :icon="mdiContentSave" type="submit" color="success"
+                    <BaseButton  :icon="mdiContentSave" type="submit" color="success"
                         label="Actualizar artículo" />
                 </BaseButtons>
             </CardBox>

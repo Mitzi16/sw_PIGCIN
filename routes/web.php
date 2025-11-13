@@ -22,6 +22,8 @@ use App\Http\Controllers\TemplateDownloadController;
 use App\Http\Controllers\ArticleGraphController;
 use App\Http\Controllers\DiapositivaController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\GenerateParticipationController;
+use App\Http\Controllers\ReconocimientoController;
 use App\Models\Module;
 use App\Models\User;
 use Illuminate\Foundation\Application;
@@ -62,9 +64,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/articles/{article}/certificate', [ConstanciaController::class, 'generateCertificate'])->name('article.certificate') ->middleware(['auth']);
     Route::get('/verificar/{folio}', [VerificationController::class, 'verifyConstancia'])->name('constancia.verify');
     Route::get('/verifica/reconocimiento/{id}', [VerificationController::class, 'verifyReconocimiento'])->name('certificate.verify');
-    Route::get('/articles/{article}/acceptance-letter-data', [ConstanciaController::class, 'getAcceptanceLetterData'])->name('article.acceptanceLetterData') ->middleware(['auth']);      
+    Route::get('/articles/{article}/acceptance-letter-data', [ConstanciaController::class, 'getAcceptanceLetterData'])->name('article.acceptanceLetterData') ->middleware(['auth']); 
+
     Route::get('/diapositivas/upload', [DiapositivaController::class, 'index'])->name('article.diapositivas')->middleware(['auth']);
     Route::get('/diapositivas/upload/{article}/create', [DiapositivaController::class, 'create'])->name('diapositiva.create')->middleware(['auth']);
+
+    Route::get('/generate/participation', [GenerateParticipationController::class, 'generateParticipation'])->name('constancia.generate')->middleware(['auth']);
+    Route::get('/generate/participation/data',[GenerateParticipationController::class, 'getReconocimientoData'])->name('reconocimiento.data')->middleware(['auth']);
+    Route::get('/reconocimiento/verify/{folio}', [GenerateParticipationController::class, 'verify'])->name('reconocimiento.verify');
 
      // Graphs Routes
     Route::get('/graficas/article/institution', [ArticleGraphController::class, 'institution'])->name('article.graphs.institution');
@@ -85,6 +92,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('permission', PermissionController::class)->names('permission');
     Route::resource('role', RoleController::class)->parameters(['role' => 'role']);
     Route::resource('user', UserController::class)->parameters(['user' => 'user']);
+    Route::get('reconocimientos', [ReconocimientoController::class, 'index'])->name('reconocimiento.index');
+    Route::patch('reconocimientos/{user}', [ReconocimientoController::class, 'update'])->name('reconocimiento.update');
 
     // Catalogos
     Route::resource('call', CallController::class)->parameters(['call' => 'call']);
