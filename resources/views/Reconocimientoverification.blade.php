@@ -136,8 +136,11 @@
                 </div>
             </div>
 
-            <h3 class="section-title">Sello Digital de Verificación</h3>
             <div class="data-list extra-data">
+                <h3 class="section-title">Sello Digital de Verificación</h3>
+                 <div class="data-item">
+                    <textarea readonly class="signature-box">{{ $selloDigital }}</textarea>
+                </div>
                 <div class="data-item">
                     <strong>Identificador:</strong>
                     <textarea readonly class="signature-box">{{ $signedText }}</textarea>

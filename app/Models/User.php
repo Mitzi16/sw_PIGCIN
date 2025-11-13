@@ -34,7 +34,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'knowledge_area_id',
-        'institution_id'
+        'institution_id',
+
+        'reconocimiento_habilitado'
     ];
 
     /**

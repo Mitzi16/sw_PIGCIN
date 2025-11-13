@@ -16,17 +16,27 @@ import {
 } from "@mdi/js";
 
 /**
+ * Helper reutilizable.
+ * Verifica si un array de roles de usuario contiene CUALQUIERA de los roles objetivo.
+ * @param {string[]} userRoles - Roles del usuario. E.g., ['Revisor']
+ * @param {string[]} targetRoles - Roles que buscamos. E.g., ['Admin', 'Editor']
+ * @returns {boolean}
+ */
+const userHasAnyRole = (userRoles, targetRoles) => {
+    // .some() es muy eficiente, se detiene en el primer 'true' que encuentra
+    return userRoles.some(role => targetRoles.includes(role));
+};
+
+/**
  * @param {string[]} userRoles -  array con los nombres de los roles del usuario. E.g., ['revisor', 'editor']
  * @returns {Array} 
  */
 export const getMenu = (userRoles = []) => {
     const isRevisor = userRoles.includes("Revisor");
     const isEditor = userRoles.includes("Editor");
-    const isAdmin = userRoles.includes("Admin");
-    const isPostulant = userRoles.includes("Postulante");
 
-    let articleMenuItem;  
-    
+    let articleMenuItem;
+
     if (isRevisor && isEditor) {
         // Caso 1: Tiene AMBOS roles. Muestra el submenú.
         articleMenuItem = {
@@ -49,8 +59,7 @@ export const getMenu = (userRoles = []) => {
             ],
         };
     } else if (isRevisor) {
-        // Caso 2: Es SÓLO Revisor (no Editor).
-        // Muestra un enlace simple directo a la ruta de calificar.
+        // Caso 2: Es SÓLO Revisor
         articleMenuItem = {
             route: "article.qualify",
             label: "Artículos para Evaluar",
@@ -58,8 +67,7 @@ export const getMenu = (userRoles = []) => {
             permission: "article.index",
         };
     } else if (isEditor) {
-        // Caso 3: Es SÓLO Editor (no Revisor).
-        // Muestra un enlace simple directo a la ruta de distribuir.
+        // Caso 3: Es SÓLO Editor
         articleMenuItem = {
             route: "article.diffuse",
             label: "Artículos para Distribuir",
@@ -67,8 +75,7 @@ export const getMenu = (userRoles = []) => {
             permission: "article.index",
         };
     } else {
-        // Caso 4: No es ni Revisor ni Editor (ej. Postulante, Admin).
-        // Muestra el enlace genérico a la lista.
+        // Caso 4: Rol genérico
         articleMenuItem = {
             route: "article.index",
             label: "Artículos",
@@ -119,6 +126,12 @@ export const getMenu = (userRoles = []) => {
                     icon: mdiAccount,
                     permission: "user.index",
                 },
+                {
+                    label: "Reconocimientos",
+                    route: "reconocimiento.index",
+                    icon: mdiShieldCrown,
+                    permission: "reconocimiento.index",
+                },
             ],
         },
         {
@@ -167,7 +180,7 @@ export const getMenu = (userRoles = []) => {
                 },
             ],
         },
-        articleMenuItem,
+        articleMenuItem, 
         {
             route: "paymentVoucher.index",
             label: "Pagos",
@@ -225,10 +238,32 @@ export const getMenu = (userRoles = []) => {
         }*/
     ];
 
-    if (isPostulant || isAdmin) {
+    // "Constancias"
+    if (userHasAnyRole(userRoles, ["Postulante", "Admin"])) {
         menu.push({
             label: "Constancias",
             route: "constancia.name",
+            icon: mdiShieldCrown,
+        });
+    }
+
+    //  Reconocimientos"
+    const rolesForRecognition = [
+        "Admin",
+        "Editor",
+        "Revisor",
+        "Tallerista",
+        "Conferencista",
+        "Admin-Revista",
+        "Asistente",
+        "Moderador",
+        "Staff",
+    ];
+
+    if (userHasAnyRole(userRoles, rolesForRecognition)) {
+        menu.push({
+            label: "Generar Reconocimiento de Participación",
+            route: "constancia.generate",
             icon: mdiShieldCrown,
         });
     }

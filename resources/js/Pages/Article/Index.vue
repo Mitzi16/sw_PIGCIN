@@ -105,7 +105,7 @@ const canEdit = (id) => {
 const confirmContribution = () => {
     Swal.fire({
         title: '¿Estás seguro de registrar tu contribución? ',
-        icon: 'warning',
+        icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
@@ -121,7 +121,7 @@ const confirmContribution = () => {
 const confirmEditContribution = (id) => {
     Swal.fire({
         title: '¿Estás seguro que deseas enviar nueva mente tu contribución con atención a observaciones? ',
-        icon: 'warning',
+        icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',

@@ -23,9 +23,6 @@ import BaseIcon from "@/Components/BaseIcon.vue";
 import Pagination from "@/Components/Pagination.vue";
 import Modal from "@/Components/Modal.vue";
 import axios from "axios";
-
-// --- IMPORTACIÓN CORREGIDA ---
-// El alias '@' ya apunta a 'resources/js', así que empezamos desde 'Pages/...'
 import { generateAcceptanceLetter } from "@/Pages/Article/Partials/Pdf/ConstansGeneral.js"; 
 
 const props = defineProps({
@@ -51,7 +48,6 @@ const notification = ref({
     message: "",
 });
 
-// --- Nueva función para generar la constancia ---
 const handleGenerateCertificate = async (article) => {
     if (isGeneratingId.value) return; 
 
@@ -99,7 +95,6 @@ const closeModal = () => {
     }
     selectedCertificateUrl.value = "";
 };
-// --- Fin de la nueva lógica ---
 
 const searchQuery = ref(props.filters.search || "");
 
@@ -137,7 +132,6 @@ watch(
             main
         />
 
-        <!-- Notificación de Éxito (Inertia Flash) -->
         <NotificationBar
             v-if="$page.props.flash.success" 
             color="success"
@@ -147,7 +141,6 @@ watch(
             {{ $page.props.flash.success }}
         </NotificationBar>
 
-        <!-- Notificación de Error (Inertia Flash) -->
         <NotificationBar
             v-if="$page.props.flash.error" 
             color="danger"
@@ -157,7 +150,6 @@ watch(
             {{ $page.props.flash.error }}
         </NotificationBar>
 
-        <!-- Notificación de Error (Error de Generación de PDF) -->
         <NotificationBar
             v-if="notification.show" 
             :color="notification.color"
@@ -234,13 +226,13 @@ watch(
                     <tbody
                         class="divide-y divide-gray-200 dark:divide-gray-700"
                     >
-                        <tr v-if="filteredArticles.length === 0"> <!-- CORREGIDO: v-if -->
+                        <tr v-if="filteredArticles.length === 0"> 
                             <td
                                 colspan="5" 
                                 class="px-6 py-4 text-center text-gray-500 dark:text-gray-400 whitespace-nowrap"
                             >
-                                No se encontraron artículos con los estatus
-                                "Aceptado" o "Aceptado con observaciones".
+                                No se encontraron artículos con el estatus
+                                "Aceptado" .
                             </td>
                         </tr>
 
