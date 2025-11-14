@@ -230,13 +230,15 @@ export const getMenu = (userRoles = []) => {
                 },
             ],
         },
-        /*{
-            label: "Diapositivas",
-            route: "article.diapositivas",
-            icon: mdiBook,
-            role:"Postulante",
-        }*/
     ];
+
+    if (userHasAnyRole(userRoles, ["Postulante", "Admin", "Admin-Revista"])){
+         menu.push({
+            label: "Diapositivas",
+            route: "diapositivas.index",
+            icon: mdiBook,
+        });
+    }
 
     // "Constancias"
     if (userHasAnyRole(userRoles, ["Postulante", "Admin"])) {
