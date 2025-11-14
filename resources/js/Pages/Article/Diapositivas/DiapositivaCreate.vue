@@ -6,7 +6,8 @@ import {
     mdiContentSave,
     mdiClose,
     mdiInformation,
-    mdiReceiptTextSend
+    mdiReceiptTextSend, 
+    mdiDownload
 } from "@mdi/js";
 import BaseButton from "@/Components/BaseButton.vue";
 import BaseButtons from "@/Components/BaseButtons.vue";
@@ -30,8 +31,9 @@ const activeTab = ref('postulant')
 
 const form = useForm({
     article_id: props.article.id,
-    expo_type: null, // Campo para 'presencial' o 'virtual'
-    diapositiva: null, // Campo para el archivo PowerPoint
+    // expo_type: props.article.expo_type || null,
+    expo_type: props.article.expo_type || 'presencial',
+    diapositiva: null,
 });
 
 const saveForm = () => {
@@ -76,15 +78,29 @@ const handleDiapositivaInput = (event) => {
                     <FormControl
                         v-model="form.expo_type"
                         :options="[
-                            { id: null, label: 'Selecciona una opción' },
                             { id: 'presencial', label: 'Presencial' },
                             { id: 'virtual', label: 'Virtual' },
                         ]"
                         component="select"
+                        optionLabel="label"
+                    />
+                </FormField>
+
+                <FormField 
+                    label="Descargar formato de presentación" 
+                    help="Si no tienes el formato de exposición, descárgalo aquí."
+                >
+                    <BaseButton
+                        href="/templates/PLANTILLA 5TO CITCA.pptx"
+                        :icon="mdiDownload"
+                        label="Descargar PLANTILLA 5TO CITCA.pptx"
+                        color="info"
+                        target="_blank"
+                        download
                     />
                 </FormField>
                 
-                <FormField label="Subir Diapositiva:" required help="Solo archivos PowerPoint (.ppt, .pptx) (MAX 20M)"
+                <FormField label="Subir Diapositiva:" required help="Archivos PDF o PowerPoint (.pdf, .ppt, .pptx) (MAX 25MB)"
                     :error="form.errors.diapositiva">
                     <div
                         class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 md:p-10 mb-4 dark:bg-gray-800 dark:border-gray-600">
@@ -95,7 +111,7 @@ const handleDiapositivaInput = (event) => {
                                 name="diapositiva" 
                                 type="file"
                                 class="w-full"
-                                accept=".ppt, .pptx, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation" 
+                                accept=".pdf, .ppt, .pptx, application/pdf, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation" 
                             />
                             <p v-if="form.diapositiva?.name" class="font-semibold mt-2">
                                 Nombre del archivo: {{ form.diapositiva?.name }}
@@ -135,7 +151,7 @@ const handleDiapositivaInput = (event) => {
                                 </FormField>
                                 <FormField label="Estado:">
                                     <LabelControl
-                                        :value="article.postulant?.institution?.state?.name ?? 'Sin información'" />
+                                        :value="article.postulante?.institution?.state?.name ?? 'Sin información'" />
                                 </FormField>
                             </div>
                         </Tab>
@@ -157,10 +173,7 @@ const handleDiapositivaInput = (event) => {
                                     <LabelControl :value="article.article_status.name" />
                                 </FormField>
                             </div>
-                            <FormField label="Comprobante:">
-                                <LabelControl value="Sin comprobante" />
-                            </FormField>
-                        </Tab>
+                            </Tab>
                     </Tabs>
                 </CardBox>
             </div>

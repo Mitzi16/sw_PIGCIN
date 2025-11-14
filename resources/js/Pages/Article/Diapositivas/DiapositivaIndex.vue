@@ -1,19 +1,18 @@
 <script setup>
 import { ref, computed, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { router, Link } from "@inertiajs/vue3"; 
 import CardBox from "@/Components/CardBox.vue";
 import LayoutMain from "@/Layouts/LayoutMain.vue";
 import debounce from "lodash.debounce";
 import {
-    mdiPresentation, // Cambiado de mdiBallotOutline
+    mdiPresentation,
     mdiInformation,
-    mdiPencil,
     mdiBroom,
     mdiMagnify,
     mdiPlus,
     mdiCheckDecagram,
-    mdiUpload, // Agregado para Cargar
-    mdiTrashCan, // Agregado para Borrar
+    mdiUpload, 
+    mdiEye, 
 } from "@mdi/js";
 import SectionTitleLineWithButton from "@/Components/SectionTitleLineWithButton.vue";
 import HeadLogo from "@/Components/HeadLogo.vue";
@@ -24,7 +23,7 @@ import Pagination from "@/Components/Pagination.vue";
 const props = defineProps({
     name: {
         type: String,
-        default: "Diapositivas", // Cambiado de "Constancias"
+        default: "Diapositivas",
     },
     title: { type: String, required: true },
     articles: {
@@ -35,12 +34,12 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    canUpload: { type: Boolean, default: false }, 
 });
 
 const searchQuery = ref(props.filters.search || "");
 
 const statusMap = {
-    3: "Aceptado con observaciones",
     4: "Aceptado",
 };
 
@@ -52,7 +51,7 @@ watch(
     searchQuery,
     debounce((value) => {
         router.get(
-            "/diapositivas/upload", // Cambiado de "/constancias/article"
+            "/diapositivas", 
             { search: value },
             {
                 preserveState: true,
@@ -145,7 +144,7 @@ watch(
                                 scope="col"
                                 class="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-600 dark:text-gray-300 uppercase"
                             >
-                                Acciones <!-- Cambiado de "Acción" -->
+                                Acciones
                             </th>
                         </tr>
                     </thead>
@@ -157,9 +156,7 @@ watch(
                                 colspan="5"
                                 class="px-6 py-4 text-center text-gray-500 dark:text-gray-400 whitespace-nowrap"
                             >
-                                <!-- Mensaje actualizado -->
-                                No se encontraron artículos con los estatus
-                                "Aceptado" o "Aceptado con observaciones".
+                                No se encontraron artículos aceptados.
                             </td>
                         </tr>
 
@@ -187,55 +184,51 @@ watch(
                                 <span
                                     :class="[
                                         'px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full',
-                                        article.status_id === 4 // Corregido: 4 es Aceptado (verde)
+                                        article.status_id === 4
                                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300', // 3 es Aceptado con Obs (amarillo)
+                                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
                                     ]"
                                 >
                                     {{ statusMap[article.status_id] }}
                                 </span>
                             </td>
-                            <!-- INICIO DE CAMBIOS: Columna de Acciones -->
-                           <td
-                                    class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap"
-                                >
-                                    <div
+
+                            <td
+                                class="px-6 py-4 text-sm font-medium text-right whitespace-nowrap"
+                            >
+                                <div
                                     class="flex items-center justify-end space-x-2"
-                                    >
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center **px-2.5 py-1** **text-xs** font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out"
-                                    >
-                                        <BaseIcon
-                                        :path="mdiUpload"
-                                        class="**w-3 h-3** **mr-1.5**"
-                                        />
-                                        Cargar
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center **px-2.5 py-1** **text-xs** font-medium text-white bg-yellow-600 border border-transparent rounded-md shadow-sm hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition duration-150 ease-in-out"
+                                >
+                                    <Link
+                                        v-if="canUpload"
+                                        :href="`/diapositivas/${article.id}/create`"
+                                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out"
                                     >
                                         <BaseIcon
-                                        :path="mdiPencil"
-                                        class="**w-3 h-3** **mr-1.5**"
+                                            :path="mdiUpload"
+                                            class="w-3 h-3 mr-1.5"
                                         />
-                                        Editar
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center **px-2.5 py-1** **text-xs** font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out"
+                                        {{
+                                            article.has_diapositiva
+                                                ? "Re-cargar"
+                                                : "Cargar"
+                                        }}
+                                    </Link>
+
+                                    <Link
+                                        v-if="!canUpload || article.has_diapositiva"
+                                        :href="`/diapositivas/${article.id}`"
+                                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out"
                                     >
                                         <BaseIcon
-                                        :path="mdiTrashCan"
-                                        class="**w-3 h-3** **mr-1.5**"
+                                            :path="mdiEye"
+                                            class="w-3 h-3 mr-1.5"
                                         />
-                                        Borrar
-                                    </button>
-                                    </div>
+                                        Ver
+                                    </Link>
+                                </div>
                             </td>
-                            <!-- FIN DE CAMBIOS -->
-                        </tr>
+                            </tr>
                     </tbody>
                 </table>
             </div>

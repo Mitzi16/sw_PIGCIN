@@ -65,9 +65,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/verificar/{folio}', [VerificationController::class, 'verifyConstancia'])->name('constancia.verify');
     Route::get('/verifica/reconocimiento/{id}', [VerificationController::class, 'verifyReconocimiento'])->name('certificate.verify');
     Route::get('/articles/{article}/acceptance-letter-data', [ConstanciaController::class, 'getAcceptanceLetterData'])->name('article.acceptanceLetterData') ->middleware(['auth']); 
-
-    Route::get('/diapositivas/upload', [DiapositivaController::class, 'index'])->name('article.diapositivas')->middleware(['auth']);
-    Route::get('/diapositivas/upload/{article}/create', [DiapositivaController::class, 'create'])->name('diapositiva.create')->middleware(['auth']);
+    
+    // Grupo de Rutas para Diapositivas
+    Route::get('/diapositivas', [DiapositivaController::class, 'index'])->name('diapositivas.index')->middleware(['auth']);
+    Route::get('/diapositivas/{article}/create', [DiapositivaController::class, 'create'])->name('diapositivas.create')->middleware(['auth']);
+    Route::post('/diapositivas', [DiapositivaController::class, 'store'])->name('diapositivas.store')->middleware(['auth']);
+    Route::get('/diapositivas/{article}', [DiapositivaController::class, 'show'])->name('diapositivas.show')->middleware(['auth']);
 
     Route::get('/generate/participation', [GenerateParticipationController::class, 'generateParticipation'])->name('constancia.generate')->middleware(['auth']);
     Route::get('/generate/participation/data',[GenerateParticipationController::class, 'getReconocimientoData'])->name('reconocimiento.data')->middleware(['auth']);

@@ -4,40 +4,83 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\User;
-use App\Models\File; // Asegúrate de importar tu modelo File
+use App\Models\File;
+use App\Models\ArticleType; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class DiapositivaController extends Controller
 {
+    private string $routeName;
+    private string $storage_path;
+
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->routeName = 'diapositivas.';
+        $this->storage_path = 'diapositivas'; // Carpeta dentro de 'storage/app/private/'
+    }
+
     /**
-     * Muestra la página de gestión de diapositivas.
+     * Muestra la lista de artículos según el ROL del usuario.
      */
     public function index(Request $request): Response
     {
         $user = User::findOrFail(Auth::id());
 
-        // Iniciar la consulta para artículos con los estatus 3 o 4
         $query = Article::query()
-            ->with('correspondingAuthor')
-            ->whereIn('article_status_id', [3, 4]); // Aceptado o Aceptado con Observaciones
+            ->with(['correspondingAuthor', 'articleType'])
+            ->withExists(['files as has_diapositiva' => function ($query) {
+                $query->where('category', 'diapositiva');
+            }])
+            ->where('article_status_id', 4); // Aceptado
+        
+        // Rol Admin: Ve todo MENOS 'Articulo Revista'
+        if ($user->hasRole('Admin')) {
+            // Obtenemos el ID del tipo de artículo a excluir
+            $revistaTypeId = ArticleType::where('name', 'Articulo Revista')->value('id');
+            if ($revistaTypeId) {
+                $query->where('article_type_id', '!=', $revistaTypeId);
+            }
 
-        // Aplicar filtro de permisos
-        if (!$user->canPermission('article.all')) {
+        // Rol Admin-Revista: Ve SOLO 'Articulo Revista'
+        } elseif ($user->hasRole('Admin-Revista')) {
+            $revistaTypeId = ArticleType::where('name', 'Articulo Revista')->value('id');
+            if ($revistaTypeId) {
+                $query->where('article_type_id', $revistaTypeId);
+            } else {
+                // Si no existe el tipo, no muestra nada
+                $query->where('id', 0); 
+            }
+        
+        // Rol Postulante  Ve solo lo suyo
+        } else {
             $query->where('postulant_id', $user->id);
         }
 
         // Aplicar filtro de búsqueda
         $query->when($request->input('search'), function ($query, $search) {
-            $query->where('title', 'like', "%{$search}%");
+            // Agrupamos las condiciones 'OR' con una clausura
+            $query->where(function ($q) use ($search) {
+                // 1. Buscar por título
+                $q->where('title', 'like', "%{$search}%")
+                // 2. Buscar por folio
+                ->orWhere('article_folio', 'like', "%{$search}%")
+                // 3. Buscar por nombre o apellido del autor en la relación
+                ->orWhereHas('correspondingAuthor', function ($authorQuery) use ($search) {
+                    $authorQuery->where('name', 'like', "%{$search}%")
+                                ->orWhere('surname', 'like', "%{$search}%");
+                });
+            });
         });
 
-        // Ordenar, paginar y transformar los resultados
+        // Ordenar, paginar y transformar
         $articles = $query->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString()
@@ -46,60 +89,60 @@ class DiapositivaController extends Controller
                 'article_folio' => $article->article_folio,
                 'title' => $article->title,
                 'status_id' => $article->article_status_id,
-                'expo_type' => $article->expo_type, // Puedes añadir esto para verlo en el index
+                'expo_type' => $article->expo_type,
                 'author_name' => $article->correspondingAuthor
                     ? trim($article->correspondingAuthor->prefix . ' ' . $article->correspondingAuthor->name . ' ' . $article->correspondingAuthor->surname)
                     : 'No especificado',
-                // Deberías añadir una forma de saber si ya tiene diapositiva
-                // 'has_diapositiva' => $article->files()->where('category', 'diapositiva')->exists(),
+                'has_diapositiva' => $article->has_diapositiva,
             ]);
 
-        // Renderizar la vista de Inertia
-        return Inertia::render('Article/Diapositivas/Index', [
+        // Solo los Postulantes (que no son ni Admin ni Admin-Revista) pueden cargar
+        $canUpload = !$user->hasRole('Admin') && !$user->hasRole('Admin-Revista');
+
+        return Inertia::render('Article/Diapositivas/DiapositivaIndex', [
             'title' => 'Gestión de Diapositivas',
             'articles' => $articles,
             'filters' => $request->only('search'),
-            'routeName' => 'diapositivas.' // Pasamos el routeName para los enlaces
+            'routeName' => $this->routeName,
+            'canUpload' => $canUpload, 
         ]);
     }
 
     /**
-     * Muestra el formulario para subir diapositivas para un artículo específico.
-     * Reemplaza tu método upload() vacío.
-     *
-     * @param  Article $article
-     * @return Response
+     * Muestra el formulario para subir diapositivas (SOLO POSTULANTES).
      */
     public function create(Article $article): Response
     {
-        // Verificar permisos
         $user = Auth::user();
+
+        if ($user->hasRole('Admin') || $user->hasRole('Admin-Revista')) {
+            abort(403, 'Los administradores no tienen permiso para cargar diapositivas.');
+        }
+
+        // Lógica de permisos original para el Postulante
         if ($article->postulant_id !== $user->id && !$user->canPermission('article.all')) {
             abort(403, 'No autorizado para este artículo.');
         }
 
-        // Cargar las relaciones necesarias para el panel lateral
         $article->load([
             'postulant.institution.country',
             'postulant.institution.state',
-            'article_type',
+            'articleType',
             'editor',
-            'article_status'
+            'articleStatus'
         ]);
 
-        return Inertia::render('Article/Diapositivas/Create', [
+        return Inertia::render('Article/Diapositivas/DiapositivaCreate', [
             'title' => 'Subir Diapositivas: ' . $article->article_folio,
             'article' => $article,
-            'routeName' => 'diapositivas.', // Prefijo de ruta para el formulario
+            'diapositiva' => null,
+            'diapositivaUrl' => null,
+            'routeName' => $this->routeName,
         ]);
     }
 
-
     /**
-     * Almacena la diapositiva y actualiza el tipo de exposición.
-     *
-     * @param  Request $request
-     * @return RedirectResponse
+     * Almacena (o reemplaza) la diapositiva (SOLO POSTULANTES).
      */
     public function store(Request $request): RedirectResponse
     {
@@ -108,71 +151,109 @@ class DiapositivaController extends Controller
             'article_id' => 'required|exists:articles,id',
             'expo_type' => ['required', 'string', Rule::in(['presencial', 'virtual'])],
             'diapositiva' => [
-                'required',
-                'file',
-                'mimes:ppt,pptx', // Acepta solo .ppt y .pptx
-                'max:20480' // Máximo 20MB
+                'required', 'file', 'mimes:pdf,ppt,pptx', 'max:25600'
             ],
         ]);
 
         $article = Article::findOrFail($validated['article_id']);
         $user = Auth::user();
 
-        // Verificar permisos (importante)
+        if ($user->hasRole('Admin') || $user->hasRole('Admin-Revista')) {
+            return redirect()->back()->with('error', 'Los administradores no tienen permiso para cargar diapositivas.');
+        }
+
         if ($article->postulant_id !== $user->id && !$user->canPermission('article.all')) {
             return redirect()->back()->with('error', 'No tienes permisos para realizar esta acción.');
         }
 
-        // --- Lógica de Archivo ---
-
         $file = $request->file('diapositiva');
         $category = 'diapositiva';
+        $safeFolio = str_replace(['/', '\\'], '-', $article->article_folio);
+        $extension = $file->getClientOriginalExtension();
+        $customFileName = $safeFolio . '_' . $category . '.' . $extension;
 
-        // 1. Revisar si ya existe una diapositiva anterior para este artículo
         $existingFile = $article->files()->where('category', $category)->first();
-
         if ($existingFile) {
-            // 2. Si existe, eliminar el archivo físico
-            Storage::delete($existingFile->path);
-            // 3. Eliminar el registro de la BD
-            $existingFile->delete();
+            Storage::disk('private')->delete($existingFile->path);
         }
+        $path = $file->storeAs($this->storage_path, $customFileName, 'private');
 
-        // 4. Guardar el nuevo archivo en la ubicación especificada
-        $path = $file->store('private/diapositivas');
+        $article->files()->updateOrCreate(
+            ['category' => $category],
+            [
+                'user_id' => $user->id,
+                'name' => $customFileName,
+                'original_name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ]
+        );
 
-        // 5. Crear el nuevo registro en la tabla 'files'
-        $article->files()->create([
-            'user_id' => $user->id,
-            'category' => $category,
-            'original_name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-        ]);
-
-        // --- Lógica de Artículo ---
-        
-        // 6. Actualizar el tipo de exposición en el artículo
         $article->expo_type = $validated['expo_type'];
         $article->save();
 
-        // 7. Redireccionar al index con mensaje de éxito
-        return redirect()->route('diapositivas.index')
+        return redirect()->route("{$this->routeName}index")
             ->with('success', 'Diapositivas subidas y tipo de exposición guardado correctamente.');
     }
 
     /**
-     * Lógica para eliminar diapositivas (opcional, si lo necesitas)
+     * Muestra el detalle del artículo según la lógica de roles.
      */
-    public function destroy(Article $article, File $file)
+    public function show(Article $article): Response
     {
-        // Lógica de permisos similar a store...
-        
-        // Storage::delete($file->path);
-        // $file->delete();
+        $user = Auth::user();
 
-        // return redirect()->route('diapositivas.index')
-        //     ->with('success', 'Diapositiva eliminada.');
+        $article->load(['articleType', 'postulant']);
+
+        $isPostulant = !$user->hasRole('Admin') && !$user->hasRole('Admin-Revista');
+        $isRevista = $article->articleType->name === 'Articulo Revista';
+
+        $canView = false;
+        
+        if ($isPostulant && $article->postulant_id === $user->id) {
+            $canView = true;
+        }
+
+        if ($user->hasRole('Admin') && !$isRevista) {
+            $canView = true;
+        }
+
+        if ($user->hasRole('Admin-Revista') && $isRevista) {
+            $canView = true;
+        }
+
+        if (!$canView) {
+            // Si ninguna regla se cumple, se deniega el acceso
+            abort(403, 'No autorizado para ver este artículo.');
+        }
+
+        $article->load([
+            'postulant.institution.country',
+            'postulant.institution.state',
+            'editor',
+            'articleStatus'
+        ]);
+
+        // Buscar el archivo de diapositiva
+        $diapositivaFile = $article->files()->where('category', 'diapositiva')->first();
+        $diapositivaUrl = null;
+        if ($diapositivaFile) {
+            try {
+                $diapositivaUrl = URL::signedRoute('file.serve', $diapositivaFile, now()->addMinutes(60));
+            } catch (\Exception $e) {
+                report($e);
+                $diapositivaUrl = null; 
+            }
+        }
+
+        return Inertia::render('Article/Diapositivas/DiapositivaShow', [
+            'title' => 'Ver Diapositivas: ' . $article->article_folio,
+            'article' => $article,
+            'diapositiva' => $diapositivaFile,
+            'diapositivaUrl' => $diapositivaUrl,
+            'routeName' => $this->routeName,
+            'canUpload' => $isPostulant, 
+        ]);
     }
 }
