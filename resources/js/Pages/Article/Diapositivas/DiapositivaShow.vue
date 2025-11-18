@@ -9,7 +9,7 @@ import {
     mdiArrowLeft,
     mdiUpload,
     mdiDownload,
-    
+    mdiVideo, // Importado para el icono de video
     mdiFileDocument,
 } from "@mdi/js";
 import BaseButton from "@/Components/BaseButton.vue";
@@ -60,6 +60,12 @@ const fileType = computed(() => {
     if (!props.diapositiva) return { type: 'unknown', icon: mdiFileDocument };
 
     const mime = props.diapositiva.mime_type || '';
+    
+    // Lógica para VIDEO
+    if (mime === 'video/mp4') {
+        return { type: 'video', icon: mdiVideo };
+    }
+
     if (mime === 'application/pdf') {
         return { type: 'pdf', icon: mdiFileDocument  };
     }
@@ -114,10 +120,20 @@ const fileType = computed(() => {
                     </div>
 
                     <div class="border-2 border-dashed dark:border-gray-700 rounded-lg p-4">
-                        <div v-if="fileType.type === 'pdf' && diapositivaUrl">
+                        <!-- Opción 1: Video MP4 -->
+                        <div v-if="fileType.type === 'video' && diapositivaUrl" class="flex flex-col items-center">
+                            <video controls class="w-full max-h-96 rounded shadow-md">
+                                <source :src="diapositivaUrl" type="video/mp4">
+                                Tu navegador no soporta la reproducción de videos.
+                            </video>
+                        </div>
+
+                        <!-- Opción 2: PDF -->
+                        <div v-else-if="fileType.type === 'pdf' && diapositivaUrl">
                             <iframe :src="diapositivaUrl" class="w-full h-96" frameborder="0"></iframe>
                         </div>
                         
+                        <!-- Opción 3: Otros (PPT, etc) - Muestra "No disponible" -->
                         <div v-else class="flex flex-col items-center justify-center text-center p-8">
                              <BaseIcon :path="fileType.icon" class="w-24 h-24 text-gray-400 mb-4" />
                             <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -150,6 +166,7 @@ const fileType = computed(() => {
                         color="white"
                         label="Volver al Listado" 
                     />
+                    <!-- El botón descargar aparece si hay URL y NO es PDF (porque el PDF ya tiene toolbar) -->
                     <BaseButton 
                         v-if="diapositivaUrl && fileType.type !== 'pdf'"
                         :href="diapositivaUrl" 

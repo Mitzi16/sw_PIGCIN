@@ -67,11 +67,11 @@ async function drawRecognitionPdf(controllerData, extraInfo) {
     const footerColor = rgb(0.5, 0.5, 0.5); 
 
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    // *** La fuente 'font' es necesaria para calcular el ancho de los títulos ***
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontMono = await pdfDoc.embedFont(StandardFonts.Courier);
     
     // --- 1. Dibujar Nombre (firstPage) ---
-    // (Esta sección no cambia)
     let fontSize = 15;
     const maxNameWidth = 500;
     const wrappedName = wrapText(participant_name, maxNameWidth, fontBold, fontSize);
@@ -92,23 +92,51 @@ async function drawRecognitionPdf(controllerData, extraInfo) {
 
     // --- 2. Dibujar Texto Principal (firstPage) ---
     const authorBlockHeight = nameLines.length * lineHeight;
+    // Establecer la posición Y inicial del bloque de texto
     y = (height / 2 + 30) - (authorBlockHeight / 2) - 40; 
     
-    // ¡CAMBIO IMPORTANTE! Pasamos 'extraInfo' a 'getParticipationText'
-    const [line1, line2, staticLine1, staticLine2, staticLine3] = getParticipationText(participant_role, participant_area, extraInfo);
+    // ¡CAMBIO IMPORTANTE! Pasamos 'extraInfo' Y el objeto 'font' a 'getParticipationText'
+    const participationLines = getParticipationText(participant_role, participant_area, extraInfo, font);
 
-    // El resto del dibujo de texto es igual
-    drawText(line1, font, 10, firstPage, y, centerX - 20, defaultColor);
-    y -= 16;
-    drawText(line2, font, 10, firstPage, y, centerX - 20, defaultColor);
-    y -= 20;
-    drawText(staticLine1, font, 10, firstPage, y, centerX - 25, defaultColor);
-    y -= 16;
-    drawText(staticLine2, font, 10, firstPage, y, centerX - 25, defaultColor);
-    y -= 16;
-    drawText(staticLine3, font, 10, firstPage, y, centerX - 20, defaultColor);
-    y -= 25;
+    // Definir el espaciado y ajuste de posición X
+    const dynamicLineSpacing = 16;
+    const line2Offset = 20; // Separación después de la línea principal/título
+    const staticXOffset = 25; // Offset para las líneas estáticas 1 y 2
+    const centerOffset = 25; // Offset general para centrar
 
+    // Dibujar las 6 líneas (3 dinámicas + 3 estáticas)
+    for (let i = 0; i < participationLines.length; i++) {
+    const line = participationLines[i];
+    
+    // 1. Inicializa la fuente a la regular
+    let currentFont = font; 
+    let xOffset = centerOffset;
+    let lineSpacing = dynamicLineSpacing;
+
+    // APLICAR NEGRITAS AL TÍTULO (Líneas 1 y 2)
+    if (i === 1 || i === 2) { 
+        currentFont = fontBold; // Usa la fuente en negritas
+    }
+
+    // Ajuste de X para las líneas estáticas 1 y 2
+    if (i === 3 || i === 4) {
+        xOffset = staticXOffset;
+        currentFont = font; // Asegurar la fuente regular para las estáticas
+    }
+
+    // *** CAMBIO CRUCIAL: USAR currentFont EN LA LLAMADA A drawText ***
+    drawText(line, currentFont, 10, firstPage, y, centerX - xOffset, defaultColor);
+    
+    // Ajuste de Y para el salto de línea extra
+    if (i === 2) { // Después de la última línea dinámica (o la tercera línea del título)
+        y -= line2Offset; 
+        // No es necesario resetear currentFont aquí, ya se hace al inicio del bucle.
+    } else {
+        y -= lineSpacing;
+        // No es necesario resetear currentFont aquí.
+    }
+}
+    
     // --- 3. Dibujar Fecha (firstPage) ---
     drawText("Cuernavaca, Morelos, 28 de noviembre de 2025", font, 10, firstPage, y, centerX - 20, goldColor);
     
@@ -116,7 +144,6 @@ async function drawRecognitionPdf(controllerData, extraInfo) {
     await addRecognitionQR(pdfDoc, secondPage, verification_url, height);
 
     // --- 5. Dibujar Folio y Sello (secondPage, Derecha) ---
-    // (Esta sección no cambia)
     const qrX = 50;
     const qrSize = 90;
     const topMarginY = height - 120;
@@ -130,18 +157,17 @@ async function drawRecognitionPdf(controllerData, extraInfo) {
     drawText(`Folio: ${reconocimiento_folio}`, font, 8, secondPage, sealY, sealLeftX, footerColor, 'left');
     sealY -= 15;
     drawText("Sello Digital (Identificador):", fontBold, 8, secondPage, sealY, sealLeftX, footerColor, 'left');
-    sealY -= 10; 
+    sealY -= 15; 
 
     const selloLines = splitAndJustifyText(signedText, fontMono, 7, sealWidth);
     const selloLineHeight = 8;
     
     for (const line of selloLines) {
-         secondPage.drawText(line, { x: sealLeftX, y: sealY, font: fontMono, size: 7, color: footerColor });
+        secondPage.drawText(line, { x: sealLeftX, y: sealY, font: fontMono, size: 7, color: footerColor });
         sealY -= selloLineHeight;
     }
 
     // --- 6. Texto de Validación ---
-    // (Esta sección no cambia)
     sealY -= 8;
     const validationText = "La firma electrónica que sustituye a la firma autógrafa del firmante, garantiza la integridad de la constancia y producirá los mismos efectos que las leyes otorgan a los documentos con firma autógrafa";
     const validationFontSize = 7;
@@ -165,68 +191,107 @@ async function drawRecognitionPdf(controllerData, extraInfo) {
 
 /**
  * ¡FUNCIÓN MODIFICADA!
- * Ahora acepta 'extraInfo' para los roles especiales.
+ * Ahora acepta 'extraInfo' y el objeto 'font' de pdf-lib.
+ * Retorna un array de 6 líneas: [linea_dinamica_1, linea_dinamica_2, linea_dinamica_3 (o vacío), static1, static2, static3]
  */
-function getParticipationText(role, area, extraInfo) {
-    let line1 = "";
-    let line2 = "";
+function getParticipationText(role, area, extraInfo, font) {
+    let lines = [];
+    
+    const staticLines = [
+        " En el marco del 5.° Congreso Internacional de Tecnología y Ciencia Aplicada",
+        " (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo",
+        "Tecnológico del 26 al 28 de Noviembre de 2025."
+    ];
+    
+    const MAX_TITLE_WIDTH = 480; 
+    const FONT_SIZE = 10; // Tamaño de la fuente para el texto principal
     
     switch (role) { 
         case "TALLERISTA":
-            line1 = "Por su destacada participación impartiendo el taller:";
-            // Si 'extraInfo' tiene valor, lo usamos.
-            line2 = `"${extraInfo || 'Nombre no especificado'}"`;
+            lines.push("Por su destacada participación impartiendo el taller:");
+            
+            const tallerTitle = extraInfo || 'Nombre no especificado';
+            // Usa wrapText para dividir el título. Se asume que font.widthOfTextAtSize está disponible.
+            const wrappedTallerTitle = wrapText(`"${tallerTitle}"`, MAX_TITLE_WIDTH, font, FONT_SIZE); 
+            
+            // Añadir las líneas del título (limitado a 3 líneas)
+            const tallerTitleLines = wrappedTallerTitle.split('\n').slice(0, 3);
+            lines.push(...tallerTitleLines);
+            
+            // Rellenar con líneas vacías si el título es corto para mantener la estructura de 3 líneas dinámicas
+            while (lines.length < 3) { lines.push(""); }
             break;
+
         case "CONFERENCISTA":
-            line1 = "Por su destacada participación como conferencista magistral con la ponencia:";
-            // Si 'extraInfo' tiene valor, lo usamos.
-            line2 = `"${extraInfo || 'Nombre no especificado'}"`;
+            lines.push("Por su destacada participación como conferencista magistral con la ponencia:");
+            
+            const confTitle = extraInfo || 'Nombre no especificado';
+            // Usa wrapText para dividir el título.
+            const wrappedConfTitle = wrapText(`"${confTitle}"`, MAX_TITLE_WIDTH, font, FONT_SIZE); 
+            
+            // Añadir las líneas del título (limitado a 3 líneas)
+            const confTitleLines = wrappedConfTitle.split('\n').slice(0, 3);
+            lines.push(...confTitleLines);
+            
+            // Rellenar con líneas vacías si el título es corto para mantener la estructura de 3 líneas dinámicas
+            while (lines.length < 3) { lines.push(""); }
             break;
-            // case "EDITOR_REVISOR" y "REVISOR_RE" no lo estoy ocupando con el nuevo flujo no es necesario tener esto
+
         case "EDITOR_REVISOR":
-            line1 = "Por su destacada doble labor como Editor (a)  de contribuciones en el área:";
-            line2 = ` ${area || 'Conocimiento'}`;
+            lines.push("Por su destacada doble labor como Editor (a)  de contribuciones en el área:");
+            lines.push(` ${area || 'Conocimiento'}`);
+            lines.push(""); // Línea de relleno
             break;
         case "REVISOR_RE":
-            line1 = "Por su destacada doble labor como Revisor (a)  de contribuciones en el área:";
-            line2 = ` ${area || 'Conocimiento'}`;
+            lines.push("Por su destacada doble labor como Revisor (a)  de contribuciones en el área:");
+            lines.push(` ${area || 'Conocimiento'}`);
+            lines.push(""); // Línea de relleno
             break;
         case "ADMIN":
-            line1 = "Por su destacada e invaluable participación en la actividad de Coordinador (a)";
-            line2 = "General, como integrante del COMITÉ ORGANIZADOR";
+            lines.push("Por su destacada e invaluable participación en la actividad de Coordinador (a)");
+            lines.push("General, como integrante del COMITÉ ORGANIZADOR");
+            lines.push(""); // Línea de relleno
             break;
         case "EDITOR":
-            line1 = "Por su destacada participación como Editor (a) de contribuciones en el área:";
-            line2 = ` ${area || 'Conocimiento'} presentadas en el marco`;
+            lines.push("Por su destacada participación como Editor (a) de contribuciones en el área:");
+            lines.push(` ${area || 'Conocimiento'} presentadas en el marco`);
+            lines.push(""); // Línea de relleno
             break;
         case "REVISOR":
-            line1 = "Por su destacada participación como Revisor (a) de contribuciones en el área:";
-            line2 = ` ${area || 'Conocimiento'} presentadas en el marco`;
+            lines.push("Por su destacada participación como Revisor (a) de contribuciones en el área:");
+            lines.push(` ${area || 'Conocimiento'} presentadas en el marco`);
+            lines.push(""); // Línea de relleno
             break;
         case "ADMIN-REVISTA":
-            line1 = "Por su destacada e invaluable participacion en la actividad de Administrador (a) General";
-            line2 = "de Revista, como integrante del COMITÉ ORGANIZADOR";
+            lines.push("Por su destacada e invaluable participacion en la actividad de Administrador (a) General");
+            lines.push("de Revista, como integrante del COMITÉ ORGANIZADOR");
+            lines.push(""); // Línea de relleno
             break;
         case "STAFF":
-            line1 = "Por su destacada e invaluable participación como miembro del";
-            line2 = "EQUIPO ORGANIZADOR";
+            lines.push("Por su destacada e invaluable participación como miembro del");
+            lines.push("EQUIPO ORGANIZADOR");
+            lines.push(""); // Línea de relleno
             break;
         case "MODERADOR":
-            line1 = "Por su destacada e invaluable participación como";
-            line2 = "MODERADOR (A) DE CONTRIBUCIONES";
+            lines.push("Por su destacada e invaluable participación como");
+            lines.push("MODERADOR (A) DE CONTRIBUCIONES");
+            lines.push(""); // Línea de relleno
             break;
         case "ASISTENTE":
         default:
-            line1 = "Por su valiosa asistencia y participación en las actividades generales del congreso";
-            line2 = "como integrante del COMITÉ ORGANIZADOR";
+            lines.push("Por su valiosa asistencia y participación en las actividades generales del congreso");
+            lines.push("como integrante del COMITÉ ORGANIZADOR");
+            lines.push(""); // Línea de relleno
             break;
     }
+    
+    // Asegurar que siempre hay 3 líneas dinámicas antes de las estáticas
+    while (lines.length < 3) { lines.push(""); }
+    
+    // Agregar las líneas estáticas
+    lines.push(...staticLines);
 
-    const staticLine1 = " En el marco del 5.° Congreso Internacional de Tecnología y Ciencia Aplicada";
-    const staticLine2 = " (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo";
-    const staticLine3 = "Tecnológico del 26 al 28 de Noviembre de 2025.";
-
-    return [line1, line2, staticLine1, staticLine2, staticLine3];
+    return lines;
 }
 
 // --- El resto de funciones helper (addRecognitionQR, drawText, etc.) no cambian ---

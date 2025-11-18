@@ -68,7 +68,21 @@ const handleDiapositivaInput = (event) => {
         </NotificationBar>
 
         <div class="md:grid md:grid-cols-5 gap-4 md:space-y-0 space-y-5">
+            
             <CardBox isForm @submit.prevent="saveForm" class="col-span-3">
+                
+                <FormField>
+                    <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <p className="text-xs text-justify text-gray-600 dark:text-gray-400 leading-relaxed">
+                        <span className="font-semibold block mb-1 text-gray-800 dark:text-gray-200">
+                            Declaración de autoría:
+                        </span>
+                        Los autores del presente artículo autorizan al TecNM/Centro Nacional de Investigación y Desarrollo Tecnológico (CENIDET) 
+                        a publicar la siguiente contribución en Memoria electrónica del CITCA del 21 al 23 de 2025. 
+                        Los autores declaran que lo vertido en el artículo es un trabajo original, haciéndonos responsables de lo expresado en el mismo.
+                        </p>
+                    </div>
+                </FormField>
 
                 <FormField 
                     label="Tipo de Exposición:" 
@@ -100,7 +114,8 @@ const handleDiapositivaInput = (event) => {
                     />
                 </FormField>
                 
-                <FormField label="Subir Diapositiva:" required help="Archivos PDF o PowerPoint (.pdf, .ppt, .pptx) (MAX 25MB)"
+                <!-- ACTUALIZADO: Agregado texto de ayuda y accept para mp4 -->
+                <FormField label="Subir Archivo:" required help="Diapositivas (PDF, PPT, PPTX) o Video (MP4)"
                     :error="form.errors.diapositiva">
                     <div
                         class="bg-slate-100 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center rounded-lg shadow-lg p-6 md:p-10 mb-4 dark:bg-gray-800 dark:border-gray-600">
@@ -111,7 +126,7 @@ const handleDiapositivaInput = (event) => {
                                 name="diapositiva" 
                                 type="file"
                                 class="w-full"
-                                accept=".pdf, .ppt, .pptx, application/pdf, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation" 
+                                accept=".pdf, .ppt, .pptx, .mp4, video/mp4, application/pdf, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation" 
                             />
                             <p v-if="form.diapositiva?.name" class="font-semibold mt-2">
                                 Nombre del archivo: {{ form.diapositiva?.name }}
@@ -127,7 +142,7 @@ const handleDiapositivaInput = (event) => {
                     <BaseButton :routeName="`${props.routeName}index`" :icon="mdiClose" color="white"
                         label="Cancelar" />
                     <BaseButton @click="saveForm" :icon="mdiContentSave" type="submit" color="success"
-                        label="Guardar Diapositiva" :disabled="form.processing" />
+                        label="Guardar Archivo" :disabled="form.processing" />
                 </BaseButtons>
             </CardBox>
 
