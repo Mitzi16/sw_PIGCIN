@@ -3,326 +3,334 @@ import axios from "axios";
 import QRCode from "qrcode";
 
 /**
- * Llama a esta función desde tu botón "Generar Reconocimiento Grupal".
- */
+ * Llama a esta función desde tu botón "Generar Reconocimiento Grupal".
+ */
 export async function generateGroupCertificate(articleId, articleTitle) {
-    try {
-        console.log("Obteniendo autores para el artículo:", articleId);
-        
-        const response = await axios.get(route("article.getAuthors", articleId));
+    try {
+        console.log("Obteniendo autores para el artículo:", articleId);
+        
+        const response = await axios.get(route("article.getAuthors", articleId));
 
-        const { 
-            authors: authorsArray, 
-            article_type_name,  
-            knowledge_area_name
-        } = response.data;
-        
-        //const authorsArray = response.data.authors;
+        const { 
+            authors: authorsArray, 
+            article_type_name,  
+            knowledge_area_name
+        } = response.data;
+        
+        if (!authorsArray || authorsArray.length === 0) {
+            console.error("No se encontraron autores para este artículo.");
+            return null;
+        }
+        
+        console.log("Autores encontrados:", authorsArray);
 
-        if (!authorsArray || authorsArray.length === 0) {
-            alert("No se encontraron autores para este artículo.");
-            return null;
-        }
-        
-        console.log("Autores encontrados:", authorsArray);
+       const degreeRegex = /^(Doctor\(a\)|Maestro\(a\)|Ingeniero\(a\)|Licenciado\(a\)|Profesor\(a\)|Estudiante\(a\))\.?\s+/i;
+        const authorsWithoutDegrees = authorsArray.map(authorName => {
+            // Reemplaza el grado (si lo encuentra) con un string vacío
+            return authorName.replace(degreeRegex, ''); 
+        });
 
-       const degreeRegex = /^(Doctor\(a\)|Maestro\(a\)|Ingeniero\(a\)|Licenciado\(a\)|Profesor\(a\)|Estudiante\(a\))\.?\s+/i;
-        const authorsWithoutDegrees = authorsArray.map(authorName => {
-            // Reemplaza el grado (si lo encuentra) con un string vacío
-            return authorName.replace(degreeRegex, ''); 
-        });
+        const pdfUrl = await getPdf(
+            authorsWithoutDegrees, 
+            articleTitle, 
+            articleId,
+            article_type_name,  
+            knowledge_area_name  
+        );
 
-        const pdfUrl = await getPdf(
-            authorsWithoutDegrees, 
-            articleTitle, // o usa apiArticleTitle
-            articleId,
-            article_type_name,   // <--- NUEVO
-            knowledge_area_name  // <--- NUEVO
-        );
-        //const pdfUrl = await getPdf(authorsWithoutDegrees, articleTitle, articleId);
+        return pdfUrl;
 
-        return pdfUrl;
-
-    } catch (error) {
-        console.error("Error al generar el certificado grupal:", error);
-        alert("Hubo un error al obtener los autores del artículo.");
-        return null;
-    }
+    } catch (error) {
+        console.error("Error al generar el certificado grupal:", error);
+        console.error("Hubo un error al obtener los autores del artículo.");
+        return null;
+    }
 }
 
 export default async function getPdf(authors, title, id, articleTypeName, knowledgeAreaName) { 
-    const signedText = await getSignedText(id);
-    // let legend = "Por su invaluable presentación del Artículo:"; // Ya no se usa
-    
-    let text = ""; // 'text' será la cadena final de autores
-    if (Array.isArray(authors)) {
-        // Es un arreglo (GRUPAL), formato "A, B y C"
-        if (authors.length > 1) {
-            const lastAuthor = authors[authors.length - 1];
-            const otherAuthors = authors.slice(0, -1); 
-            text = otherAuthors.join(' | ') + ' y ' + lastAuthor;
-        } else if (authors.length === 1) {
-            text = authors[0]; // Solo un autor en el arreglo
-        }
-    } else {
-        text = authors;
-    }
+    const signedText = await getSignedText(id);
+    
+    let text = ""; 
+    if (Array.isArray(authors)) {
+        // Es un arreglo (GRUPAL), formato "A | B y C"
+        if (authors.length > 1) {
+            const lastAuthor = authors[authors.length - 1];
+            const otherAuthors = authors.slice(0, -1); 
+            text = otherAuthors.join(' | ') + ' y ' + lastAuthor;
+        } else if (authors.length === 1) {
+            text = authors[0]; 
+        }
+    } else {
+        text = authors;
+    }
 
-    const urlPdf = "/pdfs/Templates.pdf";
-    const existingPdfBytes = await fetch(urlPdf).then((res) =>
-        res.arrayBuffer()
-    );
-    const pdfDoc = await PDFDocument.load(existingPdfBytes);
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0];
-    const { width, height } = firstPage.getSize();
-    const secondPage = pdfDoc.addPage([width, height]);
+    const urlPdf = "/pdfs/Templates.pdf";
+    const existingPdfBytes = await fetch(urlPdf).then((res) =>
+        res.arrayBuffer()
+    );
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    const pages = pdfDoc.getPages();
+    const firstPage = pages[0];
+    const { width, height } = firstPage.getSize();
+    const secondPage = pdfDoc.addPage([width, height]);
 
-    const centerX = width / 2;
-    let y; // 'y' se definirá dinámicamente
+    const centerX = width / 2;
+    let y; 
 
-    // --- Definición de Colores ---
-    const authorColor = rgb(118 / 255, 117 / 255, 116 / 255); // Gris #767574
-    const goldColor = rgb(173 / 255, 132 / 255, 31 / 255);   // Dorado #AD841F
-    const defaultColor = rgb(0.2, 0.255, 0.333); // Color por defecto (gris oscuro)
+    // --- Definición de Colores ---
+    const authorColor = rgb(118 / 255, 117 / 255, 116 / 255); // Gris #767574
+    const goldColor = rgb(173 / 255, 132 / 255, 31 / 255);   // Dorado #AD841F
+    const defaultColor = rgb(0.2, 0.255, 0.333); // Color por defecto (gris oscuro)
+    const footerColor = rgb(0.5, 0.5, 0.5); // Gris solicitado para el pie de página
 
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    let font = fontBold;
-    
-    // --- CAMBIO 1: Tamaño de fuente de autores ---
-    let fontSize = 15; // Reducido de 15 a 13
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    let font = await pdfDoc.embedFont(StandardFonts.Helvetica); // Cargar Helvetica
+    const fontMono = await pdfDoc.embedFont(StandardFonts.Courier); // <--- NUEVO: Cargar fuente monoespaciada
+    
+    // --- Dibujo de Autores (Página 1) ---
+    let fontSize = 15; 
+    const maxAuthorWidth = 500; 
+    const wrappedText = wrapText(text, maxAuthorWidth, fontBold, fontSize); // Usamos fontBold para autores
+    const textLines = wrappedText.split('\n');
+    const lineHeight = fontSize * 1.5; 
 
-    const maxAuthorWidth = 500; // Ancho máximo para el nombre/s
-    const wrappedText = wrapText(text, maxAuthorWidth, font, fontSize);
-    const textLines = wrappedText.split('\n');
-    const lineHeight = fontSize * 1.5; // Espaciado de 1.5
+    const totalTextBlockHeight = (textLines.length - 1) * lineHeight;
+    let currentY = (height / 2 + 30) + (totalTextBlockHeight / 2);
 
-    
-    const totalTextBlockHeight = (textLines.length - 1) * lineHeight;
-    let currentY = (height / 2 + 30) + (totalTextBlockHeight / 2);
+    for (const line of textLines) {
+        let textWidth = fontBold.widthOfTextAtSize(line, fontSize);
+        let x = (centerX - textWidth / 2) - 20; 
+        
+        firstPage.drawText(line, {
+            x: x,
+            y: currentY - fontSize / 2, 
+            font: fontBold,
+            size: fontSize,
+            color: authorColor, 
+        });
+        currentY -= lineHeight; 
+    }
 
-    for (const line of textLines) {
-        let textWidth = font.widthOfTextAtSize(line, fontSize);
-        
-        // --- CAMBIO 2: Centrado de autores ---
-        let x = (centerX - textWidth / 2) - 20; // Eliminado el '- 20' para centrar correctamente
-        
-        firstPage.drawText(line, {
-            x: x,
-            y: currentY - fontSize / 2, 
-            font: font,
-            size: fontSize,
-            // --- CAMBIO 3: Color de autores ---
-            color: authorColor, 
-        });
-        currentY -= lineHeight; // Mover 'y' hacia abajo para la siguiente línea
-    }
+    // Ajustar la 'y' para que esté debajo del bloque de autores
+    const authorBlockHeight = textLines.length * lineHeight;
+    y = (height / 2 + 30) - (authorBlockHeight / 2) - 40; // 40px de espacio
 
-    // --- CAMBIO 4: Bloque de texto principal reemplazado ---
+    // --- DIBUJO DEL QR EN LA SEGUNDA PÁGINA (Nuevo estilo) ---
+    await addQR(pdfDoc, secondPage, height, id); // <-- Llama a la función actualizada
 
-    // Cargar la fuente normal (no negrita)
-    font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    
-    // Ajustar la 'y' para que esté debajo del bloque de autores
-    const authorBlockHeight = textLines.length * lineHeight;
-    y = (height / 2 + 30) - (authorBlockHeight / 2) - 40; // 40px de espacio
+    // --- INICIO DEL BLOQUE DE TEXTO (Página 1) ---
+    
+    // "Por su destacada participación con la Contribución: [articleTypeName],"
+    drawText(`Por su destacada participación con la Contribución: ${articleTypeName},`, font, 10, firstPage, y, centerX - 20, defaultColor);
+    y -= 16; 
 
-    // Mover la llamada al QR aquí para que no interfiera con el flujo de 'y'
-    await addQR(pdfDoc, secondPage, title, text, height, id);
+    // "en el área: [knowledgeAreaName], con el Título:"
+    drawText(`en el área: ${knowledgeAreaName}, con el Título:`, font, 10, firstPage, y, centerX - 20, defaultColor);
+    y -= 25; 
 
-    // --- INICIO DEL NUEVO BLOQUE DE TEXTO ---
-    
-    // "Por su destacada participación con la Contribución: [articleTypeName],"
-    drawText(`Por su destacada participación con la Contribución: ${articleTypeName},`, font, 10, firstPage, y, centerX - 20, defaultColor);
-    y -= 16; // Espaciado
+    // "[title]" (El título en negrita y más grande)
+    drawText(title, fontBold, 12, firstPage, y, centerX - 20, defaultColor);
+    y -= 32; 
 
-    // "en el área: [knowledgeAreaName], con el Título:"
-    drawText(`en el área: ${knowledgeAreaName}, con el Título:`, font, 10, firstPage, y, centerX - 20, defaultColor);
-    y -= 25; // Más espacio antes del título
+    // "presentada en el marco del 5.° Congreso Internacional de Tecnología y Ciencia"
+    drawText("presentada en el marco del 5.° Congreso Internacional de Tecnología y Ciencia Aplicada", font, 10, firstPage, y, centerX - 25, defaultColor);
+    y -= 16; 
 
-    // "[title]" (El título en negrita y más grande)
-    drawText(title, fontBold, 12, firstPage, y, centerX - 20, defaultColor);
-    y -= 32; // Más espacio después del título
+    // "Aplicada (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo"
+    drawText(" (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo", font, 10, firstPage, y, centerX - 25, defaultColor);
+    y -= 16; 
 
-    // "presentada en el marco del 4.° Congreso Internacional de Tecnología y Ciencia"
-    drawText("presentada en el marco del 5.° Congreso Internacional de Tecnología y Ciencia Aplicada", font, 10, firstPage, y, centerX - 25, defaultColor);
-    y -= 16; // Espaciado
+    // "Tecnológico del 26 al 28 de Noviembre de 2025."
+    drawText("Tecnológico del 26 al 28 de Noviembre de 2025.", font, 10, firstPage, y, centerX - 20, defaultColor);
+    y -= 25; 
+    
+    // --- FIN DEL BLOQUE DE TEXTO (Página 1) ---
 
-    // "Aplicada (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo"
-    drawText(" (CITCA), celebrado en el Centro Nacional de Investigación y Desarrollo", font, 10, firstPage, y, centerX - 25, defaultColor);
-    y -= 16; // Espaciado
+    // Fecha
+    drawText("Cuernavaca, Morelos, 24 de noviembre de 2025", font, 10, firstPage, y, centerX - 20, goldColor);
+    
+    // --- DIBUJO DEL SELLO DIGITAL Y TEXTO LEGAL (Página 2 - Nuevo estilo) ---
+    
+    // Definir geometría de posicionamiento
+    const qrX = 50;
+    const qrSize = 90;
+    const topMarginY = height - 120; // Referencia de la parte superior del QR
+    const spacing = 20;
+    const rightPageMargin = width - 50;
 
-    // "Tecnológico del 21 al 23 de mayo de 2025."
-    drawText("Tecnológico del 26 al 28 de Noviembre de 2025.", font, 10, firstPage, y, centerX - 20, defaultColor);
-    y -= 25; // Espacio antes de la fecha
-    
-    // --- FIN DEL NUEVO BLOQUE DE TEXTO ---
+    const sealLeftX = qrX + qrSize + spacing; // Posición X de inicio del sello (a la derecha del QR)
+    const sealWidth = rightPageMargin - sealLeftX; // Ancho máximo del bloque de sello
+    let sealY = topMarginY + 90; // Posición Y de inicio (cercana a la parte superior de la página)
 
+    // 1. Título del Sello Digital
+    drawText('Sello Digital:', font, 10, secondPage, sealY, sealLeftX, footerColor, 'left');
+    sealY -= 15;
+    const selloFontSize = 8;
 
-    // --- CAMBIO 5: Color y texto de la fecha ---
-    drawText("Cuernavaca, Morelos, 24 de noviembre de 2025", font, 10, firstPage, y, centerX - 20, goldColor);
-    
-    // SERV (Sello Digital en la segunda página)
-    let sealY = height - 50;
-    let sealLeftX = 110;
-    let titleFontSize = 10;
-    secondPage.drawText('Sello Digital:', {
-        x: sealLeftX, // <-- Usa el margen izquierdo
-        y: sealY - titleFontSize / 2,
-        font: font, // (Ya es Helvetica)
-        size: titleFontSize,
-        color: rgb(0.2, 0.255, 0.333),
-    });
-    fontSize = 8;
-    sealY -= 10;
-    const lines = splitAndJustifyText(signedText, font, fontSize, 400);
-    console.log(centerX);
-    lines.forEach((line, index) => {
-        sealY -= fontSize + 3; // Espaciado entre líneas
-        // Justificación manual
-        let lineWidth = font.widthOfTextAtSize(line, fontSize);
-        let currentX = sealLeftX;
-        let spaceWidth = 0;
-        // let spaceWidth = (400 - lineWidth) / (line.length - 1);
-        if (index < lines.length - 1 && line.length > 1) {
-            spaceWidth = (400 - lineWidth) / (line.length - 1);
-        } else {
-            spaceWidth = 0;
-            currentX = sealLeftX; 
-        }
+    // 2. Texto del Sello Digital (usando fontMono y left alignment)
+    const lines = splitAndJustifyText(signedText, fontMono, selloFontSize, sealWidth); 
+    const selloLineHeight = selloFontSize + 3;
 
-        for (let char of line) {
-            secondPage.drawText(char, {
-                x: currentX,
-                y: sealY - fontSize / 2,
-                font: font,
-                size: fontSize,
-                color: rgb(0.2, 0.255, 0.333),
-                maxWidth: 401,
-            });
-            currentX += font.widthOfTextAtSize(char, fontSize) + spaceWidth;
-        }
-    });
-    // guardado
-    const pdfBytes = await pdfDoc.save();
-    // Crear un Blob con los datos del PDF
-    const blob = new Blob([pdfBytes], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    return url;
+    for (const line of lines) {
+        // Usa drawText con align='left' y fontMono
+        drawText(line, fontMono, selloFontSize, secondPage, sealY, sealLeftX, footerColor, 'left');
+        sealY -= selloLineHeight;
+    }
+
+    // 3. Texto Legal (Debajo del Sello)
+    const legalText = "La firma electrónica que sustituye a la firma autógrafa del firmante, garantiza la integridad de la constancia y producirá los mismos efectos que las leyes otorgan a los documentos con firma autógrafa";
+    const legalFontSize = 8;
+    const legalLineHeight = 9;
+
+    // Usamos wrapText para manejar el salto de línea del texto legal
+    const validationLines = wrapText(legalText, sealWidth, font, legalFontSize).split('\n');
+
+    sealY -= 8; // Espacio entre el sello y el texto legal
+    for (const line of validationLines) {
+        // Usa drawText con align='left' y font normal
+        drawText(line, font, legalFontSize, secondPage, sealY, sealLeftX, footerColor, 'left');
+        sealY -= legalLineHeight;
+    }
+    // -----------------------------------------------------------------
+
+    // guardado
+    const pdfBytes = await pdfDoc.save();
+    // Crear un Blob con los datos del PDF
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    return url;
 }
 
 const getSignedText = async (id) => {
-    try {
-        const response = await axios.get(route("article.signPdf", id)); // <--- usa 'route()'
-        return response.data.signedText;
-    } catch (error) {
-        console.error("ERROR AXIOS:", error);
-        return null;
-    }
+    try {
+        const response = await axios.get(route("article.signPdf", id)); 
+        return response.data.signedText;
+    } catch (error) {
+        console.error("ERROR AXIOS:", error);
+        return null;
+    }
 };
 
-// --- CAMBIO 6: Se añade 'color' como parámetro a drawText ---
-const drawText = (text, font, fontSize, page, y, centerX, color = rgb(0.2, 0.255, 0.333)) => {
-    const textWidth = font.widthOfTextAtSize(text, fontSize);
-    const x = centerX - textWidth / 2;
-
-    page.drawText(text, {
-        x: x,
-        y: y - fontSize / 2, // Ajustar para centrar verticalmente
-        maxWidth: 520,
-        font: font,
-        color: color, // Usar el parámetro de color
-        size: fontSize,
-    });
+/**
+ * Función mejorada para dibujar texto con soporte de alineación 'center' (predeterminado) o 'left'.
+ * @param {string} text - El texto a dibujar.
+ * @param {PDFDocument.PDFPage} page - La página del PDF.
+ * @param {number} y - Posición Y (vertical) de la línea de base.
+ * @param {number} xPos - Posición X de referencia (centro para 'center', inicio para 'left').
+ * @param {PDFDocument.RGB} color - El color del texto.
+ * @param {string} align - Alineación ('center' o 'left').
+ */
+const drawText = (text, font, fontSize, page, y, xPos, color = rgb(0.2, 0.255, 0.333), align = 'center') => {
+    let x;
+    if (align === 'left') { 
+        x = xPos;
+    } else {
+        const textWidth = font.widthOfTextAtSize(text, fontSize);
+        x = xPos - textWidth / 2;
+    }
+    page.drawText(text, { 
+        x: x, 
+        y: y - fontSize / 2, // Ajustar para centrar verticalmente
+        maxWidth: 520, 
+        font: font, 
+        color: color, 
+        size: fontSize 
+    });
 };
 
 const splitAndJustifyText = (text, font, fontSize, maxWidth) => {
-    if (!text) return []; // Guarda contra texto nulo o vacío
-    const words = text.split(""); // Dividir por caracteres
-    let lines = [];
-    let currentLine = words[0] || "";
+    if (!text) return []; // Guarda contra texto nulo o vacío
+    const words = text.split(""); // Dividir por caracteres
+    let lines = [];
+    let currentLine = words[0] || "";
 
-    for (let i = 1; i < words.length; i++) {
-        let char = words[i];
-        let width = font.widthOfTextAtSize(currentLine + char, fontSize);
+    for (let i = 1; i < words.length; i++) {
+        let char = words[i];
+        let width = font.widthOfTextAtSize(currentLine + char, fontSize);
 
-        if (width < maxWidth) {
-            currentLine += char;
-        } else {
-            lines.push(currentLine);
-            currentLine = char;
-        }
-    }
-    lines.push(currentLine);
-    return lines;
+        if (width < maxWidth) {
+            currentLine += char;
+        } else {
+            lines.push(currentLine);
+            currentLine = char;
+        }
+    }
+    lines.push(currentLine);
+    return lines;
 };
 
 const wrapText = (text, width, font, fontSize) => {
-    const words = text.split(' ');
-    let line = '';
-    let result = '';
-    for (let n = 0; n < words.length; n++) {
-      const testLine = line + words[n] + ' ';
-      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
-      if (testWidth > width && n > 0) { // <-- Añadido 'n > 0' para evitar saltos en la primera palabra
-        result += line.trim() + '\n'; 
-        line = words[n] + ' ';
-      } else {
-        line = testLine;
-      }
-    }
-    result += line.trim(); // <-- .trim() para la última línea
-    return result;
-  }
-
-const addQR = async (pdfDoc, firstPage, title, user, height, id) => { 
-    const qr = await generateQR(id);
-    if (!qr) {
-        console.error("No se pudo generar el QR");
-        return;
-    }
-    const base64Data = qr.replace(/^data:image\/(png|jpeg);base64,/, '');
-    const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-    const image = await pdfDoc.embedJpg(imageBytes); 
-    const qrFixedSize = 90;
-    const qrX = 10;
-    const qrY = 580;
-    firstPage.drawImage(image, {
-        x: qrX,
-        y: qrY,
-        width: qrFixedSize,
-        height: qrFixedSize,
-    });
-
-    firstPage.drawRectangle({
-        x: qrX,
-        y: qrY,
-        width: qrFixedSize,
-        height: qrFixedSize,
-        borderWidth: 1,
-        borderColor: rgb(0, 0, 0), // 0, 0, 0 es negro
-    });
+    if (!text) { return ''; }
+    const words = text.split(' ');
+    let line = '';
+    let result = '';
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+      if (testWidth > width && n > 0) { 
+        result += line.trim() + '\n'; 
+        line = words[n] + ' ';
+      } else {
+        line = testLine;
+      }
+    }
+    result += line.trim(); 
+    return result;
 }
 
-const generateQR = async (id) => { // <-- 1. Se vuelve 'async'
-    const verificationUrl = route('certificate.verify', id);
-    
-    try {
-        // 2. Usamos 'await' para esperar el resultado
-        const url = await QRCode.toDataURL(
-            verificationUrl, // <-- 3. El contenido es la URL
-            {
-                type: "image/jpeg",
-                color: {
-                    dark: "#000000",
-                    light: "#ffffff",
-                },
-            }
-        );
-        return url; // 4. Retornamos la URL generada (data URL)
-    
-    } catch (error) {
-        console.error("Error al generar QR:", error);
-        return null; // 5. Manejamos el error
-    }
+/**
+ * Dibuja el QR en la segunda página con el posicionamiento estándar.
+ */
+const addQR = async (pdfDoc, page, height, id) => { 
+    const qr = await generateQR(id);
+    if (!qr) {
+        console.error("No se pudo generar el QR");
+        return;
+    }
+    const base64Data = qr.replace(/^data:image\/(png|jpeg);base64,/, '');
+    const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    const image = await pdfDoc.embedJpg(imageBytes); 
+
+    // Posicionamiento de personal_recognition.js (Segunda página, esquina superior izquierda)
+    const qrFixedSize = 90;
+    const qrX = 50; 
+    const qrY = height - 120; // Alineado con el Top Margin
+
+    page.drawImage(image, {
+        x: qrX,
+        y: qrY,
+        width: qrFixedSize,
+        height: qrFixedSize,
+    });
+
+    page.drawRectangle({
+        x: qrX,
+        y: qrY,
+        width: qrFixedSize,
+        height: qrFixedSize,
+        borderWidth: 1,
+        borderColor: rgb(0, 0, 0), // 0, 0, 0 es negro
+    });
+}
+
+const generateQR = async (id) => { 
+    const verificationUrl = route('certificate.verify', id);
+    
+    try {
+        const url = await QRCode.toDataURL(
+            verificationUrl, 
+            {
+                type: "image/jpeg",
+                color: {
+                    dark: "#000000",
+                    light: "#ffffff",
+                },
+            }
+        );
+        return url; 
+    
+    } catch (error) {
+        console.error("Error al generar QR:", error);
+        return null; 
+    }
 };

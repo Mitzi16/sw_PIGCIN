@@ -44,15 +44,13 @@ class GenerateParticipationController extends Controller
         // 3. Preparar los datos del usuario
         $participant_name = $user->name;
         $participant_name = mb_strtoupper($participant_name, 'UTF-8');
-
-        // --- LÓGICA DE ROLES MEJORADA ---
         
         $roles = $user->roles->pluck('name');
         $hasEditor = $roles->contains('Editor');
         $hasRevisor = $roles->contains('Revisor');
         $participant_role = 'No especificado'; 
 
-        // 3.1. Lógica de Prioridad (incluyendo nuevos roles)
+        //  Lógica de Prioridad (incluyendo nuevos roles)
         if ($hasEditor && $hasRevisor) {
             $participant_role = 'DUAL_EDITOR_REVISOR';
         } 
@@ -66,17 +64,31 @@ class GenerateParticipationController extends Controller
         } elseif ($roles->contains('Admin-Revista')) {
             $participant_role = 'Admin-Revista';
         }
-        // --- NUEVOS ROLES AÑADIDOS A LA LÓGICA ---
         elseif ($roles->contains('Staff')) {
             $participant_role = 'Staff';
         } elseif ($roles->contains('Moderador')) {
             $participant_role = 'Moderador';
         }
-        // --- FIN DE NUEVOS ROLES ---
         elseif ($hasEditor) {
             $participant_role = 'Editor';
         } elseif ($hasRevisor) {
             $participant_role = 'Revisor';
+            
+            
+            // 1. Contar cuántos artículos tiene asignados este revisor
+            $articlesAssigned = DB::table('article_reviews')
+                ->where('reviewer_id', $user->id)
+                ->count();
+
+            // 2. Si el conteo es 0, no puede generar el reconocimiento
+            if ($articlesAssigned === 0) {
+                Log::warning("Revisor {$user->id} intentó generar reconocimiento, pero no tiene artículos asignados.");
+                return response()->json([
+                    'error' => 'No puedes generar tu reconocimiento. Debes tener al menos un artículo asignado. Por favor, contacte al administrador.'
+                ], 403); // 403 = Prohibido
+            }
+
+
         }
         elseif ($roles->contains('Asistente')) {
             $participant_role = 'Asistente';
@@ -86,9 +98,8 @@ class GenerateParticipationController extends Controller
         
         $participant_role = mb_strtoupper($participant_role, 'UTF-8');
 
-        // --- ¡NUEVA LÓGICA DE VERIFICACIÓN! ---
         
-        // 3.2. Definir roles que SÍ necesitan la verificación
+        //  Definir roles que SÍ necesitan la verificación
         $rolesConVerificacion = [
             'TALLERISTA', 
             'CONFERENCISTA', 
@@ -96,11 +107,11 @@ class GenerateParticipationController extends Controller
             'ASISTENTE'
         ];
 
-        // 3.3. Ejecutar la comprobación
+        //  Ejecutar la comprobación
         if (in_array($participant_role, $rolesConVerificacion)) {
             // Este rol SÍ necesita verificar el campo 'reconocimiento_habilitado'
             
-            // Usamos !$user->reconocimiento_habilitado (asume 0, false, o null)
+            // Usamos !$user->reconocimiento_habilitado
             if (!$user->reconocimiento_habilitado) {
                 // Si está deshabilitado (0), bloqueamos al usuario.
                 Log::warning("Usuario {$user->id} (Rol: {$participant_role}) intentó generar reconocimiento, pero 'reconocimiento_habilitado' es 0.");
@@ -110,11 +121,6 @@ class GenerateParticipationController extends Controller
             }
             // Si $user->reconocimiento_habilitado es 1, el código simplemente continúa.
         }
-        // Si el rol NO está en $rolesConVerificacion (p.ej. ADMIN, EDITOR),
-        // se salta este bloque y se le permite generar siempre.
-
-        // --- FIN DE LA NUEVA LÓGICA DE VERIFICACIÓN ---
-
 
         // 4. Obtener el 'area' usando el 'knowledge_area_id'
         $participant_area = 'No especificada'; 
@@ -201,12 +207,17 @@ class GenerateParticipationController extends Controller
     public function verify(Request $request, $folio)
     {
         try {
-            $parts = explode('-', $folio);
-            if (count($parts) !== 3 || $parts[0] !== 'REC' || !is_numeric($parts[1])) {
+            // Esto elimina cualquier caracter como '?' o '#' y lo que le sigue.
+            $cleanFolio = preg_replace('/[?#].*$/', '', $folio);
+            
+            $parts = explode('-', $cleanFolio);
+
+            if ($parts[0] !== 'REC' || !is_numeric($parts[1])) {
+                Log::warning("Intento de verificación fallido: Folio con formato incorrecto. Valor recibido: {$folio}");
                 return "Folio no válido: " . htmlspecialchars($folio);
             }
 
-            $userId = $parts[1];
+            $userId = $parts[1]; // El ID del usuario sigue siendo la segunda parte
             $user = User::with('roles')->find($userId);
 
             if (!$user) {
@@ -231,7 +242,7 @@ class GenerateParticipationController extends Controller
                 $institucion,
                 $tipo,
                 $userRole,
-                htmlspecialchars($folio)
+                htmlspecialchars($cleanFolio) // Usar el folio limpio
             ];
             
             return implode(' | ', $data);
