@@ -206,50 +206,71 @@ class GenerateParticipationController extends Controller
      */
     public function verify(Request $request, $folio)
     {
+       // Limpieza básica del folio
+        $cleanFolio = preg_replace('/[?#].*$/', '', $folio);
+        
+        // Vista por defecto para errores
+        $errorViewData = [
+            'data' => false,
+            'folio' => $cleanFolio,
+            'participant_name' => '',
+            'participant_role' => '',
+            'selloDigital' => '',
+            'signedText' => ''
+        ];
+
         try {
-            // Esto elimina cualquier caracter como '?' o '#' y lo que le sigue.
-            $cleanFolio = preg_replace('/[?#].*$/', '', $folio);
-            
             $parts = explode('-', $cleanFolio);
 
-            if ($parts[0] !== 'REC' || !is_numeric($parts[1])) {
-                Log::warning("Intento de verificación fallido: Folio con formato incorrecto. Valor recibido: {$folio}");
-                return "Folio no válido: " . htmlspecialchars($folio);
+            // 1. Validación de formato
+            if ($parts[0] !== 'REC' || !isset($parts[1]) || !is_numeric($parts[1])) {
+                Log::warning("Folio con formato incorrecto: {$folio}");
+                return view('RverificationParticipation', $errorViewData);
             }
 
-            $userId = $parts[1]; // El ID del usuario sigue siendo la segunda parte
+            $userId = $parts[1];
+
+            // 2. Buscar usuario
             $user = User::with('roles')->find($userId);
 
             if (!$user) {
-                return "Folio válido, pero no se encontró el usuario asociado: " . htmlspecialchars($folio);
+                Log::warning("Folio válido pero usuario no encontrado: {$folio}");
+                return view('RverificationParticipation', $errorViewData);
             }
 
-            $userName = $user->name;
-            $userRole = 'No especificado'; 
-            
+            // 3. Preparar datos para la vista
+            $userName = mb_strtoupper($user->name, 'UTF-8');
+            $userRole = 'PARTICIPANTE'; // Valor por defecto
+
             if ($user->roles->isNotEmpty()) {
-                $roleName = $user->roles->first()->name;
-                $userRole = $roleName . '(a)'; 
+                // Toma el primer rol y lo convierte a mayúsculas
+                $userRole = mb_strtoupper($user->roles->first()->name, 'UTF-8');
             }
-            
-            $congreso = "5.° Congreso Internacional de Tecnología y Ciencia Aplicada (CITCA)";
-            $institucion = "TECNM/CENIDET";
-            $tipo = "RECONOCIMIENTO";
 
-            $data = [
-                $userName,
-                $congreso,
-                $institucion,
-                $tipo,
-                $userRole,
-                htmlspecialchars($cleanFolio) // Usar el folio limpio
-            ];
-            
-            return implode(' | ', $data);
+            // 4. Regenerar el Sello Digital
+            // Como el sello depende de datos estáticos del usuario (id, name, email),
+            // lo recalculamos aquí para mostrarlo en la validación.
+            $selloDigital = "Firma no disponible";
+            try {
+                $selloDigital = $this->generateSignature($user);
+            } catch (\Exception $e) {
+                Log::error("Error regenerando firma en verify: " . $e->getMessage());
+            }
+
+            // 5. Retornar la vista Exitosa
+            return view('RverificationParticipation', [
+                'data' => true, // Bandera para que el Blade muestre la sección verde
+                'participant_name' => $userName,
+                'participant_role' => $userRole,
+                'selloDigital'     => $selloDigital, // El texto encriptado largo
+                'signedText'       => $cleanFolio,   // En tu blade, el segundo textarea muestra el folio usando esta variable
+                'folio'            => $cleanFolio    // Por redundancia
+            ]);
 
         } catch (\Exception $e) {
-            Log::error("Error en la verificación de folio {$folio}: " . $e->getMessage());
-            return "Error al procesar el folio: " . htmlspecialchars($folio);
+            Log::error("Error crítico en verificación de folio {$folio}: " . $e->getMessage());
+            return view('RverificationParticipation', $errorViewData);
         }
     }
+    
 }

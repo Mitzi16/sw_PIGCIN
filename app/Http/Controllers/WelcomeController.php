@@ -217,4 +217,11 @@ class WelcomeController extends Controller
     return response()->json($articles);
 }
 
+    public function info(){
+        return Inertia::render("{$this->source}CitcaInfo/CitcaContainer",[
+            'title' => 'CITCA-INFO',
+            'routeName' => $this->routeName,
+        ]);
+    }
+
 }
