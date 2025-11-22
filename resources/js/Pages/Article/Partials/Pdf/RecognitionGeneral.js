@@ -78,7 +78,7 @@ export default async function getPdf(authors, title, id, articleTypeName, knowle
     let y; 
 
     // --- Definición de Colores ---
-    const authorColor = rgb(118 / 255, 117 / 255, 116 / 255); // Gris #767574
+    const authorColor = rgb(0 / 255, 0 / 255, 0 / 255);
     const goldColor = rgb(173 / 255, 132 / 255, 31 / 255);   // Dorado #AD841F
     const defaultColor = rgb(0.2, 0.255, 0.333); // Color por defecto (gris oscuro)
     const footerColor = rgb(0.5, 0.5, 0.5); // Gris solicitado para el pie de página
