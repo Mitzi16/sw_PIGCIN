@@ -45,7 +45,7 @@ const toggleNav = () => {
             <div :class="showMenu ? 'flex flex-col' : 'hidden'"
                 class="pb-4 lg:pb-0 lg:flex lg:flex-row lg:justify-between lg:w-full">
                 <ul
-                    class="w-full order-2 flex-col mt-4 space-y-2 lg:ml-20 lg:order-1 lg:flex lg:space-y-0 lg:flex-row lg:items-center lg:space-x-10 lg:mt-0">
+                    class="w-full order-2 flex-col mt-2 space-y-2 lg:ml-20 lg:order-1 lg:flex lg:space-y-0 lg:flex-row lg:items-center lg:space-x-4 lg:mt-0">
                     <li>
                         <NavLink :active="$page.component === 'Welcome/Home/Index'" href="/">INICIO</NavLink>
                     </li>
@@ -57,6 +57,9 @@ const toggleNav = () => {
                     </li> -->
                     <li>
                         <NavLink :active="$page.component === 'Welcome/Place/Index'" href="/lugar">LUGAR</NavLink>
+                    </li>
+                    <li>
+                        <NavLink :active="$page.component === 'Components/CitcaInfo/CitcaContainer'" :href="route('welcome.info')">CONOCE MÁS DE CITCA-2025</NavLink>
                     </li>
                     <!-- <li>
                         <NavLink :active="$page.component === 'Welcome/Program/Index'" href="/programa">Programa

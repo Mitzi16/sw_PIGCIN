@@ -49,7 +49,7 @@ async function drawRecognitionPdf(controllerData, extraInfo) {
     } = controllerData;
 
     // Cargar la plantilla PDF
-    const urlPdf = "/pdfs/Templates.pdf";
+    const urlPdf = "/pdfs/Reconocimiento_a25_CITCApdf.pdf";
     const existingPdfBytes = await fetch(urlPdf).then((res) => res.arrayBuffer());
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
     const pages = pdfDoc.getPages();
@@ -61,7 +61,7 @@ async function drawRecognitionPdf(controllerData, extraInfo) {
     let y;
 
     // --- Colores y Fuentes ---
-    const authorColor = rgb(118 / 255, 117 / 255, 116 / 255);
+    const authorColor = rgb(0 / 255, 0 / 255, 0 / 255);
     const goldColor = rgb(173 / 255, 132 / 255, 31 / 255);
     const defaultColor = rgb(0.2, 0.255, 0.333);
     const footerColor = rgb(0.5, 0.5, 0.5); 
@@ -72,7 +72,7 @@ async function drawRecognitionPdf(controllerData, extraInfo) {
     const fontMono = await pdfDoc.embedFont(StandardFonts.Courier);
     
     // --- 1. Dibujar Nombre (firstPage) ---
-    let fontSize = 15;
+    let fontSize = 20;
     const maxNameWidth = 500;
     const wrappedName = wrapText(participant_name, maxNameWidth, fontBold, fontSize);
     const nameLines = wrappedName.split('\n');
@@ -248,23 +248,24 @@ function getParticipationText(role, area, extraInfo, font) {
             lines.push(""); // Línea de relleno
             break;
         case "ADMIN":
-            lines.push("Por su destacada e invaluable participación en la actividad de Coordinador (a)");
-            lines.push("General, como integrante del COMITÉ ORGANIZADOR");
+            lines.push("Por su destacada e invaluable participación en la actividad de Coordinador (a) General,");
+            lines.push(" como integrante del COMITÉ ORGANIZADOR");
             lines.push(""); // Línea de relleno
             break;
         case "EDITOR":
             lines.push("Por su destacada participación como Editor (a) de contribuciones en el área:");
-            lines.push(` ${area || 'Conocimiento'} presentadas en el marco`);
+            lines.push(` ${area || 'Conocimiento'} `);
             lines.push(""); // Línea de relleno
             break;
         case "REVISOR":
             lines.push("Por su destacada participación como Revisor (a) de contribuciones en el área:");
-            lines.push(` ${area || 'Conocimiento'} presentadas en el marco`);
+            lines.push(` ${area || 'Conocimiento'}`);
+            //lines.push("presentadas")
             lines.push(""); // Línea de relleno
             break;
         case "ADMIN-REVISTA":
-            lines.push("Por su destacada e invaluable participacion en la actividad de Administrador (a) General");
-            lines.push("de Revista, como integrante del COMITÉ ORGANIZADOR");
+            lines.push("Por su destacada e invaluable participacion en la actividad de Administrador (a) General de");
+            lines.push("Revista, como integrante del COMITÉ ORGANIZADOR");
             lines.push(""); // Línea de relleno
             break;
         case "STAFF":

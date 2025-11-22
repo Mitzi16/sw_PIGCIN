@@ -64,7 +64,7 @@ export default async function getPdf(authors, title, id, articleTypeName, knowle
         text = authors;
     }
 
-    const urlPdf = "/pdfs/Templates.pdf";
+    const urlPdf = "/pdfs/Reconocimiento_a25_CITCApdf.pdf";
     const existingPdfBytes = await fetch(urlPdf).then((res) =>
         res.arrayBuffer()
     );

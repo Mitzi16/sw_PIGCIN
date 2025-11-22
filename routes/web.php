@@ -21,6 +21,7 @@ use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\TemplateDownloadController;
 use App\Http\Controllers\ArticleGraphController;
 use App\Http\Controllers\DiapositivaController;
+use App\Http\Controllers\GenerateGafetesController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\GenerateParticipationController;
 use App\Http\Controllers\ReconocimientoController;
@@ -49,6 +50,12 @@ Route::get('/programa', [WelcomeController::class, 'program'])->name('welcome.pr
 Route::get('/welcome/article/show/{code?}', [WelcomeController::class, 'showArticle'])->name('welcome.show.article');
 Route::get('/welcome/article/search/{code?}', action: [WelcomeController::class, 'searchArticle'])->name('welcome.search.article');
 Route::get('/welcome/article/search-live', [WelcomeController::class, 'searchArticleLive'])->name('welcome.search.article.live');
+//info citca
+Route::get('/conoce-mas/sobre/CITCA-2025', [WelcomeController::class, 'info'])->name('welcome.info');
+
+//Route::get('/conferencias/magistrales', [WelcomeController::class, 'conferences'])->name('welcome.conference');
+//Route::get('/talleres', [WelcomeController::class, 'workshop'])->name('welcome.workshop');
+
 Route::get('/download/{filename}', [TemplateDownloadController::class, 'download'])
     ->where('filename', '.*')
     ->name('download');
@@ -65,6 +72,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/verificar/{folio}', [VerificationController::class, 'verifyConstancia'])->name('constancia.verify');
     Route::get('/verifica/reconocimiento/{id}', [VerificationController::class, 'verifyReconocimiento'])->name('certificate.verify');
     Route::get('/articles/{article}/acceptance-letter-data', [ConstanciaController::class, 'getAcceptanceLetterData'])->name('article.acceptanceLetterData') ->middleware(['auth']); 
+
+    //generar gafetes
+    Route::get('/generate/gafetes', [GenerateGafetesController::class, 'generate'])->name('generate.gafetes')->middleware(['auth']);
+    Route::get('/generate/gafetes-data', [GenerateGafetesController::class, 'getGafetesData'])->name('generate.gafetes.data')->middleware(['auth', 'role:Admin']);
+    Route::get('/programa/CITCA2025/{user_id}', [GenerateGafetesController::class, 'download'])->name('gafete.download');
     
     // Grupo de Rutas para Diapositivas
     Route::get('/diapositivas', [DiapositivaController::class, 'index'])->name('diapositivas.index')->middleware(['auth']);

@@ -230,6 +230,12 @@ export const getMenu = (userRoles = []) => {
                 },
             ],
         },
+        {
+            label: "Generar Gafetes",
+            route: "generate.gafetes",
+            icon: mdiBook,
+            role: "Admin"
+        },
     ];
 
     if (userHasAnyRole(userRoles, ["Postulante", "Admin", "Admin-Revista"])){
