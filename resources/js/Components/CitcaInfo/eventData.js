@@ -246,7 +246,7 @@ export const eventData = {
             modalidad: "Presencial",
             area: "Electrónica",
             descripcion: "Este taller ofrece una introducción práctica al cálculo fraccionario y su aplicación en la ingeniería eléctrica, especialmente en el diseño de filtros fraccionarios y en el análisis de capacitores basados en materiales fractales. Se revisarán las principales definiciones de derivadas fraccionarias (Riemann–Liouville, Caputo y Grünwald–Letnikov), destacando sus diferencias y usos. Los participantes conocerán cómo los órdenes no enteros permiten modelar sistemas con memoria, respuestas intermedias y comportamientos no lineales. El taller enfatiza la utilidad del cálculo fraccionario para describir y diseñar componentes eléctricos avanzados, mostrando cómo los modelos fraccionarios ofrecen mayor precisión en sistemas y materiales con propiedades fractales.",
-            tabla_img:  "/img/tallerista/c107.png"
+            tabla_img:  "/img/tallerista/C107.png"
         },
         {
             id: 108,
@@ -264,7 +264,7 @@ export const eventData = {
             modalidad: "Presencial",
             area: "Electrónica y computación",
             descripcion: "Este taller introduce a los participantes al diseño y uso de sistemas embebidos para resolver problemas reales en áreas como instrumentación, control, IoT y adquisición de datos. Se revisan los elementos básicos de hardware (microcontroladores, SoC-FPGA, sensores, actuadores, buses de comunicación) y su integración con herramientas de desarrollo (IDE, compiladores, depuradores). A través de ejercicios prácticos, los asistentes programan y prueban aplicaciones como lectura de sensores, control de motores, envío de datos a la nube y desarrollo de interfaces básicas de usuario. Al finalizar, el participante será capaz de seleccionar una plataforma embebida adecuada y desarrollar prototipos funcionales orientados a aplicaciones académicas e industriales.",
-            tabla_img: "/img/tallerista/c108.png"
+            tabla_img: "/img/tallerista/C108.png"
         },
     ]
 };
