@@ -29,7 +29,6 @@ class DiapositivaController extends Controller
 
     public function index(Request $request): Response
     {
-        // ... (Tu código index original se mantiene igual) ...
         $user = User::findOrFail(Auth::id());
 
         $query = Article::query()
@@ -37,23 +36,14 @@ class DiapositivaController extends Controller
             ->withExists(['files as has_diapositiva' => function ($query) {
                 $query->where('category', 'diapositiva');
             }])
-            ->where('article_status_id', 4); 
+            ->where('article_status_id', 4); // Solo aceptados
         
-        if ($user->hasRole('Admin')) {
-            $revistaTypeId = ArticleType::where('name', 'Articulo Revista')->value('id');
-            if ($revistaTypeId) {
-                $query->where('article_type_id', '!=', $revistaTypeId);
-            }
-        } elseif ($user->hasRole('Admin-Revista')) {
-            $revistaTypeId = ArticleType::where('name', 'Articulo Revista')->value('id');
-            if ($revistaTypeId) {
-                $query->where('article_type_id', $revistaTypeId);
-            } else {
-                $query->where('id', 0); 
-            }
-        } else {
+        // Si NO es Admin ni Admin-Revista (es decir, es Postulante), filtramos por su ID.
+        // Si ES Admin o Admin-Revista, no aplicamos filtro (ven todos los tipos).
+        if (!$user->hasRole('Admin') && !$user->hasRole('Admin-Revista')) {
             $query->where('postulant_id', $user->id);
         }
+        // -----------------------------------------------------
 
         $query->when($request->input('search'), function ($query, $search) {
             $query->where(function ($q) use ($search) {
@@ -94,7 +84,6 @@ class DiapositivaController extends Controller
 
     public function create(Article $article): Response
     {
-        // ... (Tu código create original se mantiene igual) ...
         $user = Auth::user();
 
         if ($user->hasRole('Admin') || $user->hasRole('Admin-Revista')) {
@@ -133,9 +122,6 @@ class DiapositivaController extends Controller
                 'file', 
                 // AQUI AGREGAMOS 'mp4'
                 'mimes:pdf,ppt,pptx,mp4', 
-                // IMPORTANTE: 25600 KB son 25MB. Un video suele pesar más.
-                // Considera aumentar esto (ej. 51200 para 50MB o 102400 para 100MB)
-                // Asegúrate que tu php.ini soporte este tamaño.
                 'max:2097152' 
             ],
         ]);
@@ -184,58 +170,56 @@ class DiapositivaController extends Controller
 
     public function show(Article $article): Response
     {
-        // ... (Tu código show original se mantiene igual) ...
-        $user = Auth::user();
+    $user = Auth::user();
 
-        $article->load(['articleType', 'postulant']);
+    $article->load(['articleType', 'postulant']);
 
-        $isPostulant = !$user->hasRole('Admin') && !$user->hasRole('Admin-Revista');
-        $isRevista = $article->articleType->name === 'Articulo Revista';
+    // Mantenemos esta variable para controlar el botón de 'canUpload' al final
+    $isPostulant = !$user->hasRole('Admin') && !$user->hasRole('Admin-Revista');
+    
+    $canView = false;
 
-        $canView = false;
-        
-        if ($isPostulant && $article->postulant_id === $user->id) {
-            $canView = true;
+    // 1. Lógica unificada: Admin y Admin-Revista ven TODO
+    if ($user->hasRole('Admin') || $user->hasRole('Admin-Revista')) {
+        $canView = true;
+    }
+
+    // 2. Lógica para postulante: Solo ve lo suyo
+    if ($isPostulant && $article->postulant_id === $user->id) {
+        $canView = true;
+    }
+
+    if (!$canView) {
+        abort(403, 'No autorizado para ver este artículo.');
+    }
+
+    $article->load([
+        'postulant.institution.country',
+        'postulant.institution.state',
+        'editor',
+        'articleStatus'
+    ]);
+
+    $diapositivaFile = $article->files()->where('category', 'diapositiva')->first();
+    $diapositivaUrl = null;
+    
+    if ($diapositivaFile) {
+        try {
+            $diapositivaUrl = URL::signedRoute('file.serve', $diapositivaFile, now()->addMinutes(60));
+        } catch (\Exception $e) {
+            report($e);
+            $diapositivaUrl = null; 
         }
+    }
 
-        if ($user->hasRole('Admin') && !$isRevista) {
-            $canView = true;
-        }
-
-        if ($user->hasRole('Admin-Revista') && $isRevista) {
-            $canView = true;
-        }
-
-        if (!$canView) {
-            abort(403, 'No autorizado para ver este artículo.');
-        }
-
-        $article->load([
-            'postulant.institution.country',
-            'postulant.institution.state',
-            'editor',
-            'articleStatus'
-        ]);
-
-        $diapositivaFile = $article->files()->where('category', 'diapositiva')->first();
-        $diapositivaUrl = null;
-        if ($diapositivaFile) {
-            try {
-                $diapositivaUrl = URL::signedRoute('file.serve', $diapositivaFile, now()->addMinutes(60));
-            } catch (\Exception $e) {
-                report($e);
-                $diapositivaUrl = null; 
-            }
-        }
-
-        return Inertia::render('Article/Diapositivas/DiapositivaShow', [
-            'title' => 'Ver Diapositivas: ' . $article->article_folio,
-            'article' => $article,
-            // Inertia pasará este objeto al frontend, incluyendo 'mime_type'
-            'diapositiva' => $diapositivaFile, 
-            'diapositivaUrl' => $diapositivaUrl,
-            'routeName' => $this->routeName,
-            'canUpload' => $isPostulant, 
-        ]);
+    return Inertia::render('Article/Diapositivas/DiapositivaShow', [
+        'title' => 'Ver Diapositivas: ' . $article->article_folio,
+        'article' => $article,
+        // Inertia pasará este objeto al frontend, incluyendo 'mime_type'
+        'diapositiva' => $diapositivaFile, 
+        'diapositivaUrl' => $diapositivaUrl,
+        'routeName' => $this->routeName,
+        'canUpload' => $isPostulant, 
+    ]);
     }
 }

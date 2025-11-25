@@ -14,10 +14,6 @@ use Illuminate\Support\Facades\DB;
 
 class GenerateParticipationController extends Controller
 {
-    /**
-     * Muestra la página (o el modal) para que el usuario
-     * genere su reconocimiento personal.
-     */
     public function generateParticipation(Request $request): Response
     {
         return Inertia::render('Article/Diapositivas/Participation', [
@@ -25,10 +21,6 @@ class GenerateParticipationController extends Controller
         ]);
     }
 
-    /**
-     * Obtiene los datos del usuario autenticado para
-     * generar el reconocimiento.
-     */
     public function getReconocimientoData()
     {
         // 1. Obtener el usuario autentificado
@@ -50,7 +42,7 @@ class GenerateParticipationController extends Controller
         $hasRevisor = $roles->contains('Revisor');
         $participant_role = 'No especificado'; 
 
-        //  Lógica de Prioridad (incluyendo nuevos roles)
+        //  Lógica de Prioridad de Roles
         if ($hasEditor && $hasRevisor) {
             $participant_role = 'DUAL_EDITOR_REVISOR';
         } 
@@ -74,21 +66,16 @@ class GenerateParticipationController extends Controller
         } elseif ($hasRevisor) {
             $participant_role = 'Revisor';
             
-            
-            // 1. Contar cuántos artículos tiene asignados este revisor
             $articlesAssigned = DB::table('article_reviews')
                 ->where('reviewer_id', $user->id)
                 ->count();
 
-            // 2. Si el conteo es 0, no puede generar el reconocimiento
             if ($articlesAssigned === 0) {
-                Log::warning("Revisor {$user->id} intentó generar reconocimiento, pero no tiene artículos asignados.");
+                Log::warning("Revisor {$user->id} sin artículos.");
                 return response()->json([
-                    'error' => 'No puedes generar tu reconocimiento. Debes tener al menos un artículo asignado. Por favor, contacte al administrador.'
-                ], 403); // 403 = Prohibido
+                    'error' => 'No puedes generar tu reconocimiento. Debes tener al menos un artículo asignado.'
+                ], 403); 
             }
-
-
         }
         elseif ($roles->contains('Asistente')) {
             $participant_role = 'Asistente';
@@ -98,31 +85,19 @@ class GenerateParticipationController extends Controller
         
         $participant_role = mb_strtoupper($participant_role, 'UTF-8');
 
-        
-        //  Definir roles que SÍ necesitan la verificación
-        $rolesConVerificacion = [
-            'TALLERISTA', 
-            'CONFERENCISTA', 
-            'STAFF', 
-            'ASISTENTE'
-        ];
+        //  Verificación de roles especiales
+        $rolesConVerificacion = ['TALLERISTA', 'CONFERENCISTA', 'STAFF', 'ASISTENTE'];
 
-        //  Ejecutar la comprobación
         if (in_array($participant_role, $rolesConVerificacion)) {
-            // Este rol SÍ necesita verificar el campo 'reconocimiento_habilitado'
-            
-            // Usamos !$user->reconocimiento_habilitado
             if (!$user->reconocimiento_habilitado) {
-                // Si está deshabilitado (0), bloqueamos al usuario.
-                Log::warning("Usuario {$user->id} (Rol: {$participant_role}) intentó generar reconocimiento, pero 'reconocimiento_habilitado' es 0.");
+                Log::warning("Usuario {$user->id} reconocimiento deshabilitado.");
                 return response()->json([
-                    'error' => 'La generación de reconocimientos no está habilitada para su cuenta en este momento. Por favor, contacte al administrador.'
-                ], 403); // 403 = Prohibido
+                    'error' => 'La generación de reconocimientos no está habilitada para su cuenta.'
+                ], 403); 
             }
-            // Si $user->reconocimiento_habilitado es 1, el código simplemente continúa.
         }
 
-        // 4. Obtener el 'area' usando el 'knowledge_area_id'
+        // 4. Obtener area
         $participant_area = 'No especificada'; 
         if ($user->knowledge_area_id) {
             try {
@@ -131,26 +106,41 @@ class GenerateParticipationController extends Controller
                     $participant_area = $area->name; 
                 }
             } catch (\Exception $e) {
-                Log::error("Error al buscar knowledge_area_id {$user->knowledge_area_id}: " . $e->getMessage());
+                Log::error("Error area: " . $e->getMessage());
             }
         }
         $participant_area = mb_strtoupper($participant_area, 'UTF-8');
 
-        // 5. Generar el sello digital
-        $signedText = "Error al generar sello"; // Valor por defecto
+        // 5. Generar sello
+        $signedText = "Error al generar sello"; 
         try {
             $signedText = $this->generateSignature($user); 
         } catch (\Exception $e) {
-            Log::error("Error al generar firma para reconocimiento (user {$user->id}): " . $e->getMessage());
+            Log::error("Error firma: " . $e->getMessage());
         }
+        
+        // 1. Limpiamos espacios del rol
+        $roleForFolio = str_replace(' ', '-', $participant_role);
+        
+        // 2. Semilla Única: ID + Fecha Creación.
+        // Esto garantiza que el número base sea único para el usuario y no cambie con el tiempo.
+        $seed = $user->id . ($user->created_at ? $user->created_at->format('YmdHis') : 'static');
+        
+        // 3. Generamos un hash numérico (CRC32)
+        $hash = sprintf('%u', crc32($seed)); 
+        
+        // 4. Recortamos a 4 dígitos exactos.
+        // Si el hash fuera "38129048", nos quedamos con "3812".
+        $fourDigits = substr($hash, 0, 4);
 
-        // Folio único
-        $reconocimiento_folio = 'REC-' . $user->id . '-' . now()->timestamp;
+        // Resultado: REC-688-CONFERENCISTA-3812
+        $reconocimiento_folio = 'REC-' . $user->id . '-' . $roleForFolio . '-' . $fourDigits;
+        
 
-        // 6. Construir el objeto de datos para el JSON
         $data = [
             'user_id' => $user->id,
             'reconocimiento_folio' => $reconocimiento_folio,
+            'folio_number' => $fourDigits,
             'participant_name' => $participant_name,
             'participant_role' => $participant_role,
             'participant_area' => $participant_area,
@@ -161,9 +151,6 @@ class GenerateParticipationController extends Controller
         return response()->json($data);
     }
 
-    /**
-     * Genera la firma digital (sello) para un RECONOCIMIENTO
-     */
     private function generateSignature(User $user): string
     {
         $varCER = 'VIICyT/VIICyT.cer';
@@ -171,45 +158,29 @@ class GenerateParticipationController extends Controller
         $keyPasswd = 'viicyt2024';
 
         $dataCER = Storage::disk('public')->get($varCER);
-        if (!$dataCER) {
-            Log::error("No se encontró el archivo .cer en storage/app/public/{$varCER}");
-            throw new \Exception('No se encontró el archivo .cer.');
-        }
+        if (!$dataCER) throw new \Exception('No se encontró el archivo .cer.');
 
         $dataKEY = Storage::disk('public')->get($varKEY);
-        if (!$dataKEY) {
-            Log::error("No se encontró el archivo .key en storage/app/public/{$varKEY}");
-            throw new \Exception('No se encontró el archivo .key.');
-        }
+        if (!$dataKEY) throw new \Exception('No se encontró el archivo .key.');
 
         $resKEY = openssl_pkey_get_private($dataKEY, $keyPasswd);
-        if ($resKEY === false) {
-            Log::error("openssl_pkey_get_private falló. ¿Contraseña incorrecta o clave corrupta?");
-            throw new \Exception('No se pudo obtener la clave privada. Verifique la contraseña.');
-        }
+        if ($resKEY === false) throw new \Exception('Clave privada incorrecta.');
 
         $string = '||' . $user->id . '||' . $user->name . '||' . $user->email . '||RECONOCIMIENTO||';
-        $stringMD5 = md5($string); // Corregido
+        $stringMD5 = md5($string); 
 
         $success = openssl_private_encrypt($stringMD5, $encrypted_string, $resKEY);
         openssl_pkey_free($resKEY);
 
-        if (!$success) {
-            throw new \Exception('Fallo al encriptar (firmar) el string: ' . openssl_error_string());
-        }
+        if (!$success) throw new \Exception('Fallo al firmar.');
 
         return base64_encode($encrypted_string);
     }
 
-    /**
-     * Verifica la validez de un folio de reconocimiento.
-     */
     public function verify(Request $request, $folio)
     {
-       // Limpieza básica del folio
         $cleanFolio = preg_replace('/[?#].*$/', '', $folio);
         
-        // Vista por defecto para errores
         $errorViewData = [
             'data' => false,
             'folio' => $cleanFolio,
@@ -222,55 +193,44 @@ class GenerateParticipationController extends Controller
         try {
             $parts = explode('-', $cleanFolio);
 
-            // 1. Validación de formato
+            // Validación: REC en [0] y ID numérico en [1]
             if ($parts[0] !== 'REC' || !isset($parts[1]) || !is_numeric($parts[1])) {
-                Log::warning("Folio con formato incorrecto: {$folio}");
+                Log::warning("Folio formato incorrecto: {$folio}");
                 return view('RverificationParticipation', $errorViewData);
             }
 
             $userId = $parts[1];
-
-            // 2. Buscar usuario
             $user = User::with('roles')->find($userId);
 
             if (!$user) {
-                Log::warning("Folio válido pero usuario no encontrado: {$folio}");
                 return view('RverificationParticipation', $errorViewData);
             }
 
-            // 3. Preparar datos para la vista
             $userName = mb_strtoupper($user->name, 'UTF-8');
-            $userRole = 'PARTICIPANTE'; // Valor por defecto
-
+            $userRole = 'PARTICIPANTE'; 
             if ($user->roles->isNotEmpty()) {
-                // Toma el primer rol y lo convierte a mayúsculas
                 $userRole = mb_strtoupper($user->roles->first()->name, 'UTF-8');
             }
 
-            // 4. Regenerar el Sello Digital
-            // Como el sello depende de datos estáticos del usuario (id, name, email),
-            // lo recalculamos aquí para mostrarlo en la validación.
             $selloDigital = "Firma no disponible";
             try {
                 $selloDigital = $this->generateSignature($user);
             } catch (\Exception $e) {
-                Log::error("Error regenerando firma en verify: " . $e->getMessage());
+                Log::error("Error firma verify: " . $e->getMessage());
             }
 
-            // 5. Retornar la vista Exitosa
             return view('RverificationParticipation', [
-                'data' => true, // Bandera para que el Blade muestre la sección verde
+                'data' => true, 
                 'participant_name' => $userName,
                 'participant_role' => $userRole,
-                'selloDigital'     => $selloDigital, // El texto encriptado largo
-                'signedText'       => $cleanFolio,   // En tu blade, el segundo textarea muestra el folio usando esta variable
-                'folio'            => $cleanFolio    // Por redundancia
+                'selloDigital'     => $selloDigital, 
+                'signedText'       => $cleanFolio,  
+                'folio'            => $cleanFolio 
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Error crítico en verificación de folio {$folio}: " . $e->getMessage());
+            Log::error("Error verify: " . $e->getMessage());
             return view('RverificationParticipation', $errorViewData);
         }
     }
-    
 }

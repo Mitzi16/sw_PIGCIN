@@ -130,19 +130,28 @@ const finishGeneration = async (role, extraInfoFromModal = null) => {
     try {
         console.log(`Iniciando generación de PDF para: ${role}`);
         
-        // Modificamos los datos base con el rol actual de la cola
-        // y creamos un folio único para este PDF específico.
+        // 1. Limpiamos el rol para que no tenga espacios (ej. "DUAL EDITOR" -> "DUAL-EDITOR")
+        const roleForFolio = role.replace(/\s+/g, '-');
+
+        // 2. Recuperamos el numero estático de 4 dígitos que nos mandó el Controller
+        // Si por alguna razón no viene, usamos '0000' para evitar errores, pero no Date.now()
+        const staticNumber = userData.value.folio_number || '0000';
+
+        // 3. Modificamos los datos base con el rol actual de la cola.
+        // AQUI ESTABA EL ERROR: Antes usabas Date.now(), ahora usamos staticNumber.
         const modifiedData = { 
             ...userData.value, 
             participant_role: role,
-            reconocimiento_folio: `REC-${userData.value.user_id}-${role}-${Date.now()}`
+            reconocimiento_folio: `REC-${userData.value.user_id}-${roleForFolio}-${staticNumber}`
         };
         
+        console.log("Generando con Folio Estático:", modifiedData.reconocimiento_folio);
+
         // Actualizamos la URL de verificación con el nuevo folio
         modifiedData.verification_url = route('reconocimiento.verify', modifiedData.reconocimiento_folio);
 
         const pdfBlobUrl = await generatePersonalRecognition(
-            modifiedData, // Usamos los datos modificados
+            modifiedData, // Usamos los datos modificados con el folio correcto
             extraInfoFromModal
         );
 

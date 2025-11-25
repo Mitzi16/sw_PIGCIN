@@ -66,16 +66,17 @@ class ArticleController extends Controller
      */
     public function index(Request $request): Response
     {
-        $direction = $request->direction ?? 'desc';
-        $order = $request->order ?? 'created_at';
-        $query = $this->model::query()->with(['articleReviews', 'articleType', 'knowledgeArea.parent']);
-        $user = User::findOrFail(Auth::id());
+    $direction = $request->direction ?? 'desc';
+    $order = $request->order ?? 'created_at';
+    $query = $this->model::query()->with(['articleReviews', 'articleType', 'knowledgeArea.parent']);
+    $user = User::findOrFail(Auth::id());
 
-        $currentRouteName = $request->route()->getName();
-        $title = 'Gestión de Artículos';
+    $currentRouteName = $request->route()->getName();
+    $title = 'Gestión de Artículos';
 
-        if (! $user->canPermission('article.all')) {
-           if ($currentRouteName === 'article.qualify') {
+    // Lógica de permisos para usuarios que NO tienen acceso total (Revisores/Editores/Postulantes)
+    if (! $user->canPermission('article.all')) {
+        if ($currentRouteName === 'article.qualify') {
             $title = 'Artículos para Evaluar';
             // Filtra para mostrar SOLO los artículos donde el usuario es Revisor.
             $query->whereHas('articleReviews', function ($query) {
@@ -94,7 +95,7 @@ class ArticleController extends Controller
             });
 
         } else {
-            // Comportamiento original si se accede desde article.index (la lista mezclada).
+            // Comportamiento original si se accede desde article.index (la lista mezclada para usuarios normales).
             $query->where(function ($query) {
                 $query->where('editor_id', Auth::id())
                       ->orWhere('postulant_id', Auth::id())
@@ -103,150 +104,101 @@ class ArticleController extends Controller
                       });
             });
         }
+    }
+
+    // --- SE ELIMINÓ EL BLOQUE DE FILTRADO POR ROL (Admin/Admin-Revista) AQUÍ ---
+    // Ahora estos roles pasan directamente a la búsqueda sin restricciones de tipo de artículo.
+
+    $query->when($request->input('search'), function ($query, $search) {
+        if ($search != '') {
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('article_folio', 'LIKE', '%' . $search . '%')
+                    ->orWhere('title', 'LIKE', '%' . $search . '%')
+                    ->orWhere('abstract', 'LIKE', '%' . $search . '%')
+                    ->orWhere('key_works', 'LIKE', '%' . $search . '%')
+                    ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
+                    })
+                    ->orWhereHas('articleStatus', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
+                    })
+                    ->orWhereHas('articleType', function ($subQuery) use ($search) {
+                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
+                    });
+            });
         }
+    });
 
-        // --- Filtrado por rol para tipos de artículo (más robusto) ---
-        $roleNames = $user->roles->pluck('name')->map(fn($r) => (string) $r)->toArray();
+    // IMPORTANT: select articles.* antes de hacer joins (evita ambigüedad).
+    $query->select('articles.*');
 
-        // Helper: obtiene ids de tipos por palabras clave (LIKE) y devuelve array de ids
-        $getTypeIdsByKeywords = function (array $keywords) {
-            $q = ArticleType::query();
-            foreach ($keywords as $i => $kw) {
-                $kw = trim($kw);
-                if ($i === 0) {
-                    $q->where('name', 'LIKE', "%{$kw}%");
-                } else {
-                    $q->orWhere('name', 'LIKE', "%{$kw}%");
-                }
-            }
-            return $q->pluck('id')->toArray();
-        };
-
-        if (in_array('Admin-Revista', $roleNames, true)) {
-            // buscamos cualquier type cuyo nombre contenga 'Revista' (tolerante)
-            $ids = $getTypeIdsByKeywords(['Revista', 'Artículo Revista', 'Articulo Revista']);
-            if (!empty($ids)) {
-                // filtramos por ids encontrados
-                $query->whereIn('article_type_id', $ids);
-            } else {
-                // Si no se encontró ningún tipo coincidente, NO aplicamos filtro para evitar lista vacía.
-                // (opcional: registrar log para depurar)
-                Log::warning('Admin-Revista: no se encontraron article_types con nombre similar a Revistas');
-            }
-        } elseif (in_array('Admin', $roleNames, true)) {
-            // buscaremos tipos relacionados con Congreso y Póster (tolerante)
-            $keywords = [
-                'Congreso', // captura "Artículo Congreso (4 a 6 hojas máximo)" u otras variantes
-                'Póster Científico',
-                'Póster Difusión',
-                'Poster', // sin acento por si acaso
-                'Póster', // en general
-            ];
-            $ids = $getTypeIdsByKeywords($keywords);
-            if (!empty($ids)) {
-                $query->whereIn('article_type_id', $ids);
-            } else {
-                // No se encontraron coincidencias: no filtramos para evitar lista vacía y lo registramos
-                Log::warning('Admin: no se encontraron article_types para Congreso/Póster con las keywords proporcionadas');
-            }
-        }
-        // --- fin filtrado por rol ---
-
-        $query->when($request->input('search'), function ($query, $search) {
-            if ($search != '') {
-                $query->where(function ($subQuery) use ($search) {
-                    $subQuery->where('article_folio', 'LIKE', '%' . $search . '%')
-                        ->orWhere('title', 'LIKE', '%' . $search . '%')
-                        ->orWhere('abstract', 'LIKE', '%' . $search . '%')
-                        ->orWhere('key_works', 'LIKE', '%' . $search . '%')
-                        ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
-                            $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                        })
-                        ->orWhereHas('articleStatus', function ($subQuery) use ($search) {
-                            $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                        })
-                        ->orWhereHas('articleType', function ($subQuery) use ($search) {
-                            $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                        });
-                });
-            }
-        });
-
-        // IMPORTANT: select articles.* antes de hacer joins (evita ambigüedad).
-        // Sólo hacemos select si vamos a unir tablas, lo cual hacemos en varios casos.
-        $query->select('articles.*');
-
-        if ($order === 'area') {
-            // orden por el nombre del área seleccionada directamente
-            $query = $query->join('knowledge_areas', 'knowledge_areas.id', '=', 'articles.knowledge_area_id')
-                ->orderBy('knowledge_areas.name', $direction);
-        } elseif ($order === 'program') {
-            // orden por Programa de Estudio (padre si existe, sino el mismo)
-            // unimos la knowledge_areas como "ka" (el área seleccionada) y su parent como "pka"
-            $query = $query
-                ->leftJoin('knowledge_areas as ka', 'ka.id', '=', 'articles.knowledge_area_id')
-                ->leftJoin('knowledge_areas as pka', 'pka.id', '=', 'ka.parent_id')
-                ->orderByRaw("COALESCE(pka.name, ka.name) {$direction}");
-        } elseif ($order === 'status') {
-            $query = $query->join('article_statuses', 'article_statuses.id', '=', 'articles.article_status_id')
-                ->orderBy('article_statuses.name', $direction);
-        } elseif ($order === 'type') {
-            $query = $query->join('article_types', 'article_types.id', '=', 'articles.article_type_id')
-                ->orderBy('article_types.name', $direction);
-        } elseif ($order === 'folio') {
-            $query = $query->orderBy('article_folio', $direction);
+    if ($order === 'area') {
+        // orden por el nombre del área seleccionada directamente
+        $query = $query->join('knowledge_areas', 'knowledge_areas.id', '=', 'articles.knowledge_area_id')
+            ->orderBy('knowledge_areas.name', $direction);
+    } elseif ($order === 'program') {
+        // orden por Programa de Estudio (padre si existe, sino el mismo)
+        $query = $query
+            ->leftJoin('knowledge_areas as ka', 'ka.id', '=', 'articles.knowledge_area_id')
+            ->leftJoin('knowledge_areas as pka', 'pka.id', '=', 'ka.parent_id')
+            ->orderByRaw("COALESCE(pka.name, ka.name) {$direction}");
+    } elseif ($order === 'status') {
+        $query = $query->join('article_statuses', 'article_statuses.id', '=', 'articles.article_status_id')
+            ->orderBy('article_statuses.name', $direction);
+    } elseif ($order === 'type') {
+        $query = $query->join('article_types', 'article_types.id', '=', 'articles.article_type_id')
+            ->orderBy('article_types.name', $direction);
+    } elseif ($order === 'folio') {
+        $query = $query->orderBy('article_folio', $direction);
+    } else {
+        // Por seguridad: solo permitir ordenar por columnas válidas en articles
+        $allowed = ['created_at', 'updated_at', 'title', 'article_folio']; 
+        if (in_array($order, $allowed)) {
+            $query = $query->orderBy($order, $direction);
         } else {
-            // Por seguridad: solo permitir ordenar por columnas válidas en articles
-            // si el $order no es columna de articles esto tiraría error; puedes mapear valores permitidos.
-            $allowed = ['created_at', 'updated_at', 'title', 'article_folio']; // añade las que quieras permitir
-            if (in_array($order, $allowed)) {
-                $query = $query->orderBy($order, $direction);
-            } else {
-                // fallback seguro
-                $query = $query->orderBy('created_at', $direction);
-            }
+            // fallback seguro
+            $query = $query->orderBy('created_at', $direction);
         }
+    }
 
 
-        $records = $query->paginate(8)->withQueryString()->through(
-            fn($article) => [
-                'id' => $article->id,
-                'folio' => $article->article_folio,
-                'title' => $article->title,
-                'article_type' => [
-                    'id' => $article->articleType?->id,
-                    'name' => $article->articleType?->name,
-                ],
-                'abstract' => $article->abstract,
-                // aquí entregamos programa y área prioritaria
-                // si el knowledgeArea tiene parent -> programa = parent.name, priority_area = area.name
-                // si no tiene parent -> se asume que el area seleccionado es el mismo programa
-                'program' => $article->knowledgeArea
-                    ? ($article->knowledgeArea->parent ? $article->knowledgeArea->parent->name : $article->knowledgeArea->name)
-                    : null,
-                'priority_area' => $article->knowledgeArea
-                    ? ($article->knowledgeArea->parent ? $article->knowledgeArea->name : null)
-                    : null,
-                'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
-                'status' => $article->articleStatus ?? null,
-                'paymentVoucherStatus' => $article?->paymentVoucher?->paymentVoucherStatus ?? null,
-                'isPostulant' => $article->postulant_id === Auth::id() ? true : false,
-                'statusReviewer' => $article->articleReviews->filter(function ($review) {
-                    return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
-                })->isNotEmpty(),
-            ]
-        );
+    $records = $query->paginate(8)->withQueryString()->through(
+        fn($article) => [
+            'id' => $article->id,
+            'folio' => $article->article_folio,
+            'title' => $article->title,
+            'article_type' => [
+                'id' => $article->articleType?->id,
+                'name' => $article->articleType?->name,
+            ],
+            'abstract' => $article->abstract,
+            // aquí entregamos programa y área prioritaria
+            'program' => $article->knowledgeArea
+                ? ($article->knowledgeArea->parent ? $article->knowledgeArea->parent->name : $article->knowledgeArea->name)
+                : null,
+            'priority_area' => $article->knowledgeArea
+                ? ($article->knowledgeArea->parent ? $article->knowledgeArea->name : null)
+                : null,
+            'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
+            'status' => $article->articleStatus ?? null,
+            'paymentVoucherStatus' => $article?->paymentVoucher?->paymentVoucherStatus ?? null,
+            'isPostulant' => $article->postulant_id === Auth::id() ? true : false,
+            'statusReviewer' => $article->articleReviews->filter(function ($review) {
+                return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
+            })->isNotEmpty(),
+        ]
+    );
 
-        return Inertia::render("{$this->source}Index", [
-            'articles' => $records,
-            'title' => $title,
-            'isReviewer' => User::find(Auth::id())->getRole(null, 'Revisor'),
-            'routeName' => $this->routeName,
-            'currentRouteName' => $currentRouteName,
-            'loadingResults' => false,
-            'search' => $request->search ?? '',
-            'direction' => $direction,
-        ]);
+    return Inertia::render("{$this->source}Index", [
+        'articles' => $records,
+        'title' => $title,
+        'isReviewer' => User::find(Auth::id())->getRole(null, 'Revisor'),
+        'routeName' => $this->routeName,
+        'currentRouteName' => $currentRouteName,
+        'loadingResults' => false,
+        'search' => $request->search ?? '',
+        'direction' => $direction,
+    ]);
     }
 
     /**
