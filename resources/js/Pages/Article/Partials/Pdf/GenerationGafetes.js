@@ -178,7 +178,9 @@ export async function generateGafetesPdf(usersList) {
             // Obtener texto del ROL
             const roleLabelText = ROLE_LABELS[user.role] || ROLE_LABELS['DEFAULT'];
             // URL completa para el QR
-            const qrUrlData = `${BASE_QR_URL}${user.user_id}`;
+            const origin = window.location.origin;
+            const qrUrlData = `${origin}/${BASE_QR_URL}${user.user_id}`;
+            //const qrUrlData = `${BASE_QR_URL}${user.user_id}`;
 
 
             // ==============================

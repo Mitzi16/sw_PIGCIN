@@ -21,7 +21,6 @@ import {
 // Importamos la función del archivo JS que creamos en el paso anterior
 // Asegúrate de que la ruta sea correcta según donde guardaste el archivo
 import { generateGafetesPdf } from "@/Pages/Article/Partials/Pdf/GenerationGafetes.js"
-// O si lo guardaste en Pages: import { generateGafetesPdf } from "./generateGafetesPdf.js";
 
 const props = defineProps({
     name: "Gafetes",
