@@ -131,7 +131,7 @@ class GenerateGafetesController extends Controller
     public function download($user_id)
     {
        
-        $pathToFile = public_path('pdfs/info/Programa previo 5to CITCA 26nov.pdf'); 
+        $pathToFile = public_path('pdfs/info/Programa_full.pdf'); 
 
 
         // 2. Verificar que el archivo físico realmente exista en el servidor antes de intentar servirlo.
@@ -142,7 +142,7 @@ class GenerateGafetesController extends Controller
             abort(404, 'El documento solicitado no está disponible en este momento.');
         }
 
-        $downloadFileName = "Programa_del_Evento.pdf";
+        $downloadFileName = "Programa_del_Event0.pdf";
 
         $headers = [
             'Content-Type' => 'application/pdf',
