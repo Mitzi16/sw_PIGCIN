@@ -88,20 +88,26 @@ const getPdf = async (isPersonal) => {
 
         if (isPersonal) {
             console.log("Obteniendo datos del artículo (para personal):", props.article.id);
+            
+            // 1. Hacemos la petición al servidor.
             const response = await axios.get(route("article.getAuthors", props.article.id));
             
-            // 2. Extraemos los nombres que necesitamos de la respuesta
-            const { article_type_name, knowledge_area_name } = response.data;
+            // 2. Extraemos los nombres. AHORA esperamos también 'postulant_name'
+            const { 
+                article_type_name, 
+                knowledge_area_name, 
+                postulant_name 
+            } = response.data;
 
-            // 3. Verificamos si los datos llegaron (evita el 'null')
-            if (!article_type_name || !knowledge_area_name) {
-                console.error("La API devolvió null para los nombres de tipo o área.", response.data);
-                Swal.fire('Error', 'Los datos del artículo (tipo o área) están incompletos en el servidor.', 'error');
-                return; // No continuar
+            // 3. Verificamos si los datos llegaron completos
+            if (!article_type_name || !knowledge_area_name || !postulant_name) {
+                console.error("Faltan datos: ", response.data);
+                Swal.fire('Error', 'Faltan datos del artículo o del autor (postulante) en el servidor.', 'error');
+                return; 
             }
 
-            // 4. Recolectamos los props que SÍ tenemos
-            const userName = props.user.name; // Nombre del usuario logueado
+            const userName = postulant_name; 
+            
             const title = props.article.title;
             const id = props.article.id;
 
@@ -114,7 +120,7 @@ const getPdf = async (isPersonal) => {
             );
 
         } else {
-            // La lógica grupal ya es correcta porque llama a la API
+            // Lógica grupal 
             url = await generateGroupCertificate(
                 props.article.id, 
                 props.article.title

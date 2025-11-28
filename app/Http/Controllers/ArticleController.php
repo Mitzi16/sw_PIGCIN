@@ -490,35 +490,35 @@ class ArticleController extends Controller
      */
     public function getArticleAuthors(Article $article)
     {
-        // 1. Autorizar que el usuario pueda ver este artículo
-        // (Usa la misma política que 'show' o 'view')
+        // 1. Autorización (Igual que antes)
         try {
             $this->authorize('view', $article);
         } catch (\Exception $e) {
-            // Si no tiene permiso, devolver un error
             return response()->json(['error' => 'No autorizado para ver este artículo.'], 403);
         }
 
-        $article->load('authors', 'articleType', 'knowledgeArea');
+        // 2. Cargar relaciones
+        // Agregamos 'postulant' para traer al dueño del artículo
+        $article->load('authors', 'articleType', 'knowledgeArea', 'postulant');
 
-        // 2. Obtener los autores usando la relación que ya existe
-        //$authors = $article->authors; // Esto carga la colección de autores
-
-        // 3. Formatear los nombres
-        // Itera sobre cada objeto 'Author' y crea un string con el nombre completo
-        $formattedNames = $article->authors->map(function ($author) {
-            // Formato: "Prefijo Nombre Apellido" (ej: "Doctor(a) felipe tr")
-            // trim() elimina espacios extra si el prefijo estuviera vacío
+        // 3. Lógica para AUTORES (Reconocimiento Grupal) 
+        // Aquí sí usas prefix, name y surname porque viene de la tabla 'authors'
+        $formattedAuthors = $article->authors->map(function ($author) {
             return trim($author->prefix . ' ' . $author->name . ' ' . $author->surname);
         });
 
-        // 4. Devolver la respuesta JSON que el frontend espera
+        // 4. Lógica para POSTULANTE (Reconocimiento Personal) 
+        // Verificamos si existe el postulante y tomamos solo el campo 'name'
+        $postulantName = $article->postulant ? $article->postulant->name : 'Usuario Desconocido';
+
+        // 5. Retornar todo junto
         return response()->json([
-            'authors' => $formattedNames,
-            'article_type_name'   => optional($article->articleType)->name, 
+            'authors'             => $formattedAuthors,   // Array para el grupal
+            'postulant_name'      => $postulantName,      // String para el personal (Nombre del dueño)
+            'article_type_name'   => optional($article->articleType)->name,
             'knowledge_area_name' => optional($article->knowledgeArea)->name,
-            'article_type_id' => $article->article_type_id,
-            'knowledge_area_id' => $article->knowledge_area_id,
+            'article_type_id'     => $article->article_type_id,
+            'knowledge_area_id'   => $article->knowledge_area_id,
         ]);
     }
 
