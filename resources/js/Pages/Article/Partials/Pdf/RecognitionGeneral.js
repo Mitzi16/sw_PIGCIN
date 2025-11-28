@@ -56,7 +56,7 @@ export default async function getPdf(authors, title, id, articleTypeName, knowle
         if (authors.length > 1) {
             const lastAuthor = authors[authors.length - 1];
             const otherAuthors = authors.slice(0, -1); 
-            text = otherAuthors.join(' | ') + ' y ' + lastAuthor;
+            text = otherAuthors.join(' | ') + ' | ' + lastAuthor;
         } else if (authors.length === 1) {
             text = authors[0]; 
         }
@@ -95,7 +95,7 @@ export default async function getPdf(authors, title, id, articleTypeName, knowle
     const lineHeight = fontSize * 1.5; 
 
     const totalTextBlockHeight = (textLines.length - 1) * lineHeight;
-    let currentY = (height / 2 + 30) + (totalTextBlockHeight / 2);
+    let currentY = (height / 2 + 50) + (totalTextBlockHeight / 2);
 
     for (const line of textLines) {
         let textWidth = fontBold.widthOfTextAtSize(line, fontSize);
@@ -113,7 +113,7 @@ export default async function getPdf(authors, title, id, articleTypeName, knowle
 
     // Ajustar la 'y' para que esté debajo del bloque de autores
     const authorBlockHeight = textLines.length * lineHeight;
-    y = (height / 2 + 30) - (authorBlockHeight / 2) - 40; // 40px de espacio
+    y = (height / 2 + 30) - (authorBlockHeight / 2) - 10; // 10px de espacio
 
     // --- DIBUJO DEL QR EN LA SEGUNDA PÁGINA (Nuevo estilo) ---
     await addQR(pdfDoc, secondPage, height, id); // <-- Llama a la función actualizada
@@ -129,8 +129,22 @@ export default async function getPdf(authors, title, id, articleTypeName, knowle
     y -= 25; 
 
     // "[title]" (El título en negrita y más grande)
-    drawText(title, fontBold, 12, firstPage, y, centerX - 20, defaultColor);
-    y -= 32; 
+    const titleFontSize = 12;
+    const titleMaxWidth = 500; // Ancho máximo permitido para el título
+    // 1. Envolvemos el texto (calculamos los saltos de línea)
+    const wrappedTitle = wrapText(title, titleMaxWidth, fontBold, titleFontSize);
+    // 2. Dividimos en un array de líneas
+    const titleLines = wrappedTitle.split('\n');
+    
+    // 3. Dibujamos línea por línea
+    for (const line of titleLines) {
+        drawText(line, fontBold, titleFontSize, firstPage, y, centerX - 20, defaultColor);
+        // Bajamos el cursor por cada línea dibujada (ej. tamaño fuente + 2pt de interlineado)
+        y -= (titleFontSize + 4); 
+    }
+
+    // 4. Agregamos un espacio extra después de terminar todo el bloque del título
+    y -= 10;
 
     // "presentada en el marco del 5.° Congreso Internacional de Tecnología y Ciencia"
     drawText("presentada en el marco del 5.° Congreso Internacional de Tecnología y Ciencia Aplicada", font, 10, firstPage, y, centerX - 25, defaultColor);
