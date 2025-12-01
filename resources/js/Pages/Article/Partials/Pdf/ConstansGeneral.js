@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import QRCode from "qrcode";
 
 /**
@@ -31,20 +32,38 @@ async function getLetterPdf(data, signedText) {
     
     // 1. Cargar plantilla de hoja membretada
     const urlPdf = "/pdfs/Membrete.pdf"; // ¡Ruta a tu plantilla!
-    const existingPdfBytes = await fetch(urlPdf).then((res) =>
-        res.arrayBuffer()
-    );
+    const existingPdfBytes = await fetch(urlPdf).then((res) => res.arrayBuffer());
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
+
+    pdfDoc.registerFontkit(fontkit);
+
     const pages = pdfDoc.getPages();
     const firstPage = pages[0];
     const { width, height } = firstPage.getSize(); // Aprox. 612 x 792 (Letter)
     const secondPage = pdfDoc.addPage([width, height]);
 
-    // 2. Cargar Fuentes
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+    // --- 3. CARGAR FUENTES ROBOTO (Soporte Unicode) ---
+    const fontUrl       = "/pdfs/font/Roboto-Regular.ttf"; 
+    const fontBoldUrl   = "/pdfs/font/Roboto-Bold.ttf";
+    const fontItalicUrl = "/pdfs/font/Roboto-Italic.ttf";
+
+    const [fontBytes, fontBoldBytes, fontItalicBytes] = await Promise.all([
+        fetch(fontUrl).then((res) => res.arrayBuffer()),
+        fetch(fontBoldUrl).then((res) => res.arrayBuffer()),
+        fetch(fontItalicUrl).then((res) => res.arrayBuffer()),
+    ]);
+
+    // Incrustar las fuentes en el PDF
+    // 'subset: true' es importante para que el archivo no pese mucho
+    const font = await pdfDoc.embedFont(fontBytes, { subset: true });
+    const fontBold = await pdfDoc.embedFont(fontBoldBytes, { subset: true });
+    const fontItalic = await pdfDoc.embedFont(fontItalicBytes, { subset: true });
     const color = rgb(0.2, 0.2, 0.2); // Un color de texto oscuro
+    // 2. Cargar Fuentes
+   /* const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);*/
+    
 
     // 3. Definir Layout (¡Ajustar según sea necesario!)
     const leftMargin = 72; // 1 pulgada
