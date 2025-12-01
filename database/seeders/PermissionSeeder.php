@@ -89,5 +89,9 @@ class PermissionSeeder extends Seeder
         Permission::create(['name' => 'paymentVoucher.update', 'guard_name' => 'web', 'description' => 'Actualizar Registros', 'module_key' => 'div']);
         Permission::create(['name' => 'paymentVoucher.delete', 'guard_name' => 'web', 'description' => 'Eliminar Registros', 'module_key' => 'div']);
         Permission::create(['name' => 'paymentVoucher.validate', 'guard_name' => 'web', 'description' => 'Validar Registros', 'module_key' => 'div']);
+
+        //autorizar reconocmientos 
+        Permission::create(['name' => 'reconocimiento.index', 'guard_name' => 'web', 'description' => 'Leer Usuarios Filtrados', 'module_key' => 'seg']);
+        Permission::create(['name' => 'reconocimiento.update', 'guard_name' => 'web', 'description' => 'Actualizar Permiso Para Generar Reconocimiento de Participacion', 'module_key' => 'seg']);
     }
 }

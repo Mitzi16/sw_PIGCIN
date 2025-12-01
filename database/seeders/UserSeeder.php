@@ -100,6 +100,8 @@ class UserSeeder extends Seeder
         $conferencista = Role::create(['name' => 'Conferencista', 'description' => 'Conferencista']);
         $Tallerista = Role::create(['name' => 'Tallerista', 'description' => 'Tallerista']);
         $Asistente = Role::create(['name' => 'Asistente', 'description' => 'Asistente']);
+        $moderador = Role::create(['name' => 'Moderador', 'description' => 'Moderador']);
+        $staff = Role::create(['name' => 'Staff', 'description' => 'Staff']);
 
 
         User::find(1)->assignRole($admin);
