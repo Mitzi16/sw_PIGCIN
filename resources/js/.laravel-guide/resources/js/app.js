@@ -1,5 +1,12 @@
 import "../css/main.css";
 
+// 1. Cargar configuración base (axios, etc)
+import './bootstrap'; 
+
+// 2. IMPORTANTE: Cargar la configuración de Echo/Reverb
+// Si esta línea no está, window.Echo nunca existirá.
+import './echo'; 
+
 import { createPinia } from "pinia";
 import { useStyleStore } from "@/stores/style.js";
 import { darkModeKey, styleKey } from "@/config.js";
@@ -21,6 +28,7 @@ createInertiaApp({
       import.meta.glob("./Pages/**/*.vue")
     ),
   setup({ el, App, props, plugin }) {
+    // Nota: Aquí no necesitas importar echo, ya se importó arriba globalmente
     return createApp({ render: () => h(App, props) })
       .use(plugin)
       .use(pinia)

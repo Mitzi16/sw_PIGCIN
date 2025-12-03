@@ -31,6 +31,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
+use App\Notifications\TestNotification;
 
 /*
 |--------------------------------------------------------------------------
@@ -152,6 +153,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     Route::get('/sign-pdf/{article}', [ArticleController::class, 'signPdf'])->name('article.signPdf');
+
+    //notifications
+    Route::get('/probar-noti', function () {
+    $user = auth()->user(); // Obtiene al usuario logueado actualmente
+    
+    // Envía la notificación
+    $user->notify(new TestNotification('Hola! Esta es una prueba en tiempo real ' . now()));
+    
+    return "Notificación enviada a " . $user->name;
+    });
 });
 
 require __DIR__ . '/auth.php';
