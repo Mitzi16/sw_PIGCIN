@@ -91,7 +91,7 @@ const menuClick = (event, item) => {
         </NavBarItemPlain>
 
         <NavBarItemPlain use-margin class="mr-auto"> 
-           <NotificationBell :user-id="$page.props.auth.user.id" />
+           <NotificationBell :user-id="$page.props.auth.user.id" :user-roles="userRoles" />
         </NavBarItemPlain>
 
       </NavBar>
