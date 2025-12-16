@@ -1,0 +1,1 @@
+import{o as a,f as r,d as i,i as n,u as o,Z as l}from"./app-CfiSnQJV.js";const u={__name:"HeadLogo",props:{title:{type:String,default:"page"}},setup(e){return(s,t)=>(a(),r(o(l),{title:e.title},{default:i(()=>t[0]||(t[0]=[n("link",{rel:"shortcut icon",type:"image/png",href:"/img/tecnm_white.png"},null,-1)])),_:1},8,["title"]))}};export{u as _};

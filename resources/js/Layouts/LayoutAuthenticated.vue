@@ -13,6 +13,7 @@ import NavBar from "@/Components/NavBar.vue";
 import NavBarItemPlain from "@/Components/NavBarItemPlain.vue";
 import AsideMenu from "@/Components/AsideMenu.vue";
 import FooterBar from "@/Components/FooterBar.vue";
+import NotificationBell from '@/Components/NotificationBell.vue';
 
 const userRoles = computed(() => {
     const roles = usePage().props.auth.user?.roles || [];
@@ -68,6 +69,7 @@ const menuClick = (event, item) => {
         :class="[
           layoutAsidePadding,
           { 'ml-60 lg:ml-0': isAsideMobileExpanded },
+          'z-40',
         ]"
         @menu-click="menuClick"
       >
@@ -80,21 +82,20 @@ const menuClick = (event, item) => {
             size="24"
           />
         </NavBarItemPlain>
+
         <NavBarItemPlain
           display="hidden lg:flex xl:hidden"
           @click.prevent="isAsideLgActive = true"
         >
           <BaseIcon :path="mdiMenu" size="24" />
         </NavBarItemPlain>
-        <NavBarItemPlain use-margin>
-          <!-- <FormControl
-            placeholder="Search (ctrl+k)"
-            ctrl-k-focus
-            transparent
-            borderless
-          /> -->
+
+        <NavBarItemPlain use-margin class="mr-auto"> 
+           <NotificationBell :user-id="$page.props.auth.user.id" :user-roles="userRoles" />
         </NavBarItemPlain>
+
       </NavBar>
+
       <AsideMenu
         :is-aside-mobile-expanded="isAsideMobileExpanded"
         :is-aside-lg-active="isAsideLgActive"
@@ -102,15 +103,16 @@ const menuClick = (event, item) => {
         @menu-click="menuClick"
         @aside-lg-close-click="isAsideLgActive = false"
       />
+      
       <slot />
+      
       <FooterBar>
         Get more with
         <a
           href="https://tailwind-vue.justboil.me/"
           target="_blank"
           class="text-blue-600"
-          >Premium version</a
-        >
+        >Premium version</a>
       </FooterBar>
     </div>
   </div>

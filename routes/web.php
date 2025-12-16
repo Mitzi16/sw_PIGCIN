@@ -25,12 +25,14 @@ use App\Http\Controllers\GenerateGafetesController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\GenerateParticipationController;
 use App\Http\Controllers\ReconocimientoController;
+use App\Http\Controllers\NotificationController;
 use App\Models\Module;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
+use App\Notifications\TestNotification;
 
 /*
 |--------------------------------------------------------------------------
@@ -152,6 +154,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     Route::get('/sign-pdf/{article}', [ArticleController::class, 'signPdf'])->name('article.signPdf');
-});
+
+    //notifications
+   
+    Route::post('/notifications/send', [NotificationController::class, 'sendNotification'])->name('notifications.send')->middleware('auth'); // Importante para saber quién envía
+    Route::get('/notifications', [NotificationController::class, 'getUserNotifications'])->middleware('auth')->name('notifications.user');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->middleware('auth')->name('notifications.markAsRead');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->middleware('auth')->name('notifications.markAllAsRead');
+}); 
 
 require __DIR__ . '/auth.php';

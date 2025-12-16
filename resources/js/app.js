@@ -1,4 +1,6 @@
 import "../css/main.css";
+import './bootstrap'; 
+import './echo';
 // import "flowbite";
 
 import { createPinia } from "pinia";
