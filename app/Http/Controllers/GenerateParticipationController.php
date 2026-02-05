@@ -97,19 +97,32 @@ class GenerateParticipationController extends Controller
             }
         }
 
-        // 4. Obtener area
-        $participant_area = 'No especificada'; 
-        if ($user->knowledge_area_id) {
-            try {
-                $area = DB::table('knowledge_areas')->find($user->knowledge_area_id);
-                if ($area) {
-                    $participant_area = $area->name; 
+        // 4. Obtener area o Programa de Estudio según el rol
+            $participant_area = 'No especificada'; 
+
+            if ($user->knowledge_area_id) {
+                try {
+                    $areaAsignada = DB::table('knowledge_areas')->find($user->knowledge_area_id);
+                    
+                    if ($areaAsignada) {
+                        // Verificamos si el rol es Editor o el Dual (Editor-Revisor)
+                        // Nota: Usamos las variables que ya definiste en el paso 3
+                        $esEditorEspecial = ($participant_role === 'EDITOR' || $participant_role === 'DUAL_EDITOR_REVISOR');
+
+                        if ($esEditorEspecial && $areaAsignada->parent_id) {
+                            // Si es Editor, intentamos extraer el Programa de Estudio (el padre)
+                            $programaEstudio = DB::table('knowledge_areas')->find($areaAsignada->parent_id);
+                            $participant_area = $programaEstudio ? $programaEstudio->name : $areaAsignada->name;
+                        } else {
+                            // Para todos los demás roles (o si no hay padre), se queda con el área actual
+                            $participant_area = $areaAsignada->name;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error al extraer area/programa: " . $e->getMessage());
                 }
-            } catch (\Exception $e) {
-                Log::error("Error area: " . $e->getMessage());
             }
-        }
-        $participant_area = mb_strtoupper($participant_area, 'UTF-8');
+            $participant_area = mb_strtoupper($participant_area, 'UTF-8');
 
         // 5. Generar sello
         $signedText = "Error al generar sello"; 

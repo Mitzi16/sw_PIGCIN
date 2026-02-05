@@ -248,7 +248,7 @@ function getParticipationText(role, area, extraInfo, font) {
             lines.push(""); // Línea de relleno
             break;
         case "ADMIN":
-            lines.push("Por su destacada e invaluable participación en la actividad de Coordinador (a) General,");
+            lines.push("Por su destacada e invaluable participación en la actividad de Editor (a),");
             lines.push(" como integrante del COMITÉ ORGANIZADOR");
             lines.push(""); // Línea de relleno
             break;
