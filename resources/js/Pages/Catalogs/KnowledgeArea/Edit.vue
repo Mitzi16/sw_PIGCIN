@@ -2,7 +2,7 @@
 import CardBox from "@/Components/CardBox.vue";
 import LayoutMain from "@/Layouts/LayoutMain.vue";
 import SectionTitleLineWithButton from "@/Components/SectionTitleLineWithButton.vue";
-import { mdiPencil, mdiTrashCan, mdiContentSave, mdiClose  } from "@mdi/js";
+import { mdiPencil, mdiTrashCan, mdiContentSave, mdiClose } from "@mdi/js";
 import BaseButton from "@/Components/BaseButton.vue";
 import BaseButtons from "@/Components/BaseButtons.vue";
 import { Link, Head } from "@inertiajs/vue3";
@@ -51,31 +51,71 @@ const deleteForm = () => {
 <template>
     <HeadLogo :title="title" />
     <LayoutMain>
-        <SectionTitleLineWithButton :icon="mdiPencil" :title="title" main>
-            <Link :href="route(`${routeName}index`)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x"
-                    viewBox="0 0 16 16">
-                    <path
-                        d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+
+        <!-- CardBox con el nuevo diseño -->
+        <CardBox isForm @submit.prevent="saveForm" class="!p-0 overflow-hidden border border-gray-200 shadow-sm rounded-xl mb-10">
+            
+            <!-- Cabecera Azul -->
+            <div class="bg-[#1e3a8a] px-6 py-5 flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
                 </svg>
-            </Link>
-        </SectionTitleLineWithButton>
+                <h1 class="text-white text-lg font-bold">Editar Datos del Área</h1>
+            </div>
 
-        <CardBox isForm @submit.prevent="saveForm">
-            <FormField label="Nombre:" :required="true" help="Nombre del área" :error="form.errors.name">
-                <FormControl v-model="form.name" placeholder="Nombre del área" />
-            </FormField>
+            <!-- Contenido del Formulario -->
+            <div class="p-8">
+                
+                <!-- Subtítulo de la sección -->
+                <div class="flex items-center gap-2 mb-8 border-b border-gray-200 pb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#1e3a8a]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
+                    </svg>
+                    <h2 class="text-xl font-bold text-[#1e3a8a]">Datos del Área</h2>
+                </div>
 
-            <FormField label="Descripción:" :required="true" help="" :error="form.errors.description">
-                <FormControl height="h-24" type="textarea" v-model="form.description" placeholder="Descripción" />
-            </FormField>
+                <div class="space-y-6">
+                    <!-- Nombre -->
+                    <FormField :error="form.errors.name" class="!mb-0">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-y-2 gap-x-8 items-start">
+                            <label class="col-span-1 font-bold text-gray-800 text-right pt-3 flex justify-end gap-1">
+                                <span class="text-red-500">*</span> Nombre:
+                            </label>
+                            <div class="col-span-3">
+                                <FormControl v-model="form.name" placeholder="Nombre del área" />
+                                <!-- Texto de ayuda visual como en el diseño original -->
+                                <p class="text-sm text-gray-500 mt-2 flex items-center gap-1">
+                                    Nombre del área 
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </p>
+                            </div>
+                        </div>
+                    </FormField>
 
+                    <!-- Descripción -->
+                    <FormField :error="form.errors.description" class="!mb-0">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-y-2 gap-x-8 items-start">
+                            <label class="col-span-1 font-bold text-gray-800 text-right pt-3 flex justify-end gap-1">
+                                <span class="text-red-500">*</span> Descripción:
+                            </label>
+                            <div class="col-span-3">
+                                <FormControl height="h-24" type="textarea" v-model="form.description" placeholder="Descripción" />
+                            </div>
+                        </div>
+                    </FormField>
+                </div>
+
+            </div>
+
+            <!-- Footer con los botones originales -->
             <template #footer>
-                <BaseButtons>
-                    <BaseButton :routeName="`${routeName}index`" :icon="mdiClose" color="white" label="Cancelar" />
-                    <BaseButton @click="saveForm" :icon="mdiContentSave" type="submit" color="success" label="Guardar"/>
-                    <BaseButton color="danger" :icon="mdiTrashCan" @click="deleteForm" label="Eliminar" />
-                </BaseButtons>
+                <div class="px-8 py-4 bg-gray-50 border-t border-gray-200 flex justify-start w-full">
+                    <BaseButtons>
+                        <BaseButton :routeName="`${routeName}index`" :icon="mdiClose" color="white" label="Cancelar" />
+                        <BaseButton @click="saveForm" :icon="mdiContentSave" type="submit" color="success" label="Guardar"/>
+                        <BaseButton color="danger" :icon="mdiTrashCan" @click="deleteForm" label="Eliminar" />
+                    </BaseButtons>
+                </div>
             </template>
         </CardBox>
     </LayoutMain>

@@ -29,6 +29,8 @@ class StoreUserRequest extends FormRequest
             'roles'             => 'nullable|array',
             'knowledge_area_id' => 'nullable|exists:knowledge_areas,id',
             'institution_id'    => 'nullable|exists:institutions,id',
+            'calls'   => ['nullable', 'array'],
+            'calls.*' => ['exists:calls,id'],
         ];
     }
     public function attributes(): array

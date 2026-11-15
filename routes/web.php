@@ -26,6 +26,7 @@ use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\GenerateParticipationController;
 use App\Http\Controllers\ReconocimientoController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AdminAssignmentController;
 use App\Models\Module;
 use App\Models\User;
 use Illuminate\Foundation\Application;
@@ -75,14 +76,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // })->name('dashboard');
 
     Route::get('/constancias/article', [ConstanciaController::class, 'constancia'])->name('constancia.name')->middleware(['auth']);
-    Route::get('/articles/{article}/certificate', [ConstanciaController::class, 'generateCertificate'])->name('article.certificate') ->middleware(['auth']);
-    Route::get('/articles/{article}/acceptance-letter-data', [ConstanciaController::class, 'getAcceptanceLetterData'])->name('article.acceptanceLetterData') ->middleware(['auth']); 
+    Route::get('/articles/{article}/certificate', [ConstanciaController::class, 'generateCertificate'])->name('article.certificate')->middleware(['auth']);
+    Route::get('/articles/{article}/acceptance-letter-data', [ConstanciaController::class, 'getAcceptanceLetterData'])->name('article.acceptanceLetterData')->middleware(['auth']);
 
     //generar gafetes
     Route::get('/generate/gafetes', [GenerateGafetesController::class, 'generate'])->name('generate.gafetes')->middleware(['auth']);
     Route::get('/generate/gafetes-data', [GenerateGafetesController::class, 'getGafetesData'])->name('generate.gafetes.data')->middleware(['auth', 'role:Admin']);
     //Route::get('/programa/CITCA2025/{user_id}', [GenerateGafetesController::class, 'download'])->name('gafete.download');
-    
+
     // Grupo de Rutas para Diapositivas
     Route::get('/diapositivas', [DiapositivaController::class, 'index'])->name('diapositivas.index')->middleware(['auth']);
     Route::get('/diapositivas/{article}/create', [DiapositivaController::class, 'create'])->name('diapositivas.create')->middleware(['auth']);
@@ -90,9 +91,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/diapositivas/{article}', [DiapositivaController::class, 'show'])->name('diapositivas.show')->middleware(['auth']);
 
     Route::get('/generate/participation', [GenerateParticipationController::class, 'generateParticipation'])->name('constancia.generate')->middleware(['auth']);
-    Route::get('/generate/participation/data',[GenerateParticipationController::class, 'getReconocimientoData'])->name('reconocimiento.data')->middleware(['auth']);
+    Route::get('/generate/participation/data', [GenerateParticipationController::class, 'getReconocimientoData'])->name('reconocimiento.data')->middleware(['auth']);
 
-     // Graphs Routes
+    // Graphs Routes
     Route::get('/graficas/article/institution', [ArticleGraphController::class, 'institution'])->name('article.graphs.institution');
     Route::get('/graficas/article/articleType', [ArticleGraphController::class, 'articleType'])->name('article.graphs.articleType');
     Route::get('/graficas/article/status', [ArticleGraphController::class, 'status'])->name('article.graphs.status');
@@ -113,6 +114,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('user', UserController::class)->parameters(['user' => 'user']);
     Route::get('reconocimientos', [ReconocimientoController::class, 'index'])->name('reconocimiento.index');
     Route::patch('reconocimientos/{user}', [ReconocimientoController::class, 'update'])->name('reconocimiento.update');
+    // Asignación de Administradores (NUEVO BLOQUE)
+    Route::middleware(['role:Super Admin'])->group(function () {
+        Route::get('/admin-assignments', [AdminAssignmentController::class, 'index'])->name('admin.assignments.index');
+        Route::get('/admin-assignments/create', [AdminAssignmentController::class, 'create'])->name('admin.assignments.create');
+        Route::post('/admin-assignments', [AdminAssignmentController::class, 'store'])->name('admin.assignments.store');
+
+        // Ruta API para traer las convocatorias del administrador
+        Route::get('/api/admin-assignments/{user}/calls', [AdminAssignmentController::class, 'getUserCalls'])->name('api.admin.assignments.calls');
+        Route::get('/admin-assignments/{user}/edit', [AdminAssignmentController::class, 'edit'])->name('admin.assignments.edit');
+        Route::put('/admin-assignments/{user}', [AdminAssignmentController::class, 'update'])->name('admin.assignments.update');
+    });
 
     // Catalogos
     Route::resource('call', CallController::class)->parameters(['call' => 'call']);
@@ -125,8 +137,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('article', ArticleController::class)->parameters(['article' => 'article']);
     Route::resource('articleTypes', ArticleTypeController::class)->names('articleType')->except(['show']);
     Route::get('articles/qualify', [ArticleController::class, 'index'])->middleware(['auth'])->name('article.qualify');
-    Route::get('articles/diffuse', [ArticleController::class, 'index'])->middleware(['auth'])->name('article.diffuse'); 
-    Route::get('/article/{article}/authors', [ArticleController::class, 'getArticleAuthors'])->middleware(['auth']) ->name('article.getAuthors'); 
+    Route::get('articles/diffuse', [ArticleController::class, 'index'])->middleware(['auth'])->name('article.diffuse');
+    Route::get('/article/{article}/authors', [ArticleController::class, 'getArticleAuthors'])->middleware(['auth'])->name('article.getAuthors');
 
     //Exports to Excel 
 
@@ -138,7 +150,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('institution/export', [InstitutionController::class, 'export'])->name('institution.export');
         Route::get('knowledgeArea/export', [KnowledgeAreaController::class, 'export'])->name('knowledgeArea.export');
         Route::get('knowledgeSubArea/export', [KnowledgeSubAreaController::class, 'export'])->name('knowledgeSubArea.export');
-
     });
 
 
@@ -156,11 +167,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/sign-pdf/{article}', [ArticleController::class, 'signPdf'])->name('article.signPdf');
 
     //notifications
-   
+
     Route::post('/notifications/send', [NotificationController::class, 'sendNotification'])->name('notifications.send')->middleware('auth'); // Importante para saber quién envía
     Route::get('/notifications', [NotificationController::class, 'getUserNotifications'])->middleware('auth')->name('notifications.user');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->middleware('auth')->name('notifications.markAsRead');
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->middleware('auth')->name('notifications.markAllAsRead');
-}); 
+});
 
 require __DIR__ . '/auth.php';

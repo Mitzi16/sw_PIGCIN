@@ -24,12 +24,20 @@ class RegisteredUserController extends Controller
     /**
      * Display the registration view.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $callId = $request->query('call_id');
+
         return Inertia::render("Auth/Register", [
             'title'         => 'Registro de Postulantes',
             'areas'         => KnowledgeArea::orderBy('name')->get(),
-            'institutions'  => Institution::orderBy('name')->select('id', 'name')->where('status', true)->get(),
+            'institutions'  => Institution::orderBy('name')
+                ->select('id', 'name')
+                ->where('status', true)
+                ->get(),
+            'call_id'       => $callId,
+            // Buscamos la convocatoria para mostrar los datos en el front
+            'selected_call' => $callId ? \App\Models\Call::find($callId) : null,
         ]);
     }
 
@@ -40,14 +48,42 @@ class RegisteredUserController extends Controller
      */
     public function store(RegisterRequest $request): RedirectResponse
     {
-        $request->validated();
-        $postulant = Role::where('name', 'Postulante')->firstOrFail();
-        $user = User::create($request->validated());
-        $user->assignRole($postulant);
+        // 1. Obtenemos los datos validados
+        $data = $request->validated();
+
+        // 2. Extraemos el rol y el call_id (no son columnas de la tabla users)
+        $roleName = $data['role'] ?? 'Postulante';
+        $callId = $data['call_id'] ?? null;
+        
+        unset($data['role'], $data['call_id']);
+
+        // 3. Buscamos el rol en la base de datos
+        $role = Role::where('name', $roleName)->firstOrFail();
+
+        // 4. Creamos el usuario
+        $user = User::create($data);
+
+        // 5. Le asignamos el rol dinámico
+        $user->assignRole($role);
+
+        // 👇 6. ASOCIAMOS A LA CONVOCATORIA SELECCIONADA 👇
+        if ($callId) {
+            $user->calls()->attach($callId);
+        }
 
         event(new Registered($user));
-
         Auth::login($user);
-        return redirect()->route("dashboard");
+
+        // 7. Redirección dependiendo del rol (asegúrate de que las rutas existan)
+        return match ($roleName) {
+            'Postulante'    => redirect()->route('profile.edit'), // Lo enviamos directo a su perfil
+            'Revisor'       => redirect()->route('profile.edit'),
+            'Editor'        => redirect()->route('profile.edit'),
+            'Moderador'     => redirect()->route('profile.edit'),
+            'Conferencista' => redirect()->route('profile.edit'),
+            'Tallerista'    => redirect()->route('profile.edit'),
+            'Staff'         => redirect()->route('profile.edit'),
+            default         => redirect()->route('dashboard'),
+        };
     }
 }

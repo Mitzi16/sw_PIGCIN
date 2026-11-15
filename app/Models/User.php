@@ -13,7 +13,6 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
-
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
@@ -29,13 +28,16 @@ class User extends Authenticatable implements MustVerifyEmail
      * @var array<int, string>
      */
     protected $table = 'users';
+
+    // 👇 AGREGA ESTA LÍNEA PARA EVITAR ERRORES CON SPATIE
+    protected $guard_name = 'web';
+
     protected $fillable = [
         'name',
         'email',
         'password',
         'knowledge_area_id',
         'institution_id',
-
         'reconocimiento_habilitado'
     ];
 
@@ -59,9 +61,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'password' => 'hashed',
     ];
 
+    /**
+     * Verifica si el usuario es Super Admin.
+     */
     public function isSuperAdmin(): bool
     {
-        return false;
+        // 👇 CORREGIDO: Ahora valida con Spatie en lugar de devolver false
+        return $this->hasRole('superadmin') || $this->hasRole('Super Admin');
     }
 
     public function getRolesArray(): Collection
@@ -84,6 +90,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return $roleName ? $this->hasRole($roleName) : false;
     }
 
+    /**
+     * Forzar el guard por defecto para Spatie
+     */
+    public function getDefaultGuardName(): string
+    {
+        return 'web';
+    }
+
     public function getPermissionArray(): Collection
     {
         return $this->getAllPermissions()->mapWithKeys(function ($permission) {
@@ -92,7 +106,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     public function canPermission(string $permissionName): bool
-    { 
+    {
         if (Permission::where('name', $permissionName)->exists()) {
             return $this->hasPermissionTo($permissionName);
         }
@@ -103,14 +117,17 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->belongsTo(KnowledgeArea::class, 'knowledge_area_id');
     }
+
     public function mainArea()
     {
         return $this->knowledgeArea?->parent ?? $this->knowledgeArea; // esto te da el área principal si el user está en subárea
     }
-   public function subArea()
-{
-    return $this->knowledgeArea?->parent ? $this->knowledgeArea : null;
-}
+
+    public function subArea()
+    {
+        return $this->knowledgeArea?->parent ? $this->knowledgeArea : null;
+    }
+
     public function institution()
     {
         return $this->belongsTo(Institution::class);
@@ -130,6 +147,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Article::class, 'postulant_id');
     }
+
     // Un revisor (usuario) puede tener muchas evaluaciones
     public function evaluations()
     {
@@ -137,8 +155,13 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     public function articleReviews()
-{
-    return $this->hasMany(ArticleReview::class, 'reviewer_id');
-}
+    {
+        return $this->hasMany(ArticleReview::class, 'reviewer_id');
+    }
 
+    // 👇 RELACIÓN PARA LAS CONVOCATORIAS
+    public function calls()
+    {
+        return $this->belongsToMany(Call::class)->withTimestamps();
+    }
 }

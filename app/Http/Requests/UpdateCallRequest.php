@@ -22,17 +22,33 @@ class UpdateCallRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'        => 'required|string|max:2555|unique:calls,title,' . $this->id,
-            'description' => 'required|max:10000',
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'url' => 'nullable|url:http,https',
+            'end_date' => 'required|date|after_or_equal:start_date',
             'status' => 'required|boolean',
-            'image_id' => 'required',
-            'file_id' => 'required',
-            'image' => 'nullable|extensions:jpeg,jpg,png|mimes:jpeg,jpg,png|max:10000',
-            'file' => 'nullable|extensions:pdf|mimes:pdf|max:10000',
-            'institution_id' => 'required|exists:institutions,id'
+            'url' => 'nullable|url',
+            'file' => 'nullable|mimes:pdf|max:10240', // Máximo 10MB
+            'image' => 'nullable|image|max:5120', // Máximo 5MB (jpeg, png, jpg, gif, svg)
+            'image_id' => 'nullable|exists:files,id',
+            'file_id' => 'nullable|exists:files,id',
+            'institution_id' => 'required|exists:institutions,id',
+
+            // REGLAS NUEVAS PARA EL CALENDARIO
+            'publication_start' => 'nullable|date',
+            'publication_end' => 'nullable|date|after_or_equal:publication_start',
+
+            'registration_start' => 'nullable|date',
+            'registration_end' => 'nullable|date|after_or_equal:registration_start',
+
+            'application_start' => 'nullable|date',
+            'application_end' => 'nullable|date|after_or_equal:application_start',
+
+            'evaluation_start' => 'nullable|date',
+            'evaluation_end' => 'nullable|date|after_or_equal:evaluation_start',
+
+            'results_start' => 'nullable|date',
+            'results_end' => 'nullable|date|after_or_equal:results_start',
         ];
     }
 

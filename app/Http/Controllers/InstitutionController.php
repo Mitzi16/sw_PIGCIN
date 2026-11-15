@@ -22,7 +22,9 @@ class InstitutionController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth');
+        // CORRECCIÓN: Excluimos 'filter' de la autenticación para que el registro público pueda usarlo
+        $this->middleware('auth')->except(['filter']);
+        
         $this->source = 'Catalogs/Institution/';
         $this->model = new Institution();
         $this->routeName = 'institution.';
@@ -32,6 +34,7 @@ class InstitutionController extends Controller
         $this->middleware("permission:{$this->module}.update")->only(['update', 'edit']);
         $this->middleware("permission:{$this->module}.delete")->only(['destroy']);
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -141,10 +144,22 @@ class InstitutionController extends Controller
         return redirect()->route("{$this->routeName}index")->with('success', 'Institución eliminada con éxito');
     }
 
-
-
     public function export()
     {
         return Excel::download(new InstitutionExport(), 'institutions.xlsx');
+    }
+
+    public function filter(Request $request)
+    {
+        $search = $request->input('search', '');
+
+        // CORRECCIÓN: Devolvemos la colección directamente. Laravel la convierte a JSON automáticamente.
+        return Institution::query()
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%");
+            })
+            ->orderBy('name')
+            ->limit(10)
+            ->get(['id', 'name']);
     }
 }

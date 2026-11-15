@@ -8,6 +8,10 @@ import DailySchedule from "@/Components/CitcaInfo/DailySchedule.vue";
 import WorkshopsList from "@/Components/CitcaInfo/WorkshopsList.vue";
 import ConferencesList from "@/Components/CitcaInfo/ConferencesList.vue"; 
 
+// Importamos un icono para el banner
+import { mdiCalendarStar } from "@mdi/js";
+import BaseIcon from "@/Components/BaseIcon.vue";
+
 const props = defineProps({
     title: {
         type: String,
@@ -28,18 +32,45 @@ const handleTabChange = (newTab) => {
   <HeadLogo :title="title" />
 
   <LayoutWelcome>
-    <main class="flex-grow container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Sección principal con fondo blanco y decoraciones -->
+    <main class="relative flex-grow bg-white overflow-hidden py-12 min-h-screen">
         
-        <section class="flex flex-col gap-6">
+        <!-- Decoraciones geométricas de fondo (igual que en las otras secciones) -->
+        <div class="absolute top-0 left-0 w-48 h-24 bg-[#1B396A] hidden md:block opacity-10" style="clip-path: polygon(0 0, 100% 0, 70% 100%, 0% 100%);"></div>
+        <div class="absolute bottom-0 right-0 w-80 h-40 bg-[#1B396A] hidden md:block opacity-10" style="clip-path: polygon(40% 0, 100% 0, 100% 100%, 0% 100%);"></div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
             
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                
-                <div class="p-6 border-b border-gray-100 dark:border-gray-700">
-                    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Consulta más sobre CITCA-2025</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mt-1">Descubre todo lo que tenemos preparado para ti</p>
+            <!-- 1. BANNER SUPERIOR AZUL (Rediseñado) -->
+            <div class="relative bg-[#1B396A] rounded-2xl overflow-hidden shadow-lg mb-8 flex flex-col md:flex-row justify-between items-center p-6 md:p-10">
+                <!-- Patrón de fondo del banner -->
+                <div class="absolute inset-0 opacity-10 pointer-events-none">
+                    <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                        <circle cx="90" cy="50" r="40" fill="white" />
+                        <circle cx="80" cy="20" r="20" fill="white" />
+                    </svg>
                 </div>
 
-                <div class="bg-gray-50 dark:bg-gray-900/50 px-6 pt-4">
+                <div class="relative z-10 flex items-center gap-4">
+                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10 hidden sm:block">
+                        <BaseIcon :path="mdiCalendarStar" size="32" class="text-white" />
+                    </div>
+                    <div>
+                        <h1 class="text-white text-2xl md:text-4xl font-extrabold tracking-tight mb-2">
+                            Consulta más sobre CITCA-2025
+                        </h1>
+                        <p class="text-blue-100 text-sm md:text-base">
+                            Descubre todo lo que tenemos preparado para ti. Explora el programa, conferencias y talleres.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. NAVEGACIÓN DE PESTAÑAS (Estilo flotante) -->
+            <div class="relative z-20 -mt-12 mb-8 flex justify-center">
+                <!-- Envolvemos el componente TabsNavigation en un contenedor con sombra y bordes redondeados -->
+                <div class="bg-white rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 p-2 inline-flex max-w-full overflow-x-auto">
+                    <!-- Nota: Debes asegurarte de que los botones dentro de TabsNavigation tengan estilos de píldora (rounded-full) -->
                     <TabsNavigation 
                         :active-tab="currentTab" 
                         @change-tab="handleTabChange" 
@@ -47,9 +78,10 @@ const handleTabChange = (newTab) => {
                 </div>
             </div>
 
+            <!-- 3. CONTENIDO DINÁMICO -->
             <div class="min-h-[400px]">
                 <Transition name="fade" mode="out-in">
-                    <div :key="currentTab">
+                    <div :key="currentTab" class="w-full">
                         
                         <DailySchedule 
                             v-if="currentTab === 'programa'" 
@@ -70,12 +102,13 @@ const handleTabChange = (newTab) => {
                 </Transition>
             </div>
 
-        </section>
+        </div>
     </main>
   </LayoutWelcome>
 </template>
 
 <style scoped>
+/* Transición suave entre pestañas */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -84,6 +117,6 @@ const handleTabChange = (newTab) => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(10px); 
+  transform: translateY(15px); 
 }
 </style>

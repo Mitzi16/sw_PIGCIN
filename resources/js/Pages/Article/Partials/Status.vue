@@ -1,97 +1,182 @@
 <script setup>
 import FormField from "@/Components/FormField.vue";
 import FormControl from "@/Components/FormControl.vue";
-import { computed, watch, ref, onMounted, inject } from "vue";
-import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
+import BaseButton from "@/Components/BaseButton.vue";
+import {
+  mdiAccountMultiple,
+  mdiFileDocumentOutline,
+  mdiCertificateOutline,
+} from "@mdi/js";
+import { computed, inject } from "vue";
+// Ya no necesitamos CardBoxComponentEmpty
+// import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
 
-const props = inject('props');
+const props = inject("props");
+const getRole = inject("getRole", () => false);
 
-// --- INICIO DE LA MODIFICACIÓN ---
+const emit = defineEmits(["changeSection"]);
 
-// Creamos una propiedad computada para filtrar los estatus
-// Esto solo incluirá los estatus con id <= 5
 const filteredStatuses = computed(() => {
-    if (!props.articleStatuses) {
-        return [];
-    }
-    return props.articleStatuses.filter(item => item.id <= 5);
+  if (!props.articleStatuses) return [];
+  return props.articleStatuses.filter((item) => item.id <= 5);
 });
 
-// --- FIN DE LA MODIFICACIÓN ---
+// 👇 NUEVA LÓGICA: Verificamos si hay algún comentario real
+const hasComments = computed(() => {
+    const comment = props.article?.comment;
+    const commentForEditor = props.article?.comment_for_editor;
+    
+    // Retorna true si al menos uno de los dos tiene texto
+    return (comment && comment.trim() !== '') || (commentForEditor && commentForEditor.trim() !== '');
+});
 
 const dateToLocal = (date) => {
-    if (!date) return "";
-    const [fecha, hora] = date.split(" ");
-    if (!fecha || !hora) return "fecha inválida";
-    const [day, month, year] = fecha.split("-");
-    const [hour, minute] = hora.split(":");
-    const d = new Date(year, month - 1, day, hour, minute);
-    if (isNaN(d.getTime())) {
-        return "fecha inválida";
-    }
-    return `${day}-${month}-${year} ${hour}:${minute}`;
+  if (!date) return "";
+  const [fecha, hora] = date.split(" ");
+  if (!fecha || !hora) return "fecha inválida";
+  const [day, month, year] = fecha.split("-");
+  const [hour, minute] = hora.split(":");
+  const d = new Date(year, month - 1, day, hour, minute);
+  if (isNaN(d.getTime())) return "fecha inválida";
+  return `${day}-${month}-${year} ${hour}:${minute}`;
 };
-
 </script>
 
 <template>
-    <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">Pasos del proceso</h2>
-    <div class="mt-5 px-5">
-        <ol class="relative text-gray-500 border-s border-gray-200 dark:border-gray-700 dark:text-gray-400">
-            
-            <li v-for="item in filteredStatuses" :key="item.id" class="mb-10 ms-6">
-            <span v-if="props.article.article_status_id === item.id"
-                    class="absolute flex items-center justify-center w-8 h-8 bg-green-200 rounded-full -start-4 ring-4 ring-white dark:ring-gray-900 dark:bg-green-900">
-                    <svg class="w-3.5 h-3.5 text-green-500 dark:text-green-400" aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 12">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M1 5.917 5.724 10.5 15 1.5" />
-                    </svg>
-                </span>
-                <span v-else
-                    class="absolute flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full -start-4 ring-4 ring-white dark:ring-gray-900 dark:bg-gray-700">
-                    <svg class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 16">
-                        <path
-                            d="M18 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2ZM6.5 3a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3.014 13.021l.157-.625A3.427 3.427 0 0 1 6.5 9.571a3.426 3.426 0 0 1 3.322 2.805l.159.622-6.967.023ZM16 12h-3a1 1 0 0 1 0-2h3a1 1 0 0 1 0 2Zm0-3h-3a1 1 0 1 1 0-2h3a1 1 0 1 1 0 2Zm0-3h-3a1 1 0 1 1 0-2h3a1 1 0 1 1 0 2Z" />
-                    </svg>
-                </span>
-                <div class="justify-between flex space-x-1">
-                    <h3 class="font-medium text-black dark:text-white leading-tight">
-                        {{ item.name }}
-                    </h3>
+  <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">
+    Proceso editorial
+  </h2>
 
-                </div>
-                <span v-if="props.article.article_status_id === item.id" class="text-xs">
+  <!-- STEPPER HORIZONTAL -->
+  <div class="relative flex items-start justify-between w-full mb-8">
+    <div class="absolute top-5 left-0 right-0 h-[2px] bg-gray-200 dark:bg-gray-700 -z-10"></div>
 
-                    Ultima fecha: {{ dateToLocal(props.article.updated_at) }}
-                </span>
-                <p class="text-sm">{{ item.description }}</p>
-            </li>
-        </ol>
+    <div
+      v-for="item in filteredStatuses"
+      :key="item.id"
+      class="flex flex-col items-center relative flex-1"
+    >
+      <div
+        class="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-slate-800 transition-all duration-300 z-10"
+        :class="{
+          'border-2 border-green-200 text-green-500': item.id < props.article.article_status_id,
+          'border-[3px] border-blue-600 text-blue-600 font-bold text-lg': item.id === props.article.article_status_id,
+          'border-2 border-transparent text-gray-400 font-bold text-lg': item.id > props.article.article_status_id,
+        }"
+      >
+        <svg
+          v-if="item.id < props.article.article_status_id"
+          class="w-5 h-5 text-green-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="3"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        <span v-else>{{ item.id }}</span>
+      </div>
+
+      <div
+        class="mt-3 text-sm font-semibold text-center w-32 leading-tight px-1"
+        :class="{
+          'text-gray-800 dark:text-gray-200': item.id <= props.article.article_status_id,
+          'text-gray-400 dark:text-gray-500': item.id > props.article.article_status_id,
+        }"
+      >
+        {{ item.name }}
+      </div>
+
+      <div
+        v-if="item.id === props.article.article_status_id"
+        class="text-xs text-blue-500 mt-1 font-medium"
+      >
+        {{ dateToLocal(props.article.updated_at) }}
+      </div>
     </div>
+  </div>
+
+  <!-- BARRA DE ACCIONES -->
+  <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <div class="flex items-center gap-3 text-gray-500">
+        <span class="bg-[#e0f2fe] text-[#0369a1] px-4 py-1.5 rounded-full text-sm font-semibold">
+          Acciones
+        </span>
+        <span class="text-sm text-gray-400">
+          Asignar revisores y evaluación
+        </span>
+      </div>
+      
+      <div class="flex flex-wrap gap-2 justify-center md:justify-end">
+        <BaseButton
+          v-if="getRole(['Editor', 'Admin', 'Admin-Revista', 'Super Admin'])"
+          color="info"
+          :icon="mdiAccountMultiple"
+          label="Asignar Revisores"
+          @click="emit('changeSection', 'assigns')"
+        />
+
+        <BaseButton
+          v-if="getRole(['Revisor', 'Editor', 'Admin', 'Admin-Revista', 'Super Admin'])"
+          color="white"
+          :icon="mdiFileDocumentOutline"
+          label="Evaluación"
+          class="border border-gray-300 text-gray-700"
+          @click="emit('changeSection', 'evaluation')"
+        />
+
+        <BaseButton
+          v-if="[3, 4].includes(props.article.article_status_id)"
+          color="info"
+          :icon="mdiCertificateOutline"
+          label="Reconocimientos"
+          class="bg-[#15396F] hover:bg-[#0f2a54] text-white border-none"
+          @click="emit('changeSection', 'recognitions')"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 👇 COMENTARIOS DEL EDITOR (Solo si hay texto) 👇 -->
+  <!-- ========================================== -->
+  <div v-if="hasComments">
+    <hr class="my-6 border-gray-200 dark:border-gray-700" />
 
     <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
-        Comentarios del editor
+      Comentarios del editor
     </h2>
 
-    <ul v-if="props.article.article_status.is_evaluation" role="list"
-        class="max-w-sm divide-y divide-gray-200 dark:divide-gray-700">
-        <li class="py-3 sm:py-4">
-            <div class="flex items-center space-x-3 rtl:space-x-reverse mb-2">
-                <div class="flex-shrink-0">
-                    <img class="w-8 h-8 rounded-full" :src="props.article?.editor?.file?.path ?? '/img/user.jpg'"
-                        alt="Neil image">
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-gray-900 truncate dark:text-white">
-                        Editor en Jefe
-                    </p>
-                    </div>
-            </div>
-            <FormControl disabled type="textarea" height="h-24" v-model="props.article.comment"
-                placeholder="Sin comentarios..." />
-        </li>
+    <ul
+      v-if="props.article.article_status.is_evaluation"
+      role="list"
+      class="max-w-sm divide-y divide-gray-200 dark:divide-gray-700"
+    >
+      <li class="py-3 sm:py-4">
+        <div class="flex items-center space-x-3 rtl:space-x-reverse mb-2">
+          <div class="flex-shrink-0">
+            <img
+              class="w-8 h-8 rounded-full"
+              :src="props.article?.editor?.file?.path ?? '/img/user.jpg'"
+              alt="Editor image"
+            />
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-gray-900 truncate dark:text-white">
+              Editor en Jefe
+            </p>
+          </div>
+        </div>
+        <FormControl
+          disabled
+          type="textarea"
+          height="h-24"
+          v-model="props.article.comment"
+          placeholder="Sin comentarios..."
+        />
+      </li>
     </ul>
-    <CardBoxComponentEmpty v-else />
+  </div>
 </template>

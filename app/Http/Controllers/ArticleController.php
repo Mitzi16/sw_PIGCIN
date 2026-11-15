@@ -66,139 +66,137 @@ class ArticleController extends Controller
      */
     public function index(Request $request): Response
     {
-    $direction = $request->direction ?? 'desc';
-    $order = $request->order ?? 'created_at';
-    $query = $this->model::query()->with(['articleReviews', 'articleType', 'knowledgeArea.parent']);
-    $user = User::findOrFail(Auth::id());
+        $direction = $request->direction ?? 'desc';
+        $order = $request->order ?? 'created_at';
+        $query = $this->model::query()->with(['articleReviews', 'articleType', 'knowledgeArea.parent']);
+        $user = User::findOrFail(Auth::id());
 
-    $currentRouteName = $request->route()->getName();
-    $title = 'Gestión de Artículos';
+        $currentRouteName = $request->route()->getName();
+        $title = 'Gestión de Artículos';
 
-    // Lógica de permisos para usuarios que NO tienen acceso total (Revisores/Editores/Postulantes)
-    if (! $user->canPermission('article.all')) {
-        if ($currentRouteName === 'article.qualify') {
-            $title = 'Artículos para Evaluar';
-            // Filtra para mostrar SOLO los artículos donde el usuario es Revisor.
-            $query->whereHas('articleReviews', function ($query) {
-                $query->where('reviewer_id', Auth::id());
-            });
+        // Lógica de permisos para usuarios que NO tienen acceso total (Revisores/Editores/Postulantes)
+        if (! $user->canPermission('article.all')) {
+            if ($currentRouteName === 'article.qualify') {
+                $title = 'Artículos para Evaluar';
+                // Filtra para mostrar SOLO los artículos donde el usuario es Revisor.
+                $query->whereHas('articleReviews', function ($query) {
+                    $query->where('reviewer_id', Auth::id());
+                });
+            } elseif ($currentRouteName === 'article.diffuse') {
+                $title = 'Artículos para Distribuir';
+                // Filtra para mostrar SOLO los artículos donde el usuario es Editor 
+                $query->where(function ($query) {
+                    $query->where('editor_id', Auth::id());
+                    //->orWhere('postulant_id', Auth::id());
+                });
+                $query->whereDoesntHave('articleReviews', function ($subQuery) {
+                    $subQuery->where('reviewer_id', Auth::id());
+                });
+            } else {
+                // Comportamiento original si se accede desde article.index (la lista mezclada para usuarios normales).
+                $query->where(function ($query) {
+                    $query->where('editor_id', Auth::id())
+                        ->orWhere('postulant_id', Auth::id())
+                        ->orWhereHas('articleReviews', function ($query) {
+                            $query->where('reviewer_id', Auth::id());
+                        });
+                });
+            }
+        }
 
-        } elseif ($currentRouteName === 'article.diffuse') {
-            $title = 'Artículos para Distribuir';
-            // Filtra para mostrar SOLO los artículos donde el usuario es Editor 
-            $query->where(function ($query) {
-                $query->where('editor_id', Auth::id());
-                      //->orWhere('postulant_id', Auth::id());
-            });
-            $query->whereDoesntHave('articleReviews', function ($subQuery) {
-                $subQuery->where('reviewer_id', Auth::id());
-            });
+        // --- SE ELIMINÓ EL BLOQUE DE FILTRADO POR ROL (Admin/Admin-Revista) AQUÍ ---
+        // Ahora estos roles pasan directamente a la búsqueda sin restricciones de tipo de artículo.
 
+        $query->when($request->input('search'), function ($query, $search) {
+            if ($search != '') {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('article_folio', 'LIKE', '%' . $search . '%')
+                        ->orWhere('title', 'LIKE', '%' . $search . '%')
+                        ->orWhere('abstract', 'LIKE', '%' . $search . '%')
+                        ->orWhere('key_works', 'LIKE', '%' . $search . '%')
+                        ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
+                            $subQuery->where('name', 'LIKE', '%' . $search . '%');
+                        })
+                        ->orWhereHas('articleStatus', function ($subQuery) use ($search) {
+                            $subQuery->where('name', 'LIKE', '%' . $search . '%');
+                        })
+                        ->orWhereHas('articleType', function ($subQuery) use ($search) {
+                            $subQuery->where('name', 'LIKE', '%' . $search . '%');
+                        });
+                });
+            }
+        });
+
+        // IMPORTANT: select articles.* antes de hacer joins (evita ambigüedad).
+        $query->select('articles.*');
+
+        if ($order === 'area') {
+            // orden por el nombre del área seleccionada directamente
+            $query = $query->join('knowledge_areas', 'knowledge_areas.id', '=', 'articles.knowledge_area_id')
+                ->orderBy('knowledge_areas.name', $direction);
+        } elseif ($order === 'program') {
+            // orden por Programa de Estudio (padre si existe, sino el mismo)
+            $query = $query
+                ->leftJoin('knowledge_areas as ka', 'ka.id', '=', 'articles.knowledge_area_id')
+                ->leftJoin('knowledge_areas as pka', 'pka.id', '=', 'ka.parent_id')
+                ->orderByRaw("COALESCE(pka.name, ka.name) {$direction}");
+        } elseif ($order === 'status') {
+            $query = $query->join('article_statuses', 'article_statuses.id', '=', 'articles.article_status_id')
+                ->orderBy('article_statuses.name', $direction);
+        } elseif ($order === 'type') {
+            $query = $query->join('article_types', 'article_types.id', '=', 'articles.article_type_id')
+                ->orderBy('article_types.name', $direction);
+        } elseif ($order === 'folio') {
+            $query = $query->orderBy('article_folio', $direction);
         } else {
-            // Comportamiento original si se accede desde article.index (la lista mezclada para usuarios normales).
-            $query->where(function ($query) {
-                $query->where('editor_id', Auth::id())
-                      ->orWhere('postulant_id', Auth::id())
-                      ->orWhereHas('articleReviews', function ($query) {
-                          $query->where('reviewer_id', Auth::id());
-                      });
-            });
+            // Por seguridad: solo permitir ordenar por columnas válidas en articles
+            $allowed = ['created_at', 'updated_at', 'title', 'article_folio'];
+            if (in_array($order, $allowed)) {
+                $query = $query->orderBy($order, $direction);
+            } else {
+                // fallback seguro
+                $query = $query->orderBy('created_at', $direction);
+            }
         }
-    }
-
-    // --- SE ELIMINÓ EL BLOQUE DE FILTRADO POR ROL (Admin/Admin-Revista) AQUÍ ---
-    // Ahora estos roles pasan directamente a la búsqueda sin restricciones de tipo de artículo.
-
-    $query->when($request->input('search'), function ($query, $search) {
-        if ($search != '') {
-            $query->where(function ($subQuery) use ($search) {
-                $subQuery->where('article_folio', 'LIKE', '%' . $search . '%')
-                    ->orWhere('title', 'LIKE', '%' . $search . '%')
-                    ->orWhere('abstract', 'LIKE', '%' . $search . '%')
-                    ->orWhere('key_works', 'LIKE', '%' . $search . '%')
-                    ->orWhereHas('knowledgeArea', function ($subQuery) use ($search) {
-                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                    })
-                    ->orWhereHas('articleStatus', function ($subQuery) use ($search) {
-                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                    })
-                    ->orWhereHas('articleType', function ($subQuery) use ($search) {
-                        $subQuery->where('name', 'LIKE', '%' . $search . '%');
-                    });
-            });
-        }
-    });
-
-    // IMPORTANT: select articles.* antes de hacer joins (evita ambigüedad).
-    $query->select('articles.*');
-
-    if ($order === 'area') {
-        // orden por el nombre del área seleccionada directamente
-        $query = $query->join('knowledge_areas', 'knowledge_areas.id', '=', 'articles.knowledge_area_id')
-            ->orderBy('knowledge_areas.name', $direction);
-    } elseif ($order === 'program') {
-        // orden por Programa de Estudio (padre si existe, sino el mismo)
-        $query = $query
-            ->leftJoin('knowledge_areas as ka', 'ka.id', '=', 'articles.knowledge_area_id')
-            ->leftJoin('knowledge_areas as pka', 'pka.id', '=', 'ka.parent_id')
-            ->orderByRaw("COALESCE(pka.name, ka.name) {$direction}");
-    } elseif ($order === 'status') {
-        $query = $query->join('article_statuses', 'article_statuses.id', '=', 'articles.article_status_id')
-            ->orderBy('article_statuses.name', $direction);
-    } elseif ($order === 'type') {
-        $query = $query->join('article_types', 'article_types.id', '=', 'articles.article_type_id')
-            ->orderBy('article_types.name', $direction);
-    } elseif ($order === 'folio') {
-        $query = $query->orderBy('article_folio', $direction);
-    } else {
-        // Por seguridad: solo permitir ordenar por columnas válidas en articles
-        $allowed = ['created_at', 'updated_at', 'title', 'article_folio']; 
-        if (in_array($order, $allowed)) {
-            $query = $query->orderBy($order, $direction);
-        } else {
-            // fallback seguro
-            $query = $query->orderBy('created_at', $direction);
-        }
-    }
 
 
-    $records = $query->paginate(8)->withQueryString()->through(
-        fn($article) => [
-            'id' => $article->id,
-            'folio' => $article->article_folio,
-            'title' => $article->title,
-            'article_type' => [
-                'id' => $article->articleType?->id,
-                'name' => $article->articleType?->name,
-            ],
-            'abstract' => $article->abstract,
-            // aquí entregamos programa y área prioritaria
-            'program' => $article->knowledgeArea
-                ? ($article->knowledgeArea->parent ? $article->knowledgeArea->parent->name : $article->knowledgeArea->name)
-                : null,
-            'priority_area' => $article->knowledgeArea
-                ? ($article->knowledgeArea->parent ? $article->knowledgeArea->name : null)
-                : null,
-            'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
-            'status' => $article->articleStatus ?? null,
-            'paymentVoucherStatus' => $article?->paymentVoucher?->paymentVoucherStatus ?? null,
-            'isPostulant' => $article->postulant_id === Auth::id() ? true : false,
-            'statusReviewer' => $article->articleReviews->filter(function ($review) {
-                return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
-            })->isNotEmpty(),
-        ]
-    );
+        $records = $query->paginate(8)->withQueryString()->through(
+            fn($article) => [
+                'id' => $article->id,
+                'folio' => $article->article_folio,
+                'title' => $article->title,
+                'article_type' => [
+                    'id' => $article->articleType?->id,
+                    'name' => $article->articleType?->name,
+                ],
+                'abstract' => $article->abstract,
+                // aquí entregamos programa y área prioritaria
+                'program' => $article->knowledgeArea
+                    ? ($article->knowledgeArea->parent ? $article->knowledgeArea->parent->name : $article->knowledgeArea->name)
+                    : null,
+                'priority_area' => $article->knowledgeArea
+                    ? ($article->knowledgeArea->parent ? $article->knowledgeArea->name : null)
+                    : null,
+                'area' => $article->knowledgeArea ? $article->knowledgeArea->name : null,
+                'status' => $article->articleStatus ?? null,
+                'paymentVoucherStatus' => $article?->paymentVoucher?->paymentVoucherStatus ?? null,
+                'isPostulant' => $article->postulant_id === Auth::id() ? true : false,
+                'statusReviewer' => $article->articleReviews->filter(function ($review) {
+                    return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
+                })->isNotEmpty(),
+            ]
+        );
 
-    return Inertia::render("{$this->source}Index", [
-        'articles' => $records,
-        'title' => $title,
-        'isReviewer' => User::find(Auth::id())->getRole(null, 'Revisor'),
-        'routeName' => $this->routeName,
-        'currentRouteName' => $currentRouteName,
-        'loadingResults' => false,
-        'search' => $request->search ?? '',
-        'direction' => $direction,
-    ]);
+        return Inertia::render("{$this->source}Index", [
+            'articles' => $records,
+            'title' => $title,
+            'isReviewer' => User::find(Auth::id())->getRole(null, 'Revisor'),
+            'routeName' => $this->routeName,
+            'currentRouteName' => $currentRouteName,
+            'loadingResults' => false,
+            'search' => $request->search ?? '',
+            'direction' => $direction,
+        ]);
     }
 
     /**
@@ -211,10 +209,8 @@ class ArticleController extends Controller
             'routeName' => $this->routeName,
             'callId' => $request->input('id'),
             'areas' => KnowledgeArea::orderBy('name')->get(),
-            'calls' => Call::orderBy('created_at', 'desc')
-                ->where('status', true)
-                ->get()
-                ->map->transform(), // Transforma cada uno de los resultados
+            // DEJALO ASÍ:
+            'calls' => Call::orderBy('created_at', 'desc')->where('status', true)->get(),
             'articleTypes' => ArticleType::select('id', 'name')->get(),
         ]);
     }
@@ -224,15 +220,37 @@ class ArticleController extends Controller
      */
     public function store(StoreArticleRequest $request)
     {
+        // 1. Validar TODOS los campos que vienen del formulario
+        $fields = $request->validate([
+            'title' => 'required|string|max:255',
+            'abstract' => 'required|string',
+            'key_works' => 'required|string',
+            'knowledge_area_id' => 'required|exists:knowledge_areas,id',
+            'article_type_id' => 'required|exists:article_types,id',
+            'call_id' => 'required|exists:calls,id',
+            'selectedArea' => 'nullable', // Si es obligatorio, cámbialo a required
 
-        $fields = $request->validated();
-        $fields['article_folio'] = $this->articleService->getUniqueCode(); // se inicia el proceso
+            'file' => 'required|mimes:pdf|max:102400', // 100MB
+            'authors' => 'required|array|min:1',
+            'authors.*.name' => 'required|string',
+            'authors.*.surname' => 'required|string',
+            'authors.*.email' => 'required|email',
+            'authors.*.institution_id' => 'required|exists:institutions,id', // Obligamos a que la institución exista
+        ]);
+
+
+        // 2. Agregar campos extra
+        $fields['article_folio'] = $this->articleService->getUniqueCode();
         $fields['postulant_id'] = Auth::id();
+        $fields['article_status_id'] = 1; // Asegúrate de guardar el estado inicial
+
+        // 3. Crear el artículo
         $article = Article::create($fields);
 
-        // nombre del archivo
-        $nombre_archivo = $article->article_folio . '-' . $request->selectedArea . '-' . $article->knowledge_area_id . '-' . $article->article_type_id . '.pdf';
+        // 4. Nombre del archivo
+        $nombre_archivo = $article->article_folio . '-' . ($request->selectedArea ?? 'area') . '-' . $article->knowledge_area_id . '-' . $article->article_type_id . '.pdf';
 
+        // 5. Guardar archivos y autores
         $this->storeFile($request, $article, $nombre_archivo);
         $this->storeAuthors($request, $article->id);
         $this->sendEmail($article->id, $article->article_folio);
@@ -245,73 +263,73 @@ class ArticleController extends Controller
      */
     public function show(Article $article)
     {
-    $article->load(
-        'knowledgeArea',
-        'articleStatus',
-        'articleType',
-        'authors.institution:id,name',
-        //'file',
-        'editor:id,name,email',
-        'editor.file',
-        'articleReviews.reviewer:id,name,email',
-        'articleReviews.reviewer.file',
-        'articleReviews.articleStatus',
-        'articleReviews.criteria:id',
-        'call',
-        'paymentVoucher'
-    );
+        $article->load(
+            'knowledgeArea',
+            'articleStatus',
+            'articleType',
+            'authors.institution:id,name',
+            //'file',
+            'editor:id,name,email',
+            'editor.file',
+            'articleReviews.reviewer:id,name,email',
+            'articleReviews.reviewer.file',
+            'articleReviews.articleStatus',
+            'articleReviews.criteria:id',
+            'call',
+            'paymentVoucher'
+        );
 
-    $institutions = $article->authors->map(function ($author) {
-        return [
-            'id' => $author->institution?->id,
-            'name' => $author->institution?->name,
-        ];
-    })->unique('id')->values();
-
-    // Editores (rol ID = 2)
-    $editors = User::with('knowledgeArea.parent')
-        ->role(2)
-        ->get()
-        ->map(function ($u) {
+        $institutions = $article->authors->map(function ($author) {
             return [
-                'id' => $u->id,
-                'name' => $u->name,
-                'area' => $u->mainArea()?->name,
-                'subarea' => $u->subArea()?->name,
+                'id' => $author->institution?->id,
+                'name' => $author->institution?->name,
             ];
-        });
+        })->unique('id')->values();
 
-    $assignedEditorId = $article->editor_id;
+        // Editores (rol ID = 2)
+        $editors = User::with('knowledgeArea.parent')
+            ->role(2)
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'area' => $u->mainArea()?->name,
+                    'subarea' => $u->subArea()?->name,
+                ];
+            });
 
-    $reviewersQuery = User::with('knowledgeArea.parent')
-        ->role(3) // Rol ID 3
-        ->orderBy('name');
+        $assignedEditorId = $article->editor_id;
 
-    if ($assignedEditorId) {
-        $reviewersQuery->where('id', '!=', $assignedEditorId);
-    }
+        $reviewersQuery = User::with('knowledgeArea.parent')
+            ->role(3) // Rol ID 3
+            ->orderBy('name');
 
-    $reviewers = $reviewersQuery->withCount('articleReviews')
-        ->get()
-        ->map(function ($u) {
-            return [
-                'id' => $u->id,
-                'name' => $u->name,
-                'area' => $u->mainArea()?->name,
-                'subarea' => $u->subArea()?->name,
-                'assigned_count' => $u->article_reviews_count,
-            ];
-        });
-    
-    $modifiedFile = $article->files()
+        if ($assignedEditorId) {
+            $reviewersQuery->where('id', '!=', $assignedEditorId);
+        }
+
+        $reviewers = $reviewersQuery->withCount('articleReviews')
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'area' => $u->mainArea()?->name,
+                    'subarea' => $u->subArea()?->name,
+                    'assigned_count' => $u->article_reviews_count,
+                ];
+            });
+
+        $modifiedFile = $article->files()
             ->where('name', 'LIKE', '%_MOD.pdf')
             ->latest() // Obtiene el más reciente en caso de que haya varios
             ->first();
-    
-    // 2. Si NO existe un archivo modificado, buscamos el original.
+
+        // 2. Si NO existe un archivo modificado, buscamos el original.
         $fileToShow = $modifiedFile; // Asignamos el modificado por defecto
 
-    if (! $fileToShow) {
+        if (! $fileToShow) {
             // Buscamos el primer archivo que NO sea _MOD (el original)
             $fileToShow = $article->files()
                 ->where('name', 'NOT LIKE', '%_MOD.pdf')
@@ -328,88 +346,88 @@ class ArticleController extends Controller
             $fileName = $fileToShow->name;
         }
 
-    return Inertia::render("{$this->source}Show", [
-        'title' => 'Visualizar Artículo',
-        'article' => $article,
-        'filePath' => $filePath,
-        'fileName' => $fileName,
-        'articleStatuses' => ArticleStatus::orderBy('id')->get(),
-        'editors' => $editors,
-        'reviewers' => $reviewers, // Se envía la lista ya filtrada
-        'criteria' => Criterion::orderBy('id')->get(),
-        'user' => User::with('roles')->find(Auth::id()),
-        'areas' => KnowledgeArea::orderBy('name')->get(),
-        'institutions' => $institutions,
-        'statusReviewer' => $article->articleReviews->filter(function ($review) {
-            return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
-        })->isNotEmpty(),
-        'routeName' => $this->routeName,
-    ]);
+        return Inertia::render("{$this->source}Show", [
+            'title' => 'Visualizar Artículo',
+            'article' => $article,
+            'filePath' => $filePath,
+            'fileName' => $fileName,
+            'articleStatuses' => ArticleStatus::orderBy('id')->get(),
+            'editors' => $editors,
+            'reviewers' => $reviewers, // Se envía la lista ya filtrada
+            'criteria' => Criterion::orderBy('id')->get(),
+            'user' => User::with('roles')->find(Auth::id()),
+            'areas' => KnowledgeArea::orderBy('name')->get(),
+            'institutions' => $institutions,
+            'statusReviewer' => $article->articleReviews->filter(function ($review) {
+                return $review->reviewer_id === Auth::id() && $review->article_status_id !== null;
+            })->isNotEmpty(),
+            'routeName' => $this->routeName,
+        ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
     public function edit(Article $article)
-{
-    $user = User::with('roles')->find(Auth::id());
+    {
+        $user = User::with('roles')->find(Auth::id());
 
-    $institutions = $article->authors->map(function ($author) {
-        return [
-            'id' => $author->institution?->id,
-            'name' => $author->institution?->name,
-        ];
-    })->unique('id')->values();
-
-    $editors = User::role('Editor')
-        ->orderBy('name')
-        ->get()
-        ->map(function($u) {
+        $institutions = $article->authors->map(function ($author) {
             return [
-                'id' => $u->id,
-                'name' => $u->name,
+                'id' => $author->institution?->id,
+                'name' => $author->institution?->name,
             ];
-        });
+        })->unique('id')->values();
 
-    $assignedEditorId = $article->editor_id;
+        $editors = User::role('Editor')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                ];
+            });
 
-    $reviewersQuery = User::with('knowledgeArea.parent')
-        ->role(3) 
-        ->orderBy('name'); // <- aquí se ordena alfabéticamente
+        $assignedEditorId = $article->editor_id;
 
-    if ($assignedEditorId) {
-        $reviewersQuery->where('id', '!=', $assignedEditorId);
-    }
+        $reviewersQuery = User::with('knowledgeArea.parent')
+            ->role(3)
+            ->orderBy('name'); // <- aquí se ordena alfabéticamente
 
-    $reviewers = $reviewersQuery->get()
-        ->map(function ($u) {
-            return [
-                'id' => $u->id,
-                'name' => $u->name,
-                'area' => $u->mainArea()?->name,
-                'subarea' => $u->subArea()?->name,
-            ];
-        });
+        if ($assignedEditorId) {
+            $reviewersQuery->where('id', '!=', $assignedEditorId);
+        }
 
-    return Inertia::render("{$this->source}Edit", [
-        'title' => 'Editar Artículo',
-        'article' => $article->load(
-            'knowledgeArea',
-            'articleStatus',
-            'authors',
-            'file',
-            'articleReviews',
-            'call'
-        ),
-        'filePath' => $this->getFile($article->file),
-        'articleStatuses' => ArticleStatus::orderBy('id')->get(),
-        'user' => $user,
-        'areas' => KnowledgeArea::orderBy('name')->get(),
-        'institutions' => $institutions,
-        'editors' => $editors,
-        'reviewers' => $reviewers, // Se envía la lista ya filtrada
-        'routeName' => $this->routeName,
-    ]);
+        $reviewers = $reviewersQuery->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'area' => $u->mainArea()?->name,
+                    'subarea' => $u->subArea()?->name,
+                ];
+            });
+
+        return Inertia::render("{$this->source}Edit", [
+            'title' => 'Editar Artículo',
+            'article' => $article->load(
+                'knowledgeArea',
+                'articleStatus',
+                'authors',
+                'file',
+                'articleReviews',
+                'call'
+            ),
+            'filePath' => $this->getFile($article->file),
+            'articleStatuses' => ArticleStatus::orderBy('id')->get(),
+            'user' => $user,
+            'areas' => KnowledgeArea::orderBy('name')->get(),
+            'institutions' => $institutions,
+            'editors' => $editors,
+            'reviewers' => $reviewers, // Se envía la lista ya filtrada
+            'routeName' => $this->routeName,
+        ]);
     }
 
     /**
@@ -467,7 +485,7 @@ class ArticleController extends Controller
         ];
         Mail::to($article->postulant->email)->queue(new EvaluationArticle($postulantData));
 
-        $user=request()->user();
+        $user = request()->user();
         $successMessage = 'Artículo evaluado con éxito!';
 
         $isDualRole = $user->hasRole('Editor') && $user->hasRole('Revisor');
@@ -476,7 +494,7 @@ class ArticleController extends Controller
         if ($isDualRole) {
             $routeName = $isEditorOfArticle ? 'article.diffuse' : 'article.qualify';
             return redirect()->route($routeName)->with('success', $successMessage);
-        } 
+        }
         return redirect()->route("{$this->routeName}index")->with('success', $successMessage);
         //redirect()->back()->with('success', 'Artículo evaluado con éxito!');
         //return redirect()->route("{$this->routeName}index")->with('success', 'Artículo evaluado con éxito');
@@ -553,7 +571,7 @@ class ArticleController extends Controller
         }
     }
 
-    private function sendEmail($id,$folio)
+    private function sendEmail($id, $folio)
     {
         $user = User::find(Auth::id());
         $allAdmins = User::role(1)->get();
@@ -575,157 +593,155 @@ class ArticleController extends Controller
     }
 
     private function storeFile(Request $request, Article $article, $nombre_archivo)
-{
-    if (!$request->hasFile('file')) {
-        return;
-    }
-
-    $fileStorage = $request->file('file');
-    $newPath = null;
-    $newPrefixedName = null;
-    $newFileRecord = null;
-
-    try {
-        DB::beginTransaction();
-
-        // 1. Crear el registro en BD primero (con datos temporales)
-        $newFileRecord = $article->files()->create([
-            'name' => 'TEMP_STORE',
-            'path' => 'TEMP_STORE',
-            'size' => $fileStorage->getSize(),
-            'mime_type' => $fileStorage->getMimeType(),
-        ]);
-
-        // 2. Obtener el ID atómico de la BD
-        $newFileId = $newFileRecord->id;
-        $newPrefixedName = $newFileId . '-' . $nombre_archivo;
-        $newPath = $this->storage_path . '/' . $newPrefixedName;
-
-        // 3. Guardar el archivo físico
-        if (!$fileStorage->storeAs($this->storage_path, $newPrefixedName, 'private')) {
-            throw new \Exception("Fallo al guardar el archivo en storage (storeFile).");
+    {
+        if (!$request->hasFile('file')) {
+            return;
         }
 
-        // 4. Actualizar el registro de la BD con los datos correctos
-        $newFileRecord->name = $newPrefixedName;
-        $newFileRecord->path = $newPath;
-        $newFileRecord->save();
+        $fileStorage = $request->file('file');
+        $newPath = null;
+        $newPrefixedName = null;
+        $newFileRecord = null;
 
-        // 5. Confirmar transacción
-        DB::commit();
+        try {
+            DB::beginTransaction();
 
-    } catch (\Exception $e) {
-        // 6. Algo salió mal, revertir todo
-        DB::rollBack();
+            // 1. Crear el registro en BD primero (con datos temporales)
+            $newFileRecord = $article->files()->create([
+                'name' => 'TEMP_STORE',
+                'path' => 'TEMP_STORE',
+                'size' => $fileStorage->getSize(),
+                'mime_type' => $fileStorage->getMimeType(),
+            ]);
 
-        // Si el archivo se guardó pero la BD falló, borrar el archivo huérfano
-        if ($newPath && Storage::disk('private')->exists($newPath)) {
-            Storage::disk('private')->delete($newPath);
+            // 2. Obtener el ID atómico de la BD
+            $newFileId = $newFileRecord->id;
+            $newPrefixedName = $newFileId . '-' . $nombre_archivo;
+            $newPath = $this->storage_path . '/' . $newPrefixedName;
+
+            // 3. Guardar el archivo físico
+            if (!$fileStorage->storeAs($this->storage_path, $newPrefixedName, 'private')) {
+                throw new \Exception("Fallo al guardar el archivo en storage (storeFile).");
+            }
+
+            // 4. Actualizar el registro de la BD con los datos correctos
+            $newFileRecord->name = $newPrefixedName;
+            $newFileRecord->path = $newPath;
+            $newFileRecord->save();
+
+            // 5. Confirmar transacción
+            DB::commit();
+        } catch (\Exception $e) {
+            // 6. Algo salió mal, revertir todo
+            DB::rollBack();
+
+            // Si el archivo se guardó pero la BD falló, borrar el archivo huérfano
+            if ($newPath && Storage::disk('private')->exists($newPath)) {
+                Storage::disk('private')->delete($newPath);
+            }
+            Log::error("Error en storeFile (transacción): " . $e->getMessage());
+            // Relanzar la excepción para que el controlador 'store' falle
+            throw $e;
         }
-        Log::error("Error en storeFile (transacción): " . $e->getMessage());
-        // Relanzar la excepción para que el controlador 'store' falle
-        throw $e; 
-    }
-}
-
-/**
- * updateFile: MODIFICADO para ser transaccional y evitar 'race conditions'
- */
-private function updateFile(Request $request, Article $article)
-{
-    if (!$request->hasFile('file')) {
-        return;
     }
 
-    // --- 1. Obtener nombre base (operación de solo lectura, segura) ---
-    $originalFileRecord = $article->files()->orderBy('created_at', 'asc')->first();
-
-    if (!$originalFileRecord) {
-        Log::error("UpdateFile: No se encontró NINGÚN registro 'File' para el artículo {$article->id} al intentar actualizar.");
-        throw new \Exception("No se encontró el archivo original del artículo {$article->id}.");
-    }
-
-    $originalDbName = $originalFileRecord->name;
-    $firstDashPos = strpos($originalDbName, '-');
-    $baseNameWithExtension = $originalDbName;
-
-    if ($firstDashPos !== false) {
-        $baseNameWithExtension = substr($originalDbName, $firstDashPos + 1);
-    } else {
-        Log::warning("UpdateFile: El nombre '{$originalDbName}' no tiene el prefijo de ID. Se usará el nombre completo como base.");
-    }
-
-    $baseName = pathinfo($baseNameWithExtension, PATHINFO_FILENAME);
-    
-    // Bucle de limpieza para quitar sufijos _MOD
-    while (str_ends_with(strtoupper($baseName), '_MOD')) {
-        $baseName = substr($baseName, 0, -4);
-    }
-
-    $newModBaseName = $baseName . '_MOD.pdf';
-    // --- Fin de obtener nombre base ---
-
-    $fileStorage = $request->file('file');
-    $newPath = null;
-    $newPrefixedName = null;
-    $newFileRecord = null;
-
-    try {
-        // 2. Iniciar la transacción
-        DB::beginTransaction();
-
-        // 3. Buscar y eliminar mods anteriores
-        // ¡Importante! Usamos withTrashed() para encontrar también los soft-deleted
-        $previousModFiles = $article->files()
-            ->withTrashed() // <-- AÑADIR ESTO
-            ->where('name', 'LIKE', '%_MOD.pdf')
-            ->lockForUpdate() 
-            ->get();
-
-        foreach ($previousModFiles as $fileToDelete) {
-            Storage::disk('private')->delete($fileToDelete->path);
-            $fileToDelete->forceDelete(); // <-- ESTE ES EL CAMBIO CLAVE
+    /**
+     * updateFile: MODIFICADO para ser transaccional y evitar 'race conditions'
+     */
+    private function updateFile(Request $request, Article $article)
+    {
+        if (!$request->hasFile('file')) {
+            return;
         }
 
-        // 4. Crear el *nuevo* registro en la BD (con datos temporales)
-        $newFileRecord = $article->files()->create([
-            'name' => 'TEMP_UPDATE',
-            'path' => 'TEMP_UPDATE',
-            'size' => $fileStorage->getSize(),
-            'mime_type' => $fileStorage->getMimeType(),
-        ]);
+        // --- 1. Obtener nombre base (operación de solo lectura, segura) ---
+        $originalFileRecord = $article->files()->orderBy('created_at', 'asc')->first();
 
-        // 5. Obtener el ID atómico de la BD
-        $newFileId = $newFileRecord->id;
-        $newPrefixedName = $newFileId . '-' . $newModBaseName; 
-        $newPath = $this->storage_path . '/' . $newPrefixedName;
-
-        // 6. Guardar el archivo físico
-        if (!$fileStorage->storeAs($this->storage_path, $newPrefixedName, 'private')) {
-            throw new \Exception("Fallo al guardar el archivo en storage (updateFile).");
+        if (!$originalFileRecord) {
+            Log::error("UpdateFile: No se encontró NINGÚN registro 'File' para el artículo {$article->id} al intentar actualizar.");
+            throw new \Exception("No se encontró el archivo original del artículo {$article->id}.");
         }
 
-        // 7. Actualizar el registro de la BD con los datos correctos
-        $newFileRecord->name = $newPrefixedName;
-        $newFileRecord->path = $newPath;
-        $newFileRecord->save();
+        $originalDbName = $originalFileRecord->name;
+        $firstDashPos = strpos($originalDbName, '-');
+        $baseNameWithExtension = $originalDbName;
 
-        // 8. Confirmar transacción
-        DB::commit();
-
-    } catch (\Exception $e) {
-        // 9. Algo salió mal, revertir todo
-        DB::rollBack();
-
-        // Si el archivo se guardó pero la BD falló, borrar el archivo huérfano
-        if ($newPath && Storage::disk('private')->exists($newPath)) {
-            Storage::disk('private')->delete($newPath);
+        if ($firstDashPos !== false) {
+            $baseNameWithExtension = substr($originalDbName, $firstDashPos + 1);
+        } else {
+            Log::warning("UpdateFile: El nombre '{$originalDbName}' no tiene el prefijo de ID. Se usará el nombre completo como base.");
         }
-        Log::error("Error en updateFile (transacción): " . $e->getMessage());
-        // Relanzar la excepción para que el controlador 'update' falle
-        throw $e;
+
+        $baseName = pathinfo($baseNameWithExtension, PATHINFO_FILENAME);
+
+        // Bucle de limpieza para quitar sufijos _MOD
+        while (str_ends_with(strtoupper($baseName), '_MOD')) {
+            $baseName = substr($baseName, 0, -4);
+        }
+
+        $newModBaseName = $baseName . '_MOD.pdf';
+        // --- Fin de obtener nombre base ---
+
+        $fileStorage = $request->file('file');
+        $newPath = null;
+        $newPrefixedName = null;
+        $newFileRecord = null;
+
+        try {
+            // 2. Iniciar la transacción
+            DB::beginTransaction();
+
+            // 3. Buscar y eliminar mods anteriores
+            // ¡Importante! Usamos withTrashed() para encontrar también los soft-deleted
+            $previousModFiles = $article->files()
+                ->withTrashed() // <-- AÑADIR ESTO
+                ->where('name', 'LIKE', '%_MOD.pdf')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($previousModFiles as $fileToDelete) {
+                Storage::disk('private')->delete($fileToDelete->path);
+                $fileToDelete->forceDelete(); // <-- ESTE ES EL CAMBIO CLAVE
+            }
+
+            // 4. Crear el *nuevo* registro en la BD (con datos temporales)
+            $newFileRecord = $article->files()->create([
+                'name' => 'TEMP_UPDATE',
+                'path' => 'TEMP_UPDATE',
+                'size' => $fileStorage->getSize(),
+                'mime_type' => $fileStorage->getMimeType(),
+            ]);
+
+            // 5. Obtener el ID atómico de la BD
+            $newFileId = $newFileRecord->id;
+            $newPrefixedName = $newFileId . '-' . $newModBaseName;
+            $newPath = $this->storage_path . '/' . $newPrefixedName;
+
+            // 6. Guardar el archivo físico
+            if (!$fileStorage->storeAs($this->storage_path, $newPrefixedName, 'private')) {
+                throw new \Exception("Fallo al guardar el archivo en storage (updateFile).");
+            }
+
+            // 7. Actualizar el registro de la BD con los datos correctos
+            $newFileRecord->name = $newPrefixedName;
+            $newFileRecord->path = $newPath;
+            $newFileRecord->save();
+
+            // 8. Confirmar transacción
+            DB::commit();
+        } catch (\Exception $e) {
+            // 9. Algo salió mal, revertir todo
+            DB::rollBack();
+
+            // Si el archivo se guardó pero la BD falló, borrar el archivo huérfano
+            if ($newPath && Storage::disk('private')->exists($newPath)) {
+                Storage::disk('private')->delete($newPath);
+            }
+            Log::error("Error en updateFile (transacción): " . $e->getMessage());
+            // Relanzar la excepción para que el controlador 'update' falle
+            throw $e;
+        }
     }
-}
 
     private function storeAuthors(Request $request, $id)
     {

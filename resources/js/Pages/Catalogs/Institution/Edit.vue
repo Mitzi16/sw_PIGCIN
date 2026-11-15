@@ -77,49 +77,95 @@ watch(() => form.country_id, filterStates);
 onMounted(() => {
     filterStates()
 });
-
 </script>
 
 <template>
-
     <HeadLogo :title="title" />
     <LayoutMain>
-        <SectionTitleLineWithButton :icon="mdiPencil" :title="title" main>
-            <Link :href="route(`${routeName}index`)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x"
-                viewBox="0 0 16 16">
-                <path
-                    d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
-            </svg>
-            </Link>
-        </SectionTitleLineWithButton>
-        <CardBox isForm @submit.prevent="saveForm">
-            <FormField label="Nombre:" required :error="form.errors.name">
-                <FormControl v-model="form.name" placeholder="Nombre de la institución" />
-            </FormField>
 
-            <div class="md:flex md:space-x-4 my-5">
-                <div class="md:w-1/2 max-lg:mb-5">
-                    <FormField required label="Pais:" :error="form.errors.country_id">
-                        <FormControl v-model="form.country_id" :options="countries" />
-                    </FormField>
-                </div>
-                <div class="md:w-1/2 max-lg:mb-5">
-                    <FormField required label="Estado:" :error="form.errors.state_id">
-                        <FormControl v-model="form.state_id" :options="statesData" />
-                    </FormField>
-                </div>
+        <!-- CardBox con el diseño adaptado -->
+        <CardBox isForm @submit.prevent="saveForm" class="!p-0 overflow-hidden border border-gray-200 shadow-sm rounded-xl mb-10">
+            
+            <!-- Cabecera Azul -->
+            <div class="bg-[#1e3a8a] px-6 py-5 flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
+                </svg>
+                <h1 class="text-white text-lg font-bold">Editar Datos de la Institución</h1>
             </div>
-            <FormField required label="Estatus:" :error="form.errors.status">
-                <FormControl v-model="form.status" :options="statuses" />
-            </FormField>
+
+            <!-- Contenido del Formulario -->
+            <div class="p-8">
+                
+                <!-- Subtítulo de la sección -->
+                <div class="flex items-center gap-2 mb-8 border-b border-gray-200 pb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#1e3a8a]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
+                    </svg>
+                    <h2 class="text-xl font-bold text-[#1e3a8a]">Datos de la Institución</h2>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Nombre -->
+                    <FormField :error="form.errors.name" class="!mb-0">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-y-2 gap-x-8 items-start">
+                            <label class="col-span-1 font-bold text-gray-800 text-right pt-3 flex justify-end gap-1">
+                                <span class="text-red-500">*</span> Nombre:
+                            </label>
+                            <div class="col-span-3">
+                                <FormControl v-model="form.name" placeholder="Nombre de la institución" />
+                            </div>
+                        </div>
+                    </FormField>
+
+                    <!-- País -->
+                    <FormField :error="form.errors.country_id" class="!mb-0">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-y-2 gap-x-8 items-start">
+                            <label class="col-span-1 font-bold text-gray-800 text-right pt-3 flex justify-end gap-1">
+                                <span class="text-red-500">*</span> País:
+                            </label>
+                            <div class="col-span-3">
+                                <FormControl v-model="form.country_id" :options="countries" />
+                            </div>
+                        </div>
+                    </FormField>
+
+                    <!-- Estado -->
+                    <FormField :error="form.errors.state_id" class="!mb-0">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-y-2 gap-x-8 items-start">
+                            <label class="col-span-1 font-bold text-gray-800 text-right pt-3 flex justify-end gap-1">
+                                <span class="text-red-500">*</span> Estado:
+                            </label>
+                            <div class="col-span-3">
+                                <FormControl v-model="form.state_id" :options="statesData" />
+                            </div>
+                        </div>
+                    </FormField>
+
+                    <!-- Estatus -->
+                    <FormField :error="form.errors.status" class="!mb-0">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-y-2 gap-x-8 items-start">
+                            <label class="col-span-1 font-bold text-gray-800 text-right pt-3 flex justify-end gap-1">
+                                <span class="text-red-500">*</span> Estatus:
+                            </label>
+                            <div class="col-span-3">
+                                <FormControl v-model="form.status" :options="statuses" />
+                            </div>
+                        </div>
+                    </FormField>
+                </div>
+
+            </div>
+
+            <!-- Footer Original con botones de acción -->
             <template #footer>
-                <BaseButtons>
-                    <BaseButton :routeName="`${routeName}index`" :icon="mdiClose" color="white" label="Cancelar" />
-                    <BaseButton @click="saveForm" :icon="mdiContentSave" type="submit" color="success"
-                        label="Guardar" />
-                    <BaseButton color="danger" :icon="mdiTrashCan" @click="deleteForm" label="Eliminar" />
-                </BaseButtons>
+                <div class="px-8 py-4 bg-gray-50 border-t border-gray-200 flex justify-start w-full">
+                    <BaseButtons>
+                        <BaseButton :routeName="`${routeName}index`" :icon="mdiClose" color="white" label="Cancelar" />
+                        <BaseButton @click="saveForm" :icon="mdiContentSave" type="submit" color="success" label="Guardar" />
+                        <BaseButton color="danger" :icon="mdiTrashCan" @click="deleteForm" label="Eliminar" />
+                    </BaseButtons>
+                </div>
             </template>
         </CardBox>
     </LayoutMain>

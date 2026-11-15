@@ -22,15 +22,31 @@ class StoreCallRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'             => 'required|string|unique:calls,title|max:2555',
-            'description'       => 'required|max:10000',
-            'start_date'        => 'required|date',
-            'end_date'          => 'required|date|after:start_date',
-            'status'            => 'required|boolean',
-            'url'               => 'nullable|url:http,https',
-            'image'             => 'required|extensions:jpeg,jpg,png|mimes:jpeg,jpg,png|max:10000',
-            'file'              => 'required|extensions:pdf|mimes:pdf|max:10000',
-            'institution_id'    => 'required|exists:institutions,id'
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'status' => 'required|boolean',
+            'url' => 'nullable|url',
+            'file' => 'nullable|file|mimes:pdf|max:5120',
+            'image' => 'nullable|image|max:5120',
+            'institution_id' => 'required|exists:institutions,id',
+
+            // REGLAS NUEVAS PARA EL CALENDARIO
+            'publication_start' => 'nullable|date',
+            'publication_end' => 'nullable|date|after_or_equal:publication_start',
+
+            'registration_start' => 'nullable|date',
+            'registration_end' => 'nullable|date|after_or_equal:registration_start',
+
+            'application_start' => 'nullable|date',
+            'application_end' => 'nullable|date|after_or_equal:application_start',
+
+            'evaluation_start' => 'nullable|date',
+            'evaluation_end' => 'nullable|date|after_or_equal:evaluation_start',
+
+            'results_start' => 'nullable|date',
+            'results_end' => 'nullable|date|after_or_equal:results_start',
         ];
     }
 

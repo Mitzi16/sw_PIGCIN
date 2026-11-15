@@ -13,6 +13,7 @@ import {
     mdiShieldLock,
     mdiFileDocumentCheck,
     mdiReceiptText,
+    mdiAccountCog,
 } from "@mdi/js";
 
 /**
@@ -126,6 +127,12 @@ export const getMenu = (userRoles = []) => {
                     icon: mdiAccount,
                     permission: "user.index",
                 },
+                // 👇 NUEVO MÓDULO AQUÍ 👇
+                {
+                    label: "Administradores",
+                    route: "admin.assignments.index", // Nombre de la ruta que crearemos
+                    icon: mdiAccountCog, // O mdiShieldAccount
+                },
                 {
                     label: "Reconocimientos",
                     route: "reconocimiento.index",
@@ -180,7 +187,7 @@ export const getMenu = (userRoles = []) => {
                 },
             ],
         },
-        articleMenuItem, 
+        articleMenuItem,
         {
             route: "paymentVoucher.index",
             label: "Pagos",
@@ -238,8 +245,8 @@ export const getMenu = (userRoles = []) => {
         },
     ];
 
-    if (userHasAnyRole(userRoles, ["Postulante", "Admin", "Admin-Revista"])){
-         menu.push({
+    if (userHasAnyRole(userRoles, ["Postulante", "Admin", "Admin-Revista"])) {
+        menu.push({
             label: "Diapositivas",
             route: "diapositivas.index",
             icon: mdiBook,

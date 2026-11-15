@@ -5,13 +5,15 @@ import moment from "moment";
 import { inject, ref } from 'vue';
 import { mdiOpenInNew, mdiCalendarRange, mdiClockOutline, mdiCalendarRemove, mdiFilePdfBox, mdiClose } from "@mdi/js";
 import CardBox from "@/Components/CardBox.vue";
-import BaseButton from "@/Components/BaseButton.vue";
+
 const { showModal, setShowModal } = inject('showModal');
+
 defineProps({
     call: Object
 })
 
 const readingTime = (text) => {
+    if(!text) return 0;
     const words = text.split(/\s+/).length;
     return Math.ceil(words / 200);
 };
@@ -19,96 +21,109 @@ const readingTime = (text) => {
 const showPdf = ref(false)
 
 const togglePdf = () => {
-    showModal.value = !showModal.value;
+    // Ya NO ocultamos el modal principal, solo abrimos el PDF encima
     showPdf.value = !showPdf.value;
 }
-
 </script>
 
 <template>
+    <!-- MODAL PRINCIPAL DE DETALLES -->
     <Modal :show="showModal" @close="setShowModal(false)" :closeable="true">
-        <div class="px-4 mb-4">
-            <img :src="call.image != null ? '/storage/' + call.image.path : '/img/login-image.jpg'"
-                class="rounded mt-8 pt-4 w-full h-80 object-cover" alt="imagen convocatoria" />
-
-            <div class="my-4 pr-12">
-                <h2 class="text-left text-lg font-bold">
+        <div class="bg-white dark:bg-gray-800 rounded-lg overflow-hidden pb-4">
+            <!-- Imagen superior -->
+            <div class="relative h-64 w-full">
+                <img :src="call.image != null ? '/storage/' + call.image.path : '/img/login-image.jpg'"
+                    class="w-full h-full object-cover" alt="imagen convocatoria" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <h2 class="absolute bottom-4 left-6 right-6 text-white text-2xl font-bold leading-tight drop-shadow-md">
                     {{ call.title }}
                 </h2>
             </div>
 
-            <div class="mb-2 justify-start flex text-gray-700 md:w-1/2">
-                <BaseIcon :path="mdiCalendarRange" size="15" />
-                <p class="text-left text-gray-600">
-                    Fecha de inicio
-                </p>
-                <p class="ml-auto text-black font-bold">
-                    {{ moment(call.start_date, "YYYY-MM-DD").format("DD-MM-YYYY") }}
-                </p>
+            <div class="px-6 py-4">
+                <!-- Grid de metadatos -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="flex items-center text-gray-700 dark:text-gray-300">
+                        <BaseIcon :path="mdiCalendarRange" size="18" class="text-[#003366] mr-2" />
+                        <span class="text-sm">Inicio:</span>
+                        <span class="ml-auto font-semibold text-gray-900 dark:text-white">
+                            {{ moment(call.start_date, "YYYY-MM-DD").format("DD-MM-YYYY") }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center text-gray-700 dark:text-gray-300">
+                        <BaseIcon :path="mdiCalendarRemove" size="18" class="text-red-500 mr-2" />
+                        <span class="text-sm">Cierre:</span>
+                        <span class="ml-auto font-semibold text-gray-900 dark:text-white">
+                            {{ moment(call.end_date, "YYYY-MM-DD").format("DD-MM-YYYY") }}
+                        </span>
+                    </div>
+
+                    <div class="flex items-center text-gray-700 dark:text-gray-300">
+                        <BaseIcon :path="mdiClockOutline" size="18" class="text-[#b2b2b2] mr-2" />
+                        <span class="text-sm">Tiempo de lectura:</span>
+                        <span class="ml-auto font-semibold text-gray-900 dark:text-white">
+                            {{ readingTime(call.description) }} min
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <!-- Botón Visitar URL -->
+                    <a v-if="call.url" target="_blank" :href="call.url"
+                        class="inline-flex items-center px-4 py-2 bg-[#003366] text-white text-sm font-medium rounded-md hover:bg-[#002244] transition-colors">
+                        <BaseIcon :path="mdiOpenInNew" size="16" class="mr-2" />
+                        Visitar URL
+                    </a>
+
+                    <!-- Botón Ver PDF (Abre el visor interno) -->
+                    <button v-if="call.file" @click="togglePdf()"
+                        class="inline-flex items-center px-4 py-2 border-2 border-[#003366] text-[#003366] text-sm font-medium rounded-md hover:bg-[#003366] hover:text-white transition-colors">
+                        <BaseIcon :path="mdiFilePdfBox" size="16" class="mr-2" />
+                        Ver Convocatoria (PDF)
+                    </button>
+
+                    <!-- NUEVO: Botón para abrir el PDF en una nueva pestaña (opcional) -->
+                    <a v-if="call.file" :href="'/storage/' + call.file.path" target="_blank"
+                        class="inline-flex items-center px-4 py-2 text-gray-500 hover:text-[#003366] text-sm font-medium transition-colors">
+                        <BaseIcon :path="mdiOpenInNew" size="16" class="mr-2" />
+                        Abrir en nueva pestaña
+                    </a>
+                </div>
+
+                <hr class="border-gray-200 dark:border-gray-700 mb-4" />
+
+                <!-- Descripción -->
+                <div>
+                    <h3 class="text-lg font-bold text-[#003366] dark:text-blue-400 mb-2">Descripción</h3>
+                    <p class="text-base text-justify text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {{ call.description }}
+                    </p>
+                </div>
             </div>
-
-            <div class="mb-2 justify-start flex text-gray-700 md:w-1/2">
-                <BaseIcon :path="mdiCalendarRemove" size="15" />
-                <p class="text-left text-gray-600">
-                    Fecha de cierre
-                </p>
-                <p class="ml-auto text-black font-bold">
-                    {{ moment(call.end_date, "YYYY-MM-DD").format("DD-MM-YYYY") }}
-                </p>
-            </div>
-
-            <div class="mb-2 justify-start flex text-gray-700 md:w-1/2">
-                <BaseIcon :path="mdiClockOutline" size="15" />
-                <p class="text-left text-gray-600">
-                    Tiempo de lectura
-                </p>
-                <p class="ml-auto text-black font-bold">
-                    {{ readingTime(call.description) }} min
-                </p>
-            </div>
-
-            <div v-if="call.url" class="mb-2 justify-start flex text-gray-700 md:w-1/2">
-                <BaseIcon :path="mdiOpenInNew" size="15" />
-                <p class="text-left text-gray-600"> URL </p>
-                <a target="_blank" :href="call.url"
-                    class="ml-auto text-blue-500 underline decoration-sky-450 font-bold transition hover:cursor-pointer hover:text-blue-600">
-                    Click aquí
-                </a>
-            </div>
-
-            <div v-if="call.file" class="mb-4 justify-start flex text-gray-700 md:w-1/2">
-                <BaseIcon :path="mdiFilePdfBox" size="15" />
-                <p class="text-left text-gray-600"> Convocatoria </p>
-                <a @click="togglePdf()"
-                    class="ml-auto text-blue-500 underline decoration-sky-450 font-bold transition hover:cursor-pointer hover:text-blue-600">
-                    Click aquí
-                </a>
-            </div>
-
-            <hr class="border-t-2 border-solid border-blue-300" />
-
-            <div class="">
-                <p class="mt-4 text-base text-justify text-gray-500"> {{ call.description }} </p>
-            </div>
-
         </div>
     </Modal>
 
+    <!-- VISOR DE PDF (Se abre encima del modal principal) -->
     <div v-if="showPdf"
-        class="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50 bg-slate-800 bg-opacity-50"
-        tabindex="0" @keydown.esc="togglePdf()">
-        <div class="relative w-full max-w-4xl mx-auto">
-            <CardBox class="mt-5" :is-modal="true">
-                <div class="justify-between flex p-2">
-                    <span class="font-bold text-sm">
-                        Archivo: {{ call.file.name }}
+        class="fixed top-0 left-0 w-full h-full flex items-center justify-center z-[100] bg-slate-900/80 backdrop-blur-md"
+        tabindex="0" @keydown.esc="showPdf = false">
+        <div class="relative w-full max-w-5xl mx-auto px-4">
+            <div class="bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+                <div class="flex justify-between items-center p-4 bg-[#003366] text-white shrink-0">
+                    <span class="font-bold text-sm flex items-center">
+                        <BaseIcon :path="mdiFilePdfBox" class="mr-2" />
+                        Archivo: {{ call.file?.name || 'Documento' }}
                     </span>
-                    <BaseButton color="danger" :icon="mdiClose" small @click="togglePdf()" />
+                    <button @click="showPdf = false" class="text-white hover:text-red-400 transition-colors bg-white/10 p-1.5 rounded-lg">
+                        <BaseIcon :path="mdiClose" size="24" />
+                    </button>
                 </div>
-                <div class="overflow-hidden rounded-md">
-                    <iframe :src="'/storage/' + call.file.path" class="w-full h-[75vh]" />
+                <div class="bg-gray-100 flex-grow relative">
+                    <iframe :src="'/storage/' + call.file?.path" class="w-full h-full border-0 absolute inset-0" />
                 </div>
-            </CardBox>
+            </div>
         </div>
     </div>
 </template>

@@ -14,38 +14,35 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
-use Mockery\CountValidator\AtMost;
 
 class ProfileController extends Controller
 {
     private string $storage_path = 'photos';
+    
     /**
      * Display the user's profile form.
      */
     public function edit(Request $request): Response
     {
+        // 👇 Cargamos la relación 'calls' para enviarla al frontend
+        $user = User::with('roles', 'file', 'institution', 'calls')->findOrFail(Auth::id());
+
         return Inertia::render('Profile/Edit', [
-            'user' => User::with('roles', 'file', 'institution')->findOrFail(Auth::id())
+            'user' => $user
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = User::findOrFail(Auth::id());
         $user->update($request->validated());
 
         if ($request->hasFile('photo')) {
-            $file = File::where([
-                ['fileable_type', User::class],
-                ['fileable_id', $user->id]
-            ])->first();
-
+            $file = File::where([['fileable_type', User::class], ['fileable_id', $user->id]])->first();
             $fileStorage = $request->file('photo');
             $fileName = (File::max('id') + 1) . '-' . $fileStorage->getClientOriginalName();
             $path = '/storage/' . $fileStorage->storeAs($this->storage_path, $fileName, 'public');
+            
             if ($file) {
                 Storage::disk('public')->delete($file->path);
                 $file->update([
@@ -66,9 +63,6 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('success', 'Perfil actualizado con éxito');
     }
 
-    /**
-     * Delete the user's account.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         $request->validate([
@@ -76,11 +70,8 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-
         Auth::logout();
-
         $user->delete();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

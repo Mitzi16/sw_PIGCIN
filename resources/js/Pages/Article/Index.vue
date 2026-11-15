@@ -1,259 +1,640 @@
 <script setup>
-import CardBox from "@/Components/CardBox.vue";
 import LayoutMain from "@/Layouts/LayoutMain.vue";
-import SectionTitleLineWithButton from "@/Components/SectionTitleLineWithButton.vue";
-import {
-    mdiBallotOutline,
-    mdiInformation,
-    mdiPencil,
-    mdiBroom,
-    mdiMagnify,
-    mdiPlus,
-    mdiCheckDecagram,
-    mdiReceiptText
-} from "@mdi/js";
 import NotificationBar from "@/Components/NotificationBar.vue";
-import BaseButton from "@/Components/BaseButton.vue";
-import BaseButtons from "@/Components/BaseButtons.vue";
-import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
-import { router } from "@inertiajs/vue3";
-import Pagination from "@/Shared/Pagination.vue";
-import { reactive, ref, provide } from "vue";
+import { router, Head, Link, usePage } from "@inertiajs/vue3";
+import { ref, reactive, computed, provide } from "vue";
 import Loading from "vue-loading-overlay";
 import "vue-loading-overlay/dist/css/index.css";
-import Dropdown from "@/Components/DropdownTable.vue";
-import HeadLogo from "@/Components/HeadLogo.vue";
 import { limitText } from "@/Hooks/useFormato";
 import { useCan } from "@/Hooks/usePermissions";
-import { computed } from "vue";
-import { usePage } from "@inertiajs/vue3";
 import Swal from "sweetalert2";
 
 const page = usePage();
 
 // Roles permitidos para exportar
 const allowedRoles = ["Admin", "Editor", "Revisor", "Admin-Revista"];
-
 const canExport = computed(() => {
   const roles = page.props.auth?.user?.roles ?? [];
   return roles.some((role) => allowedRoles.includes(role.name));
 });
 
-
 const props = defineProps({
-    name: "Index",
-    title: { type: String, required: true },
-    articles: { type: Object, default: () => ({}), required: true },
-    isReviewer: { type: Boolean, required: true },
-    routeName: { type: String, required: true },
-    currentRouteName: { type: String, required: true }, 
-    search: { type: String, required: true },
-    direction: { type: String, required: true },
+  name: { type: String, default: "Index" },
+  title: { type: String, required: true },
+  articles: {
+    type: Object,
+    default: () => ({ data: [], links: [], total: 0, from: 0, to: 0 }),
+    required: true,
+  },
+  isReviewer: { type: Boolean, required: true },
+  routeName: { type: String, required: true },
+  currentRouteName: { type: String, required: true },
+  search: { type: String, default: "" },
+  direction: { type: String, default: "" },
 });
 
 const search = ref(props.search);
 const isLoading = ref(false);
 
 const state = reactive({
-    filters: {
-        search: search,
-        order: props.articles.order ?? "created_at",
-        direction: props.direction,
-    },
+  filters: {
+    search: search,
+    order: props.articles?.order ?? "created_at",
+    direction: props.direction,
+  },
 });
 
 const filterSearch = () => {
-    router.get(route(`${props.routeName}index`, state.filters, { replace: true }));
+  isLoading.value = true;
+  router.get(
+    route(`${props.routeName}index`, state.filters, { replace: true }),
+    {},
+    { onFinish: () => (isLoading.value = false) }
+  );
 };
 
 const cleanFilters = () => {
-    isLoading.value = true;
-    router.get(route(`${props.routeName}index`));
-};
-
-const filterBy = (order, direction) => {
-    state.filters.order = order;
-    state.filters.direction = direction;
-    isLoading.value = true;
-    router.get(route(`${props.routeName}index`, state.filters));
+  search.value = "";
+  isLoading.value = true;
+  router.get(
+    route(`${props.routeName}index`),
+    {},
+    { onFinish: () => (isLoading.value = false) }
+  );
 };
 
 const exportExcel = () => {
-    // Abre en nueva pestaña para descargar el Excel
-    window.open(route(`${props.routeName}export`), "_blank");
+  window.open(route(`${props.routeName}export`), "_blank");
 };
 
-const opts = [
-    { label: "Identificador", key: "folio", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
-    { label: "Titulo", key: "title", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
-    { label: "Tipo", key: "type", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
-    { label: "Programa_Estudio", key: "program", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
-    { label: "Area_Prioritaria", key: "area", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
-    { label: "Estatus", key: "status", menu: [{ title: "Ordenar desde A - Z", direction: "asc" }, { title: "Ordenar desde Z - A", direction: "desc" }] },
-];
-
 const canEdit = (id) => {
-    if (useCan("article.update")) {
-        const article = props.articles.data.find((article) => article?.id === id);
-        if (article.isPostulant && article.status.can_edit) {
-            return true;
-        }
+  if (useCan("article.update")) {
+    const article = props.articles.data.find((article) => article?.id === id);
+    if (article.isPostulant && article.status.can_edit) {
+      return true;
     }
-    return false;
+  }
+  return false;
 };
 
 const confirmContribution = () => {
-    Swal.fire({
-        title: '¿Estás seguro de registrar tu contribución? ',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sí, registrar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            router.get(route(`${props.routeName}create`));
-        }
-    });
-}
+  Swal.fire({
+    title: "",
+    html: `
+            <div class="flex flex-col items-center justify-center pt-2">
+                <div class="w-16 h-16 bg-[#f0f4f9] rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-[#15396F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
+                    </svg>
+                </div>
+                <h2 class="text-[22px] font-bold text-[#15396F] mb-2 leading-tight">¿Deseas registrar tu contribución?</h2>
+                <p class="text-gray-500 text-[15px] px-4">Verifica que la información proporcionada sea correcta antes de continuar.</p>
+            </div>
+        `,
+    footer:
+      '<span class="text-gray-400 text-xs">Plataforma de Gestión Académica · TecNM</span>',
+    showCancelButton: true,
+    confirmButtonText: "Confirmar registro",
+    cancelButtonText: "Volver a revisar",
+    buttonsStyling: false,
+    customClass: {
+      popup: "rounded-2xl w-full max-w-md p-6 pb-4 shadow-xl",
+      html: "p-0 m-0",
+      actions: "w-full flex gap-3 mt-6 mb-2",
+      confirmButton:
+        "flex-1 bg-[#15396F] hover:bg-[#0f2853] text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm",
+      cancelButton:
+        "flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition-colors text-sm",
+      footer: "border-t border-gray-100 pt-4 mt-0 w-full",
+      closeButton: "text-gray-400 hover:text-gray-600 focus:outline-none",
+    },
+    showCloseButton: true,
+  }).then((result) => {
+    if (result.isConfirmed) {
+      router.get(route(`${props.routeName}create`));
+    }
+  });
+};
 
 const confirmEditContribution = (id) => {
-    Swal.fire({
-        title: '¿Estás seguro que deseas enviar nueva mente tu contribución con atención a observaciones? ',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sí, editar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            router.get(route(`${props.routeName}edit`,  id ));
-        }
-    });
-}
+  Swal.fire({
+    title: "",
+    html: `
+            <div class="flex flex-col items-center justify-center pt-2">
+                <div class="w-16 h-16 bg-[#f0f4f9] rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-[#15396F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-[22px] font-bold text-[#15396F] mb-2 leading-tight px-2 text-center">¿Estás seguro que deseas enviar nuevamente tu contribución?</h2>
+                <p class="text-gray-500 text-[15px] px-4 text-center">Asegúrate de haber atendido las observaciones antes de continuar.</p>
+            </div>
+        `,
+    footer:
+      '<span class="text-gray-400 text-xs">Plataforma de Gestión Académica · TecNM</span>',
+    showCancelButton: true,
+    confirmButtonText: "Confirmar envío",
+    cancelButtonText: "Volver a revisar",
+    buttonsStyling: false,
+    customClass: {
+      popup: "rounded-2xl w-full max-w-md p-6 pb-4 shadow-xl",
+      html: "p-0 m-0",
+      actions: "w-full flex gap-3 mt-6 mb-2",
+      confirmButton:
+        "flex-1 bg-[#15396F] hover:bg-[#0f2853] text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm",
+      cancelButton:
+        "flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition-colors text-sm",
+      footer: "border-t border-gray-100 pt-4 mt-0 w-full",
+      closeButton: "text-gray-400 hover:text-gray-600 focus:outline-none",
+    },
+    showCloseButton: true,
+  }).then((result) => {
+    if (result.isConfirmed) {
+      router.get(route(`${props.routeName}edit`, id));
+    }
+  });
+};
 
-provide("filterBy", filterBy);
-
+const getPaginatorLabel = (label) => {
+  if (
+    label.includes("Previous") ||
+    label.includes("Anterior") ||
+    label.includes("&laquo;")
+  ) {
+    return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>';
+  }
+  if (
+    label.includes("Next") ||
+    label.includes("Siguiente") ||
+    label.includes("&raquo;")
+  ) {
+    return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>';
+  }
+  return label;
+};
 </script>
 
 <template>
-    <HeadLogo :title="title" />
+  <div>
+    <Head :title="title" />
     <LayoutMain>
-        <SectionTitleLineWithButton :icon="mdiBallotOutline" :title="title" main />
-
-        <NotificationBar v-if="$page.props.flash.success" color="success" :icon="mdiInformation" :outline="false">
-            {{ $page.props.flash.success }}
-        </NotificationBar>
-
-        <NotificationBar v-if="$page.props.flash.error" color="danger" :icon="mdiInformation" :outline="false">
-            {{ $page.props.flash.error }}
-        </NotificationBar>
-
-        <form @submit.prevent="filterSearch" class="w-full mb-5">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="flex w-full md:w-1/2 mr-1 my-4">
-                    <input type="search" id="search-dropdown"
-                        class="block pr-10 md:h-11 w-full z-20 text-sm text-gray-900 bg-gray-50 rounded-l-lg md:border-l-gray-300 border-l-gray-300 border border-gray-300
-                    focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-l-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:border-blue-500"
-                        placeholder="Ingresa un parametro de busqueda" v-model="search" />
-                    <BaseButton class="relative z-30 right-0 h-11 rounded-none" @click="filterSearch" :icon="mdiMagnify"
-                        color="info" title="Buscar" />
-                    <BaseButton class="relative right-0 h-11 rounded-l-none rounded-r-lg" @click="cleanFilters"
-                        :icon="mdiBroom" color="lightDark" title="Limpiar filtro" />
-                </div>
-
-                <BaseButtons class="flex space-x-2 w-full max-w-sm">
-                    <!-- max-w-sm opcional para que no se estiren demasiado -->
-                    <BaseButton v-if="useCan('article.store')" @click="confirmContribution" color="info"
-                        :icon="mdiPlus" label="Agregar artículo" class="flex-1 h-11 rounded-l-lg " />
-
-                    <BaseButton :icon="mdiReceiptText" color="success" label="Exportar Excel" @click="exportExcel"
-                        class="flex-1 h-11 rounded-r-lg" v-if="canExport"/>
-                </BaseButtons>
-
-            </div>
-        </form>
-      
-        <CardBox v-if="articles.data.length > 0">
-            <table>
-                <thead>
-                    <tr>
-                        <th />
-                        <th>
-                            <Dropdown title="Identificador" :options="opts" />
-                        </th>
-                        <th>
-                            <Dropdown title="Titulo" :options="opts" />
-                        </th>
-                        <th>
-                            <Dropdown title="Tipo" :options="opts" />
-                        </th>
-                        <th>
-                            <Dropdown title="Programa_Estudio" :options="opts" />
-                        </th>
-                        <th>
-                            <Dropdown title="Area_Prioritaria" :options="opts" />
-                        </th>
-                        <th class="text-sm" v-if="currentRouteName === 'article.qualify'">Estatus de evaluación</th>
-                        <th v-else>
-                            <Dropdown title="Estatus" :options="opts" />
-                        </th>
-                        <th>Comprobante</th>
-                        <th class="relative inline-block text-left">
-                            <span
-                                class="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-bold text-gray-900 dark:text-white ring-inset ring-gray-300 hover:bg-gray-100">
-                                Acciones
-                            </span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in articles.data" :key="item.id">
-                        <td class="align-items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                class="bi bi-book-half" viewBox="0 0 16 16">
-                                <path
-                                    d="M8.5 2.687c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z" />
-                            </svg>
-                        </td>
-                        <td data-label="Identificador">{{ item.folio }}</td>
-                        <td data-label="Titulo">{{ limitText(item.title, 50) }}</td>
-                        <td data-label="Tipo">{{ item.article_type?.name ?? "Sin tipo" }}</td>
-                        <td data-label="Programa_Estudio">{{item.program}}</td>
-                        <td data-label="Area">{{ item.area }}</td>
-                        <td v-if="currentRouteName === 'article.qualify'" data-label="Estatus de evaluación">
-                            <div class="dark:bg-green-800 dark:text-green-200 bg-green-100 rounded-full text-green-500 px-2 dark:opacity-95 opacity-85 w-max text-center"
-                                v-if="item.statusReviewer">
-                                Evaluado
-                            </div>
-                            <div 
-                                class="dark:bg-yellow-800 dark:text-yellow-200 bg-yellow-100 rounded-full text-yellow-500 px-2 dark:opacity-95 opacity-85 w-max text-center"
-                                v-if="!item.statusReviewer">
-                                Pendiente de evaluar
-                            </div>
-                        </td>
-                        <td v-else data-label="Estatus">
-                            <div :class="item.status.class">{{ item.status.name }}</div>
-                        </td>
-                        <td data-label="Comprobante">{{ item.paymentVoucherStatus?.name }}</td>
-                        <td data-label="Acciones">
-                            <BaseButtons>
-                                <BaseButton v-if="canEdit(item.id)" color="info" :icon="mdiPencil" small
-                                    @click="confirmEditContribution(item.id)" title="Editar artículo" />
-                                <BaseButton color="info" :icon="mdiCheckDecagram" iconSize="22" small
-                                    :routeName="`${routeName}show`" :parameter="item.id" title="Ver artículo" />
-                            </BaseButtons>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </CardBox>
-        <CardBoxComponentEmpty v-else />
-        <pagination :links="articles.links" :total="articles.total" :to="articles.to" :from="articles.from" />
-        <div class="vl-parent">
-            <loading v-model:active="isLoading" :can-cancel="false" :is-full-page="true" />
+      <!-- Banner Superior -->
+      <div
+        class="relative bg-white border border-gray-200 rounded-xl overflow-hidden mb-5 shadow-sm flex items-center min-h-[85px] w-full"
+      >
+        <div
+          class="absolute inset-y-0 right-0 w-[50%] overflow-hidden pointer-events-none hidden md:block z-0"
+        >
+          <img
+            src="/img/azul.png"
+            alt="TecNM"
+            class="absolute right-6 top-1/2 -translate-y-1/2 h-20 w-auto opacity-30 grayscale object-contain"
+          />
+          <div
+            class="absolute -top-10 -bottom-10 right-[25%] w-10 bg-[#15396F] -skew-x-12"
+          ></div>
+          <div
+            class="absolute -top-10 -bottom-10 right-[36%] w-2.5 bg-[#7cb0f7] -skew-x-12"
+          ></div>
         </div>
+        <div class="relative z-10 px-6 py-4 flex items-center w-full md:w-3/4">
+          <div
+            class="w-11 h-11 rounded-full bg-[#15396F] flex items-center justify-center text-white shadow-sm flex-shrink-0"
+          >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"
+              />
+            </svg>
+          </div>
+          <div class="h-8 w-[2px] bg-[#15396F] mx-4 flex-shrink-0"></div>
+          <div>
+            <h1
+              class="text-xl md:text-2xl font-bold text-[#15396F] tracking-wide"
+            >
+              {{ title }}
+            </h1>
+            <p class="text-xs md:text-sm text-gray-500 mt-0.5">
+              Consulta y administra los artículos del sistema
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alertas -->
+      <div class="mb-4 space-y-2">
+        <NotificationBar
+          v-if="$page.props.flash?.success"
+          color="success"
+          outline="false"
+          >{{ $page.props.flash.success }}</NotificationBar
+        >
+        <NotificationBar
+          v-if="$page.props.flash?.error"
+          color="danger"
+          outline="false"
+          >{{ $page.props.flash.error }}</NotificationBar
+        >
+      </div>
+
+      <!-- Barra de Búsqueda y Botones -->
+      <div
+        class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6"
+      >
+        <form
+          @submit.prevent="filterSearch"
+          class="flex w-full xl:w-auto items-center gap-2"
+        >
+          <div class="relative w-full sm:w-[350px]">
+            <div
+              class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+            >
+              <svg
+                class="w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+            </div>
+            <input
+              type="search"
+              v-model="search"
+              class="bg-white border border-gray-300 text-gray-900 text-sm rounded-full focus:ring-[#15396F] focus:border-[#15396F] block w-full pl-11 p-2.5 shadow-sm"
+              placeholder="Buscar artículo..."
+            />
+          </div>
+          <button
+            type="submit"
+            class="p-2.5 text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-full border border-gray-300 shadow-sm transition-colors"
+            title="Filtrar"
+          >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
+              />
+            </svg>
+          </button>
+          <button
+            @click="cleanFilters"
+            type="button"
+            class="p-2.5 text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-full border border-gray-300 shadow-sm transition-colors"
+            title="Limpiar"
+          >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4zM6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9z"
+              />
+            </svg>
+          </button>
+        </form>
+
+        <div
+          class="flex flex-row flex-wrap gap-3 w-full xl:w-auto mt-4 xl:mt-0 justify-start xl:justify-end"
+        >
+          <button
+            v-if="useCan('article.store')"
+            @click="confirmContribution"
+            class="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-[#15396F] hover:bg-[#0f2853] rounded-full transition-colors shadow-sm cursor-pointer z-10 relative"
+          >
+            <svg
+              class="w-4 h-4 pointer-events-none"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+            </svg>
+            Agregar artículo
+          </button>
+          <button
+            v-if="canExport"
+            @click="exportExcel"
+            class="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-[#15396F] hover:bg-[#0f2853] rounded-full transition-colors shadow-sm z-10 relative"
+          >
+            <svg
+              class="w-4 h-4 pointer-events-none"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"
+              />
+            </svg>
+            Exportar a Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div
+        class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4"
+      >
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left text-gray-500">
+            <thead class="text-xs text-white uppercase bg-[#15396F]">
+              <tr>
+                <th scope="col" class="px-4 py-4 w-12 text-center"></th>
+                <th
+                  scope="col"
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50"
+                >
+                  Identificador
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50"
+                >
+                  Título
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50"
+                >
+                  Tipo
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50"
+                >
+                  Programa
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50"
+                >
+                  Área
+                </th>
+                <th
+                  v-if="currentRouteName === 'article.qualify'"
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50"
+                >
+                  Estatus Eval.
+                </th>
+                <th
+                  v-else
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50"
+                >
+                  Estatus
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50"
+                >
+                  Comprobante
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-4 font-semibold text-center border-l border-blue-800/50 w-24"
+                >
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template
+                v-if="articles && articles.data && articles.data.length > 0"
+              >
+                <tr
+                  v-for="item in articles.data"
+                  :key="item.id"
+                  class="bg-white border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                >
+                  <td class="px-4 py-4 text-center text-[#15396F]">
+                    <svg
+                      class="w-5 h-5 mx-auto"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M21 4H7V2H5v20h2v-8h14l-2-5 2-5zm-3.86 5.74l1.14 2.76H7V6h11.4l-1.26 3.74z"
+                      />
+                    </svg>
+                  </td>
+                  <td
+                    class="px-4 py-4 text-gray-700 text-center border-l border-gray-100"
+                  >
+                    {{ item.folio }}
+                  </td>
+                  <td
+                    class="px-4 py-4 text-gray-800 font-medium border-l border-gray-100"
+                  >
+                    {{ limitText(item.title, 40) }}
+                  </td>
+                  <td
+                    class="px-4 py-4 text-gray-600 text-center border-l border-gray-100"
+                  >
+                    {{ item.article_type?.name ?? "Sin tipo" }}
+                  </td>
+                  <td
+                    class="px-4 py-4 text-gray-600 text-center border-l border-gray-100"
+                  >
+                    {{ item.program }}
+                  </td>
+                  <td
+                    class="px-4 py-4 text-gray-600 text-center border-l border-gray-100"
+                  >
+                    {{ item.area }}
+                  </td>
+
+                  <td
+                    v-if="currentRouteName === 'article.qualify'"
+                    class="px-4 py-4 text-center border-l border-gray-100"
+                  >
+                    <span
+                      v-if="item.statusReviewer"
+                      class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-bold bg-emerald-100 text-emerald-600"
+                    >
+                      <span
+                        class="w-1.5 h-1.5 rounded-full bg-emerald-500"
+                      ></span>
+                      Evaluado
+                    </span>
+                    <span
+                      v-else
+                      class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-bold bg-amber-100 text-amber-600"
+                    >
+                      <span
+                        class="w-1.5 h-1.5 rounded-full bg-amber-500"
+                      ></span>
+                      Pendiente
+                    </span>
+                  </td>
+                  <td
+                    v-else
+                    class="px-4 py-4 text-center border-l border-gray-100"
+                  >
+                    <span
+                      class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-bold"
+                      :class="item.status.class"
+                    >
+                      {{ item.status.name }}
+                    </span>
+                  </td>
+
+                  <td
+                    class="px-4 py-4 text-gray-600 text-center border-l border-gray-100"
+                  >
+                    {{ item.paymentVoucherStatus?.name ?? "N/A" }}
+                  </td>
+
+                  <td class="px-4 py-4 border-l border-gray-100">
+                    <div class="flex justify-center gap-2">
+                      <button
+                        v-if="canEdit(item.id)"
+                        @click="confirmEditContribution(item.id)"
+                        class="bg-[#0d6efd] hover:bg-blue-700 text-white p-2 rounded-lg shadow-sm transition-colors"
+                        title="Editar"
+                      >
+                        <svg
+                          class="w-4 h-4"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                          />
+                        </svg>
+                      </button>
+                      <Link
+                        :href="route(`${routeName}show`, item.id)"
+                        class="bg-[#15396F] hover:bg-[#0f2853] text-white p-2 rounded-lg shadow-sm transition-colors"
+                        title="Ver"
+                      >
+                        <svg
+                          class="w-4 h-4"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                          />
+                        </svg>
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <tr v-else>
+                <td colspan="10" class="px-4 py-8 text-center text-gray-500">
+                  No se encontraron artículos.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginación -->
+        <div v-if="articles && articles.links" class="relative pb-12">
+          <div
+            class="flex items-center justify-center gap-4 w-full mt-6 mb-6 px-4 md:px-8 relative z-10"
+          >
+            <div class="h-px bg-gray-200 flex-1"></div>
+            <svg
+              class="w-7 h-7 text-[#15396F] bg-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            <div class="h-px bg-gray-200 flex-1"></div>
+          </div>
+
+          <div
+            class="flex flex-col lg:flex-row justify-between items-center gap-6 px-4 md:px-8 mb-4 relative z-10"
+          >
+            <div
+              class="flex items-center gap-3 bg-[#f4f7f9] border border-gray-200 px-4 py-2.5 rounded-xl shadow-sm w-full lg:w-auto flex-shrink-0"
+            >
+              <div
+                class="w-7 h-7 rounded-full bg-[#15396F] flex items-center justify-center flex-shrink-0 shadow-sm"
+              >
+                <span class="text-white text-sm font-serif font-bold italic"
+                  >i</span
+                >
+              </div>
+              <div class="text-[13px] text-gray-500 leading-tight">
+                Mostrando registros del
+                <span class="font-bold text-[#15396F]">{{
+                  articles.from || 0
+                }}</span>
+                al
+                <span class="font-bold text-[#15396F]">{{
+                  articles.to || 0
+                }}</span
+                ><br />
+                de un total de
+                <span class="font-bold text-[#15396F]">{{
+                  articles.total || 0
+                }}</span>
+                registros
+              </div>
+            </div>
+
+            <div
+              class="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:max-w-[500px]"
+            >
+              <template v-for="(link, k) in articles.links" :key="k">
+                <Link
+                  v-if="link.url"
+                  :href="link.url"
+                  class="w-10 h-10 flex items-center justify-center rounded-md border text-sm font-semibold transition-all duration-200 shadow-sm"
+                  :class="
+                    link.active
+                      ? 'bg-[#15396F] text-white border-[#15396F]'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                  "
+                >
+                  <span v-html="getPaginatorLabel(link.label)"></span>
+                </Link>
+                <span
+                  v-else
+                  class="w-10 h-10 flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-400 text-sm font-semibold cursor-not-allowed shadow-sm"
+                  v-html="getPaginatorLabel(link.label)"
+                ></span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Decoraciones -->
+          <svg
+            class="absolute bottom-0 left-0 w-48 h-16 pointer-events-none z-0"
+            viewBox="0 0 100 50"
+            preserveAspectRatio="none"
+          >
+            <polygon points="0,50 100,50 0,10" fill="#d1a744" />
+            <polygon points="0,10 100,50 0,4" fill="#15396F" />
+          </svg>
+          <svg
+            class="absolute bottom-0 right-0 w-48 h-16 pointer-events-none z-0"
+            viewBox="0 0 100 50"
+            preserveAspectRatio="none"
+          >
+            <polygon points="100,50 0,50 100,10" fill="#d1a744" />
+            <polygon points="100,10 0,50 100,4" fill="#15396F" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="vl-parent">
+        <loading
+          v-model:active="isLoading"
+          :can-cancel="false"
+          :is-full-page="true"
+        />
+      </div>
     </LayoutMain>
+  </div>
 </template>

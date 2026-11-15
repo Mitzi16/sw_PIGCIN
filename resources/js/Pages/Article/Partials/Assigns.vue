@@ -1,29 +1,26 @@
 <script setup>
-import { mdiContentSave } from "@mdi/js";
 import { computed, inject, ref } from "vue";
 import FormField from "@/Components/FormField.vue";
 import FormControl from "@/Components/FormControl.vue";
 import CardBoxComponentEmpty from "@/Components/CardBoxComponentEmpty.vue";
-import BaseButtons from "@/Components/BaseButtons.vue";
 import BaseButton from "@/Components/BaseButton.vue";
 import { useForm } from "@inertiajs/vue3";
 
 const props = inject("props");
 const getRole = inject("getRole");
+const emit = defineEmits(["close"]); 
 
 const form = useForm({
   article_id: props.article.id,
   editor_id: props.article.editor_id,
   article_status_id: props.article.article_status_id,
-  reviewers: props.article.article_reviews.map(
-    (reviewer) => reviewer.reviewer_id
-  ),
+  reviewers: props.article.article_reviews?.map((r) => r.reviewer_id) ?? [],
 });
 
-const TotalAssigned = computed(() => form.reviewers.length);
-
 const saveAssign = () => {
-  form.post(route("articleReview.store"));
+  form.post(route("articleReview.store"), {
+      onSuccess: () => emit("close"), 
+  });
 };
 
 const checkedReviewer = (reviewer) => {
@@ -39,7 +36,6 @@ const toggleReviewer = (reviewer) => {
   }
 };
 
-/* ---- 🔹 Buscador ---- */
 const search = ref("");
 
 const filteredReviewers = computed(() => {
@@ -48,17 +44,14 @@ const filteredReviewers = computed(() => {
     (r) =>
       r.name.toLowerCase().includes(search.value.toLowerCase()) ||
       (r.area && r.area.toLowerCase().includes(search.value.toLowerCase())) ||
-      (r.subarea &&
-        r.subarea.toLowerCase().includes(search.value.toLowerCase()))
+      (r.subarea && r.subarea.toLowerCase().includes(search.value.toLowerCase()))
   );
 });
 
 const currentPage = ref(1);
-const perPage = 10; // cantidad de revisores por página
+const perPage = 5;
 
-const totalPages = computed(() =>
-  Math.ceil(filteredReviewers.value.length / perPage)
-);
+const totalPages = computed(() => Math.ceil(filteredReviewers.value.length / perPage));
 
 const paginatedReviewers = computed(() => {
   const start = (currentPage.value - 1) * perPage;
@@ -75,127 +68,113 @@ const prevPage = () => {
 </script>
 
 <template>
-  <h2 class="text-xl font-medium text-gray-700 dark:text-white py-2">
-    Asignar editor y revisores
-  </h2>
-  <div class="mt-5 grid grid-cols-1 gap-3">
-    <!-- Selección de editor -->
-    <div class="lg:mb-5">
-      <div class="lg:mb-5">
-        <FormField
-          required
-          label="Selecciona un editor:"
-          :error="form.errors.editor_id"
-        >
+  <div class="flex flex-col h-full bg-white dark:bg-slate-800">
+    <!-- Formulario Principal -->
+    <div class="flex-1 overflow-y-auto pr-2">
+      
+      <!-- Selección de editor -->
+      <div class="mb-6">
+        <FormField required label="Editor responsable" :error="form.errors.editor_id">
+          <!-- Aquí ya está incluido 'Super Admin' -->
           <FormControl
-            :disabled="!getRole(['Admin', 'Admin-Revista'])"
+            :disabled="!getRole(['Admin', 'Admin-Revista', 'Super Admin'])"
             v-model="form.editor_id"
             :options="props.editors"
+            placeholder="Seleccione un editor"
+            class="w-full"
           />
         </FormField>
       </div>
 
-      <div class="lg:mb-5">
-        <FormField
-          required
-          label="Teclea el nombre del revisor o su programa para buscarlo:"
-          :error="form.errors.reviewers"
-        >
-          <FormControl
+      <!-- Buscador -->
+      <div class="mb-6">
+        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">Buscar revisores</h3>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
+            </svg>
+          </div>
+          <input 
             v-model="search"
+            type="text"
             placeholder="Buscar por nombre, área o subárea..."
+            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#15396F] focus:border-[#15396F] dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all text-sm outline-none"
           />
-        </FormField>
+        </div>
       </div>
-    </div>
 
-    <!-- Selección de revisores -->
-    <div class="lg:mb-5 col-span-2">
       <!-- Lista de revisores -->
-      <div
-        v-if="filteredReviewers.length > 0"
-        class="border rounded border-gray-400"
-      >
-        <ul class="flex flex-col divide-y divide-gray-200">
-          <li v-for="item in paginatedReviewers" :key="item.id">
-            <label
-              class="p-2 justify-between flex items-center px-3"
-              :class="{
-                'cursor-not-allowed': !getRole([
-                  'Editor',
-                  'Admin',
-                  'Admin-Revista',
-                ]),
-                'cursor-pointer': getRole(['Editor', 'Admin', 'Admin-Revista']),
-              }"
-            >
-              <span
-                class="text-sm font-medium text-gray-900 dark:text-gray-300"
-              >
-                {{ item.name }}
-                <span v-if="item.area" class="ml-2">- {{ item.area }}</span>
-                <span v-if="item.subarea" class="ml-2"
-                  >- {{ item.subarea }}</span
-                >
-                <p class="text-gray-500 dark:text-gray-400 mt-1 text-xs">
-                  Artículos asignados: {{ item.assigned_count }}
-                </p>
-              </span>
+      <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-3">Revisores disponibles</h3>
+      
+      <div v-if="paginatedReviewers.length > 0" class="space-y-3">
+        <div 
+          v-for="item in paginatedReviewers" 
+          :key="item.id"
+          class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm hover:border-blue-300 transition-colors gap-4"
+        >
+          <!-- Info del revisor (Izquierda) -->
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-50 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-base font-bold text-gray-800 dark:text-gray-100">{{ item.name }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ item.area || 'Sin área' }} <span v-if="item.subarea">- {{ item.subarea }}</span>
+              </p>
+              <p class="text-xs text-gray-400 mt-1">Artículos asignados: {{ item.assigned_count }}</p>
+            </div>
+          </div>
 
-              <input
-                :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])"
-                type="checkbox"
+          <!-- Switch y estado (Derecha) -->
+          <div class="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+            <span class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              Disponible
+            </span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
                 class="sr-only peer"
-                :value="item.id"
-                :id="'reviewer_' + item.id"
+                :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista', 'Super Admin'])"
                 :checked="checkedReviewer(item)"
                 @change="toggleReviewer(item)"
               />
-              <div
-                class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
-              ></div>
+              <!-- Estilo del Switch Verde -->
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
             </label>
-          </li>
-        </ul>
-
-        <!-- Controles de paginación -->
-        <div
-          class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800"
-        >
-          <button
-            @click="prevPage"
-            :disabled="currentPage === 1"
-            class="px-3 py-1 text-sm rounded border text-white bg-green-500 hover:bg-green-600 dark:bg-gray-700"
-          >
-            Anterior
-          </button>
-          <span class="text-sm"
-            >Página {{ currentPage }} de {{ totalPages }}</span
-          >
-          <button
-            @click="nextPage"
-            :disabled="currentPage === totalPages"
-            class="px-3 py-1 text-sm rounded border text-white bg-green-500 hover:bg-green-600 dark:bg-gray-700"
-          >
-            Siguiente
-          </button>
+          </div>
         </div>
       </div>
-      <CardBoxComponentEmpty v-else />
+      <CardBoxComponentEmpty v-else message="No se encontraron revisores" />
+
+      <!-- Paginación -->
+      <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <span class="text-sm text-gray-500">Página {{ currentPage }} de {{ totalPages || 1 }}</span>
+        <div class="flex gap-2">
+          <button @click="prevPage" :disabled="currentPage === 1" class="px-4 py-1.5 text-sm font-medium rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-50 transition-colors">Anterior</button>
+          <button @click="nextPage" :disabled="currentPage === totalPages || totalPages === 0" class="px-4 py-1.5 text-sm font-medium rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 disabled:opacity-50 transition-colors">Siguiente</button>
+        </div>
+      </div>
     </div>
 
-    <!-- Botón guardar -->
-    <div class="col-span-2">
-      <BaseButtons class="mt-5">
-        <BaseButton
-          :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista'])"
-          @click="saveAssign()"
-          :icon="mdiContentSave"
-          color="success"
-          label="Asignar"
-          small
-        />
-      </BaseButtons>
+    <!-- Botones de acción (Fijos al fondo) -->
+    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 bg-white dark:bg-slate-800">
+      <BaseButton 
+        color="white" 
+        label="Cancelar" 
+        @click="emit('close')" 
+        class="border border-gray-300 font-semibold text-gray-700"
+      />
+      <BaseButton 
+        :disabled="!getRole(['Editor', 'Admin', 'Admin-Revista', 'Super Admin'])"
+        @click="saveAssign()"
+        color="success" 
+        label="Guardar asignación" 
+        class="bg-[#10b981] hover:bg-[#059669] text-white font-semibold border-none"
+      />
     </div>
   </div>
 </template>

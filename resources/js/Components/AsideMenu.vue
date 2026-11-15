@@ -3,22 +3,14 @@ import AsideMenuLayer from "@/Components/AsideMenuLayer.vue";
 import OverlayLayer from "@/Components/OverlayLayer.vue";
 
 defineProps({
-  menu: {
-    type: Array,
-    required: true,
-  },
+  menu: { type: Array, required: true },
   isAsideMobileExpanded: Boolean,
-  isAsideLgActive: Boolean,
 });
 
-const emit = defineEmits(["menu-click", "aside-lg-close-click"]);
+const emit = defineEmits(["menu-click"]);
 
 const menuClick = (event, item) => {
   emit("menu-click", event, item);
-};
-
-const asideLgCloseClick = (event) => {
-  emit("aside-lg-close-click", event);
 };
 </script>
 
@@ -26,15 +18,14 @@ const asideLgCloseClick = (event) => {
   <AsideMenuLayer
     :menu="menu"
     :class="[
-      isAsideMobileExpanded ? 'left-0' : '-left-60 lg:left-0',
-      { 'lg:hidden xl:flex': !isAsideLgActive },
+      isAsideMobileExpanded ? 'left-0' : '-left-60 lg:left-0'
     ]"
     @menu-click="menuClick"
-    @aside-lg-close-click="asideLgCloseClick"
   />
+  
   <OverlayLayer
-    v-show="isAsideLgActive"
+    v-show="isAsideMobileExpanded"
     z-index="z-30"
-    @overlay-click="asideLgCloseClick"
+    @overlay-click="$emit('update:isAsideMobileExpanded', false)" 
   />
 </template>

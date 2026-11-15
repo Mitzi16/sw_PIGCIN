@@ -1,18 +1,11 @@
 <script setup>
 import LayoutMain from '@/Layouts/LayoutMain.vue'
-import HeadLogo from '@/Components/HeadLogo.vue'
-import SectionTitleLineWithButton from '@/Components/SectionTitleLineWithButton.vue'
-import { mdiContentSave, mdiClose, mdiPlus, mdiTrashCan } from '@mdi/js'
-import { Link, useForm } from '@inertiajs/vue3'
-import CardBox from '@/Components/CardBox.vue'
-import FormField from '@/Components/FormField.vue'
-import FormControl from '@/Components/FormControl.vue'
-import BaseButtons from '@/Components/BaseButtons.vue'
-import BaseButton from '@/Components/BaseButton.vue'
+import { Link, useForm, Head } from '@inertiajs/vue3'
+import { mdiPlus, mdiTrashCan } from '@mdi/js'
 
 const props = defineProps({
-  title: String,
-  routeName: String,
+  title: { type: String, required: true },
+  routeName: { type: String, required: true },
 })
 
 const form = useForm({ 
@@ -25,7 +18,6 @@ const form = useForm({
   ]
 })
 
-// Agregar item si no supera el límite de 10
 const addItem = (rubricIndex) => {
   if (form.rubrics[rubricIndex].items.length < 10) {
     form.rubrics[rubricIndex].items.push({
@@ -35,7 +27,6 @@ const addItem = (rubricIndex) => {
   }
 }
 
-// Agregar respuesta si no supera el límite de 4
 const addAnswer = (rubricIndex, itemIndex) => {
   if (form.rubrics[rubricIndex].items[itemIndex].answers.length < 5) {
     form.rubrics[rubricIndex].items[itemIndex].answers.push({
@@ -59,157 +50,149 @@ const saveForm = () => {
 </script>
 
 <template>
-  <HeadLogo :title="title" />
-  <LayoutMain>
-    <SectionTitleLineWithButton :icon="mdiPlus" :title="title" main>
-      <Link :href="route(`${routeName}index`)">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x"
-          viewBox="0 0 16 16">
-          <path
-            d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
-        </svg>
-      </Link>
-    </SectionTitleLineWithButton>
+  <div class="bg-slate-50 min-h-screen relative overflow-hidden">
+    <div class="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-50 to-transparent -z-10"></div>
 
-    <CardBox isForm @submit.prevent="saveForm">
-      <FormField label="Nombre del Tipo de Artículo:" :required="true" help="Nombre del tipo" :error="form.errors.name">
-        <FormControl v-model="form.name" placeholder="Ej: Artículo Científico, Ensayo, etc." />
-      </FormField>
+    <Head :title="title" />
+    <LayoutMain>
+      <form @submit.prevent="saveForm" class="max-w-5xl mx-auto pt-6 pb-24 relative z-10">
+        
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+          <!-- Header Principal -->
+          <div class="bg-[#15396F] px-6 py-3 flex items-center justify-between text-white">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+              </svg>
+              <h2 class="text-sm font-bold">{{ title }}</h2>
+            </div>
+            <Link :href="route(`${routeName}index`)" class="text-white hover:text-red-400 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </Link>
+          </div>
 
-      <!-- RRubric (single) -->
-      <div class="mt-8">
-        <div v-for="(rubric, rubricIndex) in form.rubrics" :key="rubricIndex" class="mb-6">
-          <CardBox class="bg-gray-50">
-            <h4 class="text-md font-medium mb-4">Rúbrica</h4>
+          <div class="p-6 space-y-8">
+            <!-- SECCIÓN 1: DATOS BÁSICOS -->
+            <div>
+              <h3 class="text-base font-bold text-[#15396F] mb-4 flex items-center gap-2 border-b border-gray-200 pb-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" /></svg>
+                Datos del tipo de artículo
+              </h3>
 
-            <FormField 
-              label="Título de la Rúbrica:"
-              :required="true"
-              :error="form.errors[`rubrics.${rubricIndex}.title`]"
-            >
-              <FormControl 
-                v-model="rubric.title" 
-                placeholder="Ej: Criterios de Evaluación General" 
-              />
-            </FormField>
-
-            <!-- Questions -->
-            <div class="mt-4">
-              <div class="flex justify-between items-center mb-3">
-                <h5 class="text-sm font-medium">Preguntas/Criterios</h5>
-                <div>
-                  <BaseButton
-                    v-if="rubric.items.length < 10"
-                    @click="addItem(rubricIndex)" 
-                    :icon="mdiPlus" 
-                    color="success" 
-                    label="Agregar Pregunta" 
-                    small 
-                    outline
-                  />
-                  <p v-else class="text-xs text-gray-500 italic">Máximo 10 preguntas alcanzado</p>
-                </div>
-              </div>
-
-              <div v-for="(item, itemIndex) in rubric.items" :key="itemIndex" class="mb-4 p-4  rounded">
-                <div class="flex justify-between items-center mb-2">
-                  <h6 class="text-sm font-medium">Pregunta {{ itemIndex + 1 }}</h6>
-                  <BaseButton 
-                    @click="removeItem(rubricIndex, itemIndex)" 
-                    :icon="mdiTrashCan" 
-                    color="danger" 
-                    small 
-                    outline
-                  />
-                </div>
-
-                <FormField 
-                  :label="`Pregunta ${itemIndex + 1}:`" 
-                  :required="true"
-                  :error="form.errors[`rubrics.${rubricIndex}.items.${itemIndex}.question`]"
-                >
-                  <FormControl 
-                    v-model="item.question" 
-                    placeholder="Ej: ¿El artículo presenta una metodología clara?" 
-                  />
-                </FormField>
-
-                <!-- Response Options -->
-                <div class="mt-3">
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-xs font-medium">Opciones de Respuesta</span>
-                    <div>
-                      <BaseButton 
-                        v-if="item.answers.length < 5"
-                        @click="addAnswer(rubricIndex, itemIndex)" 
-                        :icon="mdiPlus" 
-                        color="info" 
-                        label="Agregar Respuesta" 
-                        small 
-                        outline
-                      />
-                      <p v-else class="text-xs text-gray-500 italic">Máximo 4 respuestas alcanzado</p>
-                    </div>
-                  </div>
-
-                  <div v-for="(answer, answerIndex) in item.answers" :key="answerIndex" class="flex gap-2 mb-2 items-end">
-                    <div class="flex-1">
-                      <FormField 
-                        :label="`Respuesta ${answerIndex + 1}:`"
-                        :error="form.errors[`rubrics.${rubricIndex}.items.${itemIndex}.answers.${answerIndex}.text`]"
-                      >
-                        <FormControl 
-                          v-model="answer.text" 
-                          placeholder="Ej: Excelente, Bueno, Regular, Deficiente" 
-                        />
-                      </FormField>
-                    </div>
-                    <div class="w-24">
-                      <FormField 
-                        label="Puntaje:"
-                        :error="form.errors[`rubrics.${rubricIndex}.items.${itemIndex}.answers.${answerIndex}.score`]"
-                      >
-                        <FormControl 
-                          v-model="answer.score" 
-                          type="number" 
-                          step="0.1"
-                          placeholder="0.0" 
-                        />
-                      </FormField>
-                    </div>
-                    <BaseButton 
-                      @click="removeAnswer(rubricIndex, itemIndex, answerIndex)" 
-                      :icon="mdiTrashCan" 
-                      color="danger" 
-                      small 
-                      outline
-                    />
+              <div class="space-y-4">
+                <div class="flex flex-col md:flex-row gap-2 md:gap-6 items-start md:items-center">
+                  <label class="w-full md:w-1/4 text-sm font-bold text-gray-800 mt-2"><span class="text-red-500">*</span> Nombre del Tipo:</label>
+                  <div class="w-full md:w-3/4">
+                    <input v-model="form.name" type="text" placeholder="Ej: Artículo Científico, Ensayo, etc." class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#15396F] text-sm text-gray-600 bg-gray-50" required>
+                    <div v-if="form.errors.name" class="text-red-500 text-xs mt-1">{{ form.errors.name }}</div>
                   </div>
                 </div>
               </div>
             </div>
-          </CardBox>
-        </div>
-      </div>
 
-      <template #footer>
-        <BaseButtons>
-          <BaseButton 
-            :href="route(`${routeName}index`)" 
-            :icon="mdiClose" 
-            color="white" 
-            label="Cancelar" 
-          />
-          <BaseButton 
-            @click="saveForm" 
-            :icon="mdiContentSave" 
-            type="submit" 
-            color="success" 
-            label="Guardar" 
-            :disabled="form.processing"
-          />
-        </BaseButtons>
-      </template>
-    </CardBox>
-  </LayoutMain>
+            <!-- SECCIÓN 2: RÚBRICA -->
+            <div v-for="(rubric, rubricIndex) in form.rubrics" :key="rubricIndex">
+              <h3 class="text-base font-bold text-[#15396F] mb-4 flex items-center gap-2 border-b border-gray-200 pb-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                Configuración de la Rúbrica
+              </h3>
+
+              <div class="space-y-4">
+                <!-- Título de la Rúbrica -->
+                <div class="flex flex-col md:flex-row gap-2 md:gap-6 items-start md:items-center">
+                  <label class="w-full md:w-1/4 text-sm font-bold text-gray-800 mt-2"><span class="text-red-500">*</span> Título de la Rúbrica:</label>
+                  <div class="w-full md:w-3/4">
+                    <input v-model="rubric.title" type="text" placeholder="Ej: Criterios de Evaluación General" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#15396F] text-sm text-gray-600 bg-gray-50" required>
+                    <div v-if="form.errors[`rubrics.${rubricIndex}.title`]" class="text-red-500 text-xs mt-1">{{ form.errors[`rubrics.${rubricIndex}.title`] }}</div>
+                  </div>
+                </div>
+
+                <!-- PREGUNTAS -->
+                <div class="mt-8">
+                  <div class="flex justify-between items-center mb-4">
+                    <h4 class="text-sm font-bold text-[#15396F]">Preguntas / Criterios</h4>
+                    <div>
+                      <button type="button" v-if="rubric.items.length < 10" @click="addItem(rubricIndex)" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#0d6efd] hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path :d="mdiPlus" /></svg>
+                        Agregar Pregunta
+                      </button>
+                      <p v-else class="text-xs text-red-500 italic font-medium">Máximo 10 preguntas alcanzado</p>
+                    </div>
+                  </div>
+
+                  <div v-for="(item, itemIndex) in rubric.items" :key="itemIndex" class="mb-6 p-5 bg-gray-50 border border-gray-200 rounded-xl relative">
+                    
+                    <button type="button" @click="removeItem(rubricIndex, itemIndex)" class="absolute top-4 right-4 bg-red-100 text-red-600 hover:bg-red-200 p-2 rounded-lg transition-colors" title="Eliminar Pregunta">
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path :d="mdiTrashCan" /></svg>
+                    </button>
+
+                    <h5 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                      <span class="w-6 h-6 rounded-full bg-[#15396F] text-white flex items-center justify-center text-xs">{{ itemIndex + 1 }}</span>
+                      Pregunta
+                    </h5>
+
+                    <div class="flex flex-col md:flex-row gap-2 md:gap-6 items-start md:items-center mb-6 pr-12">
+                      <label class="w-full md:w-1/4 text-sm font-bold text-gray-800">Texto de la pregunta:</label>
+                      <div class="w-full md:w-3/4">
+                        <input v-model="item.question" type="text" placeholder="Ej: ¿El artículo presenta una metodología clara?" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#15396F] text-sm text-gray-600 bg-white" required>
+                        <div v-if="form.errors[`rubrics.${rubricIndex}.items.${itemIndex}.question`]" class="text-red-500 text-xs mt-1">{{ form.errors[`rubrics.${rubricIndex}.items.${itemIndex}.question`] }}</div>
+                      </div>
+                    </div>
+
+                    <!-- RESPUESTAS -->
+                    <div class="pl-0 md:pl-8 border-l-0 md:border-l-2 border-gray-300">
+                      <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-gray-600">Opciones de Respuesta (y Puntaje)</span>
+                        <div>
+                          <button type="button" v-if="item.answers.length < 5" @click="addAnswer(rubricIndex, itemIndex)" class="flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold text-[#0d6efd] bg-blue-50 hover:bg-blue-100 rounded-md transition-colors">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path :d="mdiPlus" /></svg>
+                            Añadir respuesta
+                          </button>
+                          <p v-else class="text-[11px] text-red-500 italic">Máximo 5 respuestas</p>
+                        </div>
+                      </div>
+
+                      <div v-for="(answer, answerIndex) in item.answers" :key="answerIndex" class="flex flex-col md:flex-row gap-3 mb-2 items-end">
+                        <div class="flex-1 w-full">
+                          <label class="block text-[11px] font-bold text-gray-600 mb-1">Respuesta {{ answerIndex + 1 }}:</label>
+                          <input v-model="answer.text" type="text" placeholder="Ej: Excelente, Bueno, Regular..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#15396F] text-sm text-gray-600 bg-white" required>
+                        </div>
+                        <div class="w-full md:w-24">
+                          <label class="block text-[11px] font-bold text-gray-600 mb-1">Puntaje:</label>
+                          <input v-model="answer.score" type="number" step="0.1" placeholder="0.0" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#15396F] text-sm text-gray-600 bg-white" required>
+                        </div>
+                        <button type="button" @click="removeAnswer(rubricIndex, itemIndex, answerIndex)" class="bg-red-50 text-red-500 hover:bg-red-100 p-2.5 rounded-lg transition-colors h-[38px] flex items-center justify-center" title="Eliminar Respuesta">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path :d="mdiTrashCan" /></svg>
+                        </button>
+                      </div>
+                      
+                      <div v-if="item.answers.length === 0" class="text-xs text-gray-500 italic mt-2">
+                        No hay opciones de respuesta agregadas.
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div v-if="rubric.items.length === 0" class="text-sm text-gray-500 italic text-center py-6 border-2 border-dashed border-gray-300 rounded-xl">
+                    Aún no has agregado preguntas a esta rúbrica.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTONES INFERIORES -->
+        <div class="flex justify-between items-center mt-8 relative">
+          <Link :href="route(`${routeName}index`)" class="px-8 py-2.5 text-sm font-bold text-[#15396F] bg-white border border-gray-300 hover:bg-gray-50 rounded-full transition-colors flex items-center gap-2 shadow-sm z-10">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            Cancelar
+          </Link>
+          <button type="submit" :disabled="form.processing" class="px-8 py-2.5 text-sm font-bold text-white bg-[#15396F] hover:bg-[#0f2853] rounded-full transition-colors flex items-center gap-2 shadow-md disabled:opacity-50 z-10">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" /></svg>
+            Guardar
+          </button>
+        </div>
+      </form>
+    </LayoutMain>
+  </div>
 </template>

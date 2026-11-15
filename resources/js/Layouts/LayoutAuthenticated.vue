@@ -1,5 +1,5 @@
 <script setup>
-import { mdiForwardburger, mdiBackburger, mdiMenu } from "@mdi/js";
+import { mdiForwardburger, mdiBackburger } from "@mdi/js"; // Quitamos mdiMenu
 import { ref, computed } from "vue";
 import { Head, router, usePage } from "@inertiajs/vue3";
 
@@ -17,7 +17,6 @@ import NotificationBell from '@/Components/NotificationBell.vue';
 
 const userRoles = computed(() => {
     const roles = usePage().props.auth.user?.roles || [];
-
     return roles.map(role => role.name);
 });
 
@@ -30,16 +29,17 @@ useMainStore().setUser({
     "https://avatars.dicebear.com/api/avataaars/example.svg?options[top][]=shortHair&options[accessoriesChance]=93",
 });
 
-const layoutAsidePadding = "xl:pl-60";
+// 1. Cambiamos 'xl:pl-60' por 'lg:pl-60' para que en laptops también respete el menú
+const layoutAsidePadding = "lg:pl-60"; 
 
 const styleStore = useStyleStore();
 
+// Solo mantenemos el estado para móviles
 const isAsideMobileExpanded = ref(false);
-const isAsideLgActive = ref(false);
+// 2. Eliminamos isAsideLgActive porque ya no se puede cerrar en PC
 
 router.on("navigate", () => {
   isAsideMobileExpanded.value = false;
-  isAsideLgActive.value = false;
 });
 
 const menuClick = (event, item) => {
@@ -73,6 +73,7 @@ const menuClick = (event, item) => {
         ]"
         @menu-click="menuClick"
       >
+        <!-- Botón de menú para móviles (se mantiene) -->
         <NavBarItemPlain
           display="flex lg:hidden"
           @click.prevent="isAsideMobileExpanded = !isAsideMobileExpanded"
@@ -83,12 +84,7 @@ const menuClick = (event, item) => {
           />
         </NavBarItemPlain>
 
-        <NavBarItemPlain
-          display="hidden lg:flex xl:hidden"
-          @click.prevent="isAsideLgActive = true"
-        >
-          <BaseIcon :path="mdiMenu" size="24" />
-        </NavBarItemPlain>
+        <!-- 3. ELIMINAMOS EL BOTÓN DE HAMBURGUESA PARA LG/XL QUE ESTABA AQUÍ -->
 
         <NavBarItemPlain use-margin class="mr-auto"> 
            <NotificationBell :user-id="$page.props.auth.user.id" :user-roles="userRoles" />
@@ -96,12 +92,11 @@ const menuClick = (event, item) => {
 
       </NavBar>
 
+      <!-- 4. Limpiamos las propiedades que controlaban el cierre del menú -->
       <AsideMenu
         :is-aside-mobile-expanded="isAsideMobileExpanded"
-        :is-aside-lg-active="isAsideLgActive"
         :menu="menuAside"
         @menu-click="menuClick"
-        @aside-lg-close-click="isAsideLgActive = false"
       />
       
       <slot />

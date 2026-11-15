@@ -8,6 +8,7 @@ use App\Mail\StoreUser;
 use App\Models\ApiUser;
 use App\Models\Institution;
 use App\Models\KnowledgeArea;
+use App\Models\Call; // 👈 Importación necesaria para las convocatorias
 use Illuminate\Http\Request;
 use App\Models\Module;
 use Spatie\Permission\Models\Permission;
@@ -32,6 +33,7 @@ class UserController extends Controller
     protected string $module = 'user';
     protected User $model;
     private string $storage_path = 'public/photos/';
+
     public function __construct()
     {
         $this->routeName = "user.";
@@ -49,15 +51,32 @@ class UserController extends Controller
     public function index(Request $request): Response
     {
         $direction = '';
-
-        if ($request->has('direction'))
+        if ($request->has('direction')) {
             $direction = $request->direction;
-        else
+        } else {
             $direction = 'desc';
+        }
 
         $order = $request->has('order') ? $request->order : 'created_at';
 
-        $records = $this->model->with('roles');
+        // 1. Iniciamos la consulta cargando la institución y las convocatorias
+        $records = $this->model->with(['roles', 'institution:id,name', 'calls:id,title']);
+
+        // =========================================================
+        // 2. FILTRO DE SEGURIDAD POR CONVOCATORIAS
+        // =========================================================
+        $user = $request->user();
+
+        // Si NO es SuperAdmin y SÍ es Administrador (CORREGIDO: quitamos 'Admin')
+        if (!$user->hasRole('SuperAdmin') && $user->hasRole('Administrador')) {
+            $myCallIds = $user->calls->pluck('id')->toArray();
+
+            // Filtramos a los usuarios que pertenezcan a las convocatorias asignadas
+            $records->whereHas('calls', function ($query) use ($myCallIds) {
+                $query->whereIn('calls.id', $myCallIds);
+            });
+        }
+        // =========================================================
 
         $profile = $request->has('profile') ? $request->profile : null;
         $records = $records->orderBy($order, $direction);
@@ -69,22 +88,28 @@ class UserController extends Controller
             });
         }
 
+        // 3. Buscador (Agrupado para que no rompa el filtro de seguridad)
         $records = $records->when($request->search, function ($query, $search) {
             if ($search != '') {
-                $query->where('name', 'LIKE', '%' . $search . '%')
-                    ->orWhere('email', 'LIKE', '%' . $search . '%')
-                    ->orWhereHas('roles', function ($query) use ($search) {
-                        $query->where('name', 'LIKE', '%' . $search . '%');
-                    });
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'LIKE', '%' . $search . '%')
+                        ->orWhere('email', 'LIKE', '%' . $search . '%')
+                        ->orWhereHas('roles', function ($queryRole) use ($search) {
+                            $queryRole->where('name', 'LIKE', '%' . $search . '%');
+                        });
+                });
             }
         });
 
+        // 👇 Agregamos institution y calls al mapeo para que se muestren en la tabla
         $records = $records->paginate(8)->withQueryString()->through(
             fn($user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'roles' => $user->roles ? $user->roles->pluck('name') : null,
+                'institution' => $user->institution,
+                'calls' => $user->calls,
             ]
         );
 
@@ -109,6 +134,8 @@ class UserController extends Controller
             'routeName'     => $this->routeName,
             'roles'         => Role::orderBy('name')->select('id', 'name', 'description')->get(),
             'areas'         => KnowledgeArea::orderBy('name')->get(),
+            'institutions'  => Institution::orderBy('name')->select('id', 'name')->get(), // 👈 Enviamos instituciones
+            'calls'         => Call::orderBy('title')->select('id', 'title')->get(),       // 👈 Enviamos convocatorias
         ]);
     }
 
@@ -127,12 +154,17 @@ class UserController extends Controller
             ]);
             $user->syncRoles($request->roles);
 
+            // 👈 Sincronizamos las convocatorias si vienen en el formulario
+            if ($request->has('calls')) {
+                $user->calls()->sync($request->calls);
+            }
+
             $userData = [
                 'name' => $user->name,
                 'email' => $user->email,
                 'password' => $request->password,
             ];
-            Mail::to($user->email)->queue(new StoreUser($userData));
+           Mail::to($user->email)->send(new StoreUser($userData));
         });
         return redirect()->route('user.index')->with('success', 'Usuario creado con éxito');
     }
@@ -153,9 +185,12 @@ class UserController extends Controller
         return Inertia::render("{$this->source}Edit", [
             'title'         => 'Editar Usuarios.',
             'routeName'     => $this->routeName,
-            'user'          => $user->load('roles:id,name', 'knowledgeArea', 'institution:id,name'),
+            // 👈 Cargamos la relación 'calls' del usuario
+            'user'          => $user->load('roles:id,name', 'knowledgeArea', 'institution:id,name', 'calls:id,title'),
             'roles'         => Role::orderBy('name')->select('id', 'name', 'description')->get(),
             'areas'         => KnowledgeArea::orderBy('name')->get(),
+            'institutions'  => Institution::orderBy('name')->select('id', 'name')->get(),
+            'calls'         => Call::orderBy('title')->select('id', 'title')->get(), // 👈 Enviamos todas las convocatorias
         ]);
     }
 
@@ -183,6 +218,14 @@ class UserController extends Controller
                 ]);
             }
             $user->syncRoles($fields['roles']);
+
+            // 👈 Sincronizamos las convocatorias (usando $fields porque es el request validado)
+            if (isset($fields['calls'])) {
+                $user->calls()->sync($fields['calls']);
+            } else {
+                // Si no se enviaron convocatorias, las vaciamos
+                $user->calls()->sync([]);
+            }
         });
 
         return redirect()->route('user.index')->with('success', 'Usuario modificado con éxito');
@@ -200,7 +243,7 @@ class UserController extends Controller
     public function getCurp($request)
     {
         if (ApiUser::where('curp', $request)->exists()) {
-            $records = ApiUser::where('curp', $request)->first(); //si existe el curp guarda los campos en records
+            $records = ApiUser::where('curp', $request)->first();
         } else {
             $request = Http::withToken('0ccedcbd-fb5a-4a6a-aaa1-d7bf0031ec0d')->post("https://apimarket.mx/api/renapo/grupo/valida-curp", ['curp' => $request])['data'];
 
