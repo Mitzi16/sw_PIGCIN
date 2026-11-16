@@ -68,12 +68,9 @@ Route::get('/verificar/{folio}', [VerificationController::class, 'verifyConstanc
 Route::get('/verifica/reconocimiento/{id}', [VerificationController::class, 'verifyReconocimiento'])->name('certificate.verify');
 Route::get('/reconocimiento/verify/{folio}', [GenerateParticipationController::class, 'verify'])->name('reconocimiento.verify');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+// 👇 AQUÍ ESTÁ EL CAMBIO: Se quitó 'verified' del middleware 👇
+Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
-
-    // Route::get('/dashboard', function () {
-    //     return Inertia::render('Dashboard', ['users' => User::all(), 'modulos' => Module::all()]);
-    // })->name('dashboard');
 
     Route::get('/constancias/article', [ConstanciaController::class, 'constancia'])->name('constancia.name')->middleware(['auth']);
     Route::get('/articles/{article}/certificate', [ConstanciaController::class, 'generateCertificate'])->name('article.certificate')->middleware(['auth']);
@@ -82,8 +79,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //generar gafetes
     Route::get('/generate/gafetes', [GenerateGafetesController::class, 'generate'])->name('generate.gafetes')->middleware(['auth']);
     Route::get('/generate/gafetes-data', [GenerateGafetesController::class, 'getGafetesData'])->name('generate.gafetes.data')->middleware(['auth', 'role:Admin']);
-    //Route::get('/programa/CITCA2025/{user_id}', [GenerateGafetesController::class, 'download'])->name('gafete.download');
-
+    
     // Grupo de Rutas para Diapositivas
     Route::get('/diapositivas', [DiapositivaController::class, 'index'])->name('diapositivas.index')->middleware(['auth']);
     Route::get('/diapositivas/{article}/create', [DiapositivaController::class, 'create'])->name('diapositivas.create')->middleware(['auth']);
@@ -114,6 +110,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('user', UserController::class)->parameters(['user' => 'user']);
     Route::get('reconocimientos', [ReconocimientoController::class, 'index'])->name('reconocimiento.index');
     Route::patch('reconocimientos/{user}', [ReconocimientoController::class, 'update'])->name('reconocimiento.update');
+    
     // Asignación de Administradores (NUEVO BLOQUE)
     Route::middleware(['role:Super Admin'])->group(function () {
         Route::get('/admin-assignments', [AdminAssignmentController::class, 'index'])->name('admin.assignments.index');

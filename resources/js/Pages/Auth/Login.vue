@@ -1,7 +1,6 @@
 <script setup>
 import { useForm, Head, Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
-import axios from 'axios' // 👈 1. IMPORTANTE: Importar Axios
 import LayoutGuest from '@/Layouts/LayoutGuest.vue'
 import FormValidationErrors from '@/Components/FormValidationErrors.vue'
 import NotificationBarInCard from '@/Components/NotificationBarInCard.vue'
@@ -32,35 +31,24 @@ const form = useForm({
 
 const showPassword = ref(false);
 
-// 👈 2. IMPORTANTE: La función submit ahora es "async"
-const submit = async () => {
-    try {
-        // 3. Pedir la cookie de seguridad (CSRF) al backend antes de enviar el formulario
-        // Aquí debes poner la URL exacta de tu backend (IP y puerto)
-        await axios.get('http://192.168.100.111:8080/sanctum/csrf-cookie');
-
-        // 4. Enviar el formulario con Inertia
-        form
-            .transform(data => ({
-                ...data,
-                remember: form.remember && form.remember.length ? 'on' : ''
-            }))
-            .post(route('login.store'), {
-                onFinish: () => form.reset('password'),
-            });
-            
-    } catch (error) {
-        // Si falla la conexión con el backend, lo mostramos en consola
-        console.error("Error al obtener el token CSRF:", error);
-    }
+// Función simplificada (Inertia maneja el CSRF automáticamente en el mismo dominio)
+const submit = () => {
+    form
+        .transform(data => ({
+            ...data,
+            remember: form.remember && form.remember.length ? 'on' : ''
+        }))
+        .post(route('login.store'), {
+            onFinish: () => form.reset('password'),
+        });
 }
 </script>
 
 <template>
     <HeadLogo title="Iniciar sesión" />
     <LayoutGuest>
-        <!-- Contenedor Principal con fondo decorado -->
-        <section class="relative min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <!-- Contenedor Principal (Agregado w-full para centrado perfecto) -->
+        <section class="relative w-full min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
             
             <!-- Decoraciones geométricas de fondo (Difuminados azules) -->
             <div class="absolute top-0 left-0 w-96 h-96 bg-[#1B396A] opacity-[0.03] pointer-events-none rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
@@ -71,8 +59,8 @@ const submit = async () => {
                 <img src="/img/azul.png" alt="Engrane de fondo" class="w-[500px] h-[500px] object-contain" />
             </div>
 
-            <!-- CONTENEDOR PRINCIPAL DE LA TARJETA -->
-            <div class="relative z-10 w-full max-w-3xl bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+            <!-- CONTENEDOR PRINCIPAL DE LA TARJETA (Agregado mx-auto por seguridad) -->
+            <div class="relative z-10 w-full max-w-3xl mx-auto bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden grid grid-cols-1 lg:grid-cols-2">
                 
                 <!-- COLUMNA IZQUIERDA: FORMULARIO -->
                 <div class="p-8 md:p-10 flex flex-col justify-center bg-white relative z-20">
